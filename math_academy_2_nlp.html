@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Academy II — NLP Mathematics</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0F0F23; color: #E0E0E0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
+
+  #header { background: #16213E; border-bottom: 2px solid #7C4DFF; padding: 14px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  #header h1 { font-size: 1.1rem; font-weight: 700; color: #7C4DFF; flex: 1; }
+  #badge { background: #0F0F23; border: 1.5px solid #00BFA5; color: #00BFA5; font-size: 0.82rem; font-weight: 700; padding: 4px 14px; border-radius: 20px; white-space: nowrap; }
+
+  #app { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 57px); }
+
+  #sidebar { width: 260px; min-width: 220px; background: #16213E; border-right: 1px solid #1a1a3e; overflow-y: auto; padding: 12px 0; flex-shrink: 0; }
+  .track-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #888; padding: 12px 16px 4px; }
+  .sidebar-item { padding: 9px 16px; cursor: pointer; border-left: 3px solid transparent; transition: background 0.15s, border-color 0.15s; font-size: 0.82rem; line-height: 1.3; display: flex; align-items: center; gap: 8px; }
+  .sidebar-item:hover { background: rgba(124,77,255,0.08); }
+  .sidebar-item.active { background: rgba(124,77,255,0.15); border-left-color: #7C4DFF; color: #7C4DFF; }
+  .sidebar-item.locked { opacity: 0.38; cursor: not-allowed; }
+  .sidebar-item .si-icon { font-size: 0.75rem; flex-shrink: 0; width: 18px; text-align: center; }
+  .sidebar-item .si-title { flex: 1; }
+  .sidebar-item .si-done { color: #00BFA5; font-size: 0.85rem; }
+
+  #main { flex: 1; overflow-y: auto; padding: 28px 32px; max-width: 900px; }
+
+  #welcome-screen { max-width: 680px; margin: 0 auto; padding-top: 24px; }
+  #welcome-screen h2 { font-size: 1.8rem; color: #7C4DFF; margin-bottom: 8px; }
+  #welcome-screen .sub { color: #aaa; margin-bottom: 28px; font-size: 0.95rem; }
+  .stats-row { display: flex; gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: #16213E; border: 1px solid #1a1a3e; border-radius: 10px; padding: 18px 28px; text-align: center; flex: 1; }
+  .stat-card .num { font-size: 2rem; font-weight: 800; color: #00BFA5; }
+  .stat-card .lbl { font-size: 0.78rem; color: #888; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .start-btns { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 28px; }
+  .btn { background: linear-gradient(135deg, #7C4DFF, #00BFA5); color: #fff; font-weight: 700; font-size: 0.88rem; padding: 11px 22px; border-radius: 8px; border: none; cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn.secondary { background: transparent; border: 1.5px solid #7C4DFF; color: #7C4DFF; }
+  .btn.secondary:hover { background: rgba(124,77,255,0.1); }
+  .welcome-desc { color: #bbb; line-height: 1.65; margin-bottom: 28px; font-size: 0.92rem; }
+  .track-overview { margin-top: 32px; }
+  .track-overview h3 { color: #00BFA5; margin-bottom: 14px; font-size: 1rem; }
+  .track-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .track-chip { background: #16213E; border: 1px solid #1a1a3e; border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; }
+  .track-chip span { color: #7C4DFF; font-weight: 700; }
+
+  #paper-view { display: none; }
+  .paper-header { margin-bottom: 24px; }
+  .paper-header .track-badge { display: inline-block; background: rgba(124,77,255,0.15); color: #7C4DFF; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; margin-bottom: 10px; }
+  .paper-header h2 { font-size: 1.35rem; color: #fff; margin-bottom: 6px; line-height: 1.3; }
+  .paper-header .authors { color: #888; font-size: 0.82rem; font-style: italic; }
+
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid #1a1a3e; margin-bottom: 24px; }
+  .tab-btn { padding: 9px 22px; font-size: 0.85rem; font-weight: 600; color: #888; background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.15s, border-color 0.15s; }
+  .tab-btn.active { color: #7C4DFF; border-bottom-color: #7C4DFF; }
+  .tab-btn:hover:not(.active) { color: #ccc; }
+
+  .lesson-body { line-height: 1.75; font-size: 0.93rem; color: #ccc; }
+  .lesson-body p { margin-bottom: 14px; }
+  .lesson-body h3 { color: #00BFA5; font-size: 1rem; margin: 22px 0 8px; }
+  .lesson-body strong { color: #fff; }
+  .lesson-body ul { padding-left: 20px; margin-bottom: 14px; }
+  .lesson-body ul li { margin-bottom: 5px; }
+
+  .prereq-box { background: #0A0A1A; border: 1px solid #1a1a3e; border-radius: 8px; padding: 10px 16px; margin-bottom: 20px; font-size: 0.82rem; color: #666; }
+  .prereq-box span { color: #7C4DFF; font-weight: 600; }
+
+  .eq-box { background: #0A0020; border: 2px solid #7C4DFF; border-radius: 12px; padding: 22px 28px; text-align: center; font-family: 'Courier New', monospace; font-size: 16px; color: #B39DDB; margin-bottom: 22px; line-height: 2; letter-spacing: 0.02em; }
+  .eq-box .eq-name { font-size: 0.68rem; font-family: 'Segoe UI', system-ui, sans-serif; color: #666; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; display: block; }
+  .eq-box .eq-line { color: #E8DEFF; font-size: 1rem; }
+  .eq-box .eq-sub { font-size: 0.78rem; color: #888; margin-top: 6px; }
+
+  .intuition-box { background: #10102A; border: 1px solid #1a1a3e; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; font-size: 0.88rem; color: #BBB; line-height: 1.7; }
+  .intuition-box .label { font-size: 0.68rem; font-weight: 700; color: #7C4DFF; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block; }
+
+  .example-box { background: #0A0A16; border-left: 3px solid #00BFA5; border-radius: 0 8px 8px 0; padding: 16px 18px; margin: 18px 0 22px; }
+  .example-title { font-size: 0.72rem; font-weight: 700; color: #00BFA5; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+  .step { font-size: 0.87rem; color: #CCC; margin-bottom: 6px; padding-left: 6px; }
+  .step strong { color: #B39DDB; }
+  .step code { background: #0A0020; color: #00BFA5; padding: 1px 5px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 0.82rem; }
+  .step-result { color: #7C4DFF; font-family: 'Courier New', monospace; font-size: 0.87rem; font-weight: 700; }
+
+  .quiz-progress { font-size: 0.78rem; color: #888; margin-bottom: 18px; }
+  .quiz-progress span { color: #7C4DFF; font-weight: 700; }
+  .question-card { background: #16213E; border: 1px solid #1a1a3e; border-radius: 12px; padding: 22px; margin-bottom: 20px; }
+  .question-text { font-size: 0.95rem; color: #fff; margin-bottom: 18px; line-height: 1.5; font-weight: 500; }
+  .option-btn { display: block; width: 100%; text-align: left; background: #0F0F23; border: 1.5px solid #1a1a3e; border-radius: 8px; padding: 11px 16px; margin-bottom: 9px; cursor: pointer; font-size: 0.87rem; color: #ccc; transition: border-color 0.15s, background 0.15s; line-height: 1.4; }
+  .option-btn:hover:not(:disabled) { border-color: #7C4DFF; color: #fff; background: rgba(124,77,255,0.07); }
+  .option-btn.correct { border-color: #00C853; background: rgba(0,200,83,0.12); color: #00C853; }
+  .option-btn.wrong { border-color: #f44336; background: rgba(244,67,54,0.1); color: #f44336; }
+  .option-btn:disabled { cursor: default; }
+  .option-letter { font-weight: 700; margin-right: 8px; color: #7C4DFF; }
+  .option-btn.correct .option-letter { color: #00C853; }
+  .option-btn.wrong .option-letter { color: #f44336; }
+  .wrong-explanation { background: rgba(244,67,54,0.08); border: 1px solid rgba(244,67,54,0.3); border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; color: #ef9a9a; margin-top: 8px; line-height: 1.5; display: none; }
+  .correct-explanation { background: rgba(0,200,83,0.08); border: 1px solid rgba(0,200,83,0.3); border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; color: #a5d6a7; margin-top: 8px; line-height: 1.5; display: none; }
+  .next-btn { margin-top: 16px; }
+
+  .completion-card { background: linear-gradient(135deg, rgba(124,77,255,0.1), rgba(0,191,165,0.05)); border: 1.5px solid #7C4DFF; border-radius: 14px; padding: 36px; text-align: center; max-width: 520px; margin: 0 auto; }
+  .completion-icon { font-size: 3.5rem; margin-bottom: 16px; }
+  .completion-card h2 { color: #7C4DFF; font-size: 1.3rem; margin-bottom: 10px; }
+  .completion-card p { color: #bbb; font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px; }
+  .unlocked-list { text-align: left; margin: 16px 0; }
+  .unlocked-list h4 { color: #00BFA5; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .unlocked-item { background: #0F0F23; border: 1px solid #1a1a3e; border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; font-size: 0.83rem; cursor: pointer; transition: border-color 0.15s; }
+  .unlocked-item:hover { border-color: #7C4DFF; color: #7C4DFF; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0F0F23; }
+  ::-webkit-scrollbar-thumb { background: #1a1a3e; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #7C4DFF; }
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>Math Academy II &mdash; NLP Mathematics</h1>
+  <div id="badge">0 / 12 completed</div>
+</div>
+<div id="app">
+  <div id="sidebar"></div>
+  <div id="main">
+    <div id="welcome-view"></div>
+    <div id="paper-view"></div>
+  </div>
+</div>
+
+<script>
+const TRACKS = [
+  { id: 'repr', label: 'Word Representations' },
+  { id: 'seq', label: 'Sequence Modeling' },
+  { id: 'transformer', label: 'Transformer Math' },
+  { id: 'eval', label: 'Generation & Evaluation' }
+];
+
+const PAPERS = [
+
+{
+  id: 'word2vec_skipgram', track: 'repr', prereqs: [],
+  title: 'Word2Vec: Skip-gram Objective',
+  authors: 'Mikolov et al. 2013 &mdash; Efficient Estimation of Word Representations',
+  lesson: `
+<div class="prereq-box">Starting point &mdash; no prerequisites</div>
+<div class="eq-box">
+  <span class="eq-name">Skip-gram Objective</span>
+  <div class="eq-line">J(&theta;) = &minus;(1/T) &sum;<sub>t</sub> &sum;<sub>&minus;m&le;j&le;m, j&ne;0</sub> log P(w<sub>t+j</sub> | w<sub>t</sub>)</div>
+  <div class="eq-line">P(w<sub>O</sub>|w<sub>I</sub>) = exp(v'<sub>w<sub>O</sub></sub><sup>T</sup> v<sub>w<sub>I</sub></sub>) / &sum;<sub>w</sub> exp(v'<sub>w</sub><sup>T</sup> v<sub>w<sub>I</sub></sub>)</div>
+  <div class="eq-sub">v = input vector &middot; v' = output vector &middot; m = context window size</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Skip-gram predicts <strong>context words from a center word</strong>. Given center word w<sub>t</sub>, maximize the probability of surrounding words within window m.
+  The model learns two vectors per word: <strong>v (input embedding)</strong> and <strong>v' (output embedding)</strong>.
+  The dot product v'<sub>c</sub><sup>T</sup>v<sub>w</sub> measures how compatible a context word c is with center word w.
+  After training, v and v' of similar words are similar &mdash; giving us word embeddings.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Vocabulary size V=5, window m=1</div>
+  <div class="step"><strong>Sentence:</strong> "the cat sat" &rarr; center word "cat", context words: "the", "sat"</div>
+  <div class="step"><strong>Vectors (d=2):</strong> v<sub>cat</sub>=[1,0], v'<sub>the</sub>=[2,1], v'<sub>sat</sub>=[0,1], v'<sub>dog</sub>=[-1,0], v'<sub>mat</sub>=[0,-1], v'<sub>on</sub>=[-1,1]</div>
+  <div class="step"><strong>Scores for "the":</strong> z<sub>the</sub> = v'<sub>the</sub><sup>T</sup>v<sub>cat</sub> = [2,1]&middot;[1,0] = <code>2.0</code></div>
+  <div class="step"><strong>Scores for "sat":</strong> z<sub>sat</sub> = [0,1]&middot;[1,0] = <code>0.0</code></div>
+  <div class="step"><strong>Softmax denominator:</strong> e<sup>2</sup>+e<sup>0</sup>+e<sup>-1</sup>+e<sup>0</sup>+e<sup>-1</sup> &asymp; 7.39+1+0.37+1+0.37 = <code>10.13</code></div>
+  <div class="step"><strong>P("the"|"cat") = e<sup>2</sup>/10.13 = 7.39/10.13 &asymp; <span class="step-result">0.73</span></strong></div>
+  <div class="step">Training pushes this probability higher while lowering non-context word scores.</div>
+</div>`,
+  questions: [
+    {
+      text: 'Skip-gram with vocabulary size V=50,000 uses full softmax to compute P(w<sub>O</sub>|w<sub>I</sub>). How many dot products are needed per training step?',
+      options: [
+        { letter: 'A', text: '2 (one for target word, one for center word)', correct: false, wrongExplanation: 'Full softmax requires computing v\'<sub>w</sub><sup>T</sup>v<sub>I</sub> for every word w in the vocabulary to build the denominator &sum;<sub>w</sub> exp(v\'<sub>w</sub><sup>T</sup>v<sub>I</sub>). That\'s V=50,000 dot products.' },
+        { letter: 'B', text: '50,000 (one per vocabulary word)', correct: true },
+        { letter: 'C', text: 'The context window size m (e.g., m=5)', correct: false, wrongExplanation: 'm controls how many context words we predict per center word, not the cost of the softmax denominator. The denominator sums over all V words regardless of window size.' },
+        { letter: 'D', text: 'd (the embedding dimension)', correct: false, wrongExplanation: 'd is the length of each dot product, not the number of dot products. Full softmax needs V dot products (one per vocabulary word) for the denominator.' }
+      ]
+    },
+    {
+      text: 'Word2Vec learns two vectors per word: v (input) and v\' (output). Why two vectors instead of one?',
+      options: [
+        { letter: 'A', text: 'One vector handles nouns, the other handles verbs', correct: false, wrongExplanation: 'The split is not by part-of-speech. Both v and v\' apply to every word. The distinction is the role in the prediction: center word uses v, context word uses v\'.' },
+        { letter: 'B', text: 'Using two separate embedding matrices avoids the word predicting itself and makes optimization more stable', correct: true },
+        { letter: 'C', text: 'Two vectors double the model capacity so it can memorize more words', correct: false, wrongExplanation: 'The two-vector design is about mathematical cleanness and optimization, not capacity. A single-vector model would create a self-reinforcing loop where a word always attends to itself.' },
+        { letter: 'D', text: 'v handles words seen in training, v\' handles unseen words', correct: false, wrongExplanation: 'Both v and v\' are used only for words in the vocabulary. Out-of-vocabulary words have no vectors in the original Word2Vec.' }
+      ]
+    },
+    {
+      text: 'After training, "king" and "queen" have similar v vectors. What in the training objective forces this?',
+      options: [
+        { letter: 'A', text: 'The model directly compares word spellings and groups similar-sounding words', correct: false, wrongExplanation: 'Word2Vec sees only word indices, never characters. It has no access to spelling. Similarity emerges purely from co-occurrence patterns in the training corpus.' },
+        { letter: 'B', text: 'Words appearing in similar contexts have high dot products with the same v\' vectors, so gradient descent pushes their v vectors to be similar', correct: true },
+        { letter: 'C', text: 'A regularization term explicitly minimizes the distance between synonyms', correct: false, wrongExplanation: 'Word2Vec has no synonym regularization. The geometric similarity is an emergent property of maximizing co-occurrence prediction on large text corpora.' },
+        { letter: 'D', text: 'The softmax denominator normalizes all word vectors to the same magnitude', correct: false, wrongExplanation: 'Softmax is a normalization into probabilities, not a vector magnitude normalizer. Word vectors can have any magnitude after training.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'negative_sampling', track: 'repr', prereqs: ['word2vec_skipgram'],
+  title: 'Negative Sampling',
+  authors: 'Mikolov et al. 2013 &mdash; Distributed Representations of Words',
+  lesson: `
+<div class="prereq-box">Requires: <span>Word2Vec: Skip-gram Objective</span></div>
+<div class="eq-box">
+  <span class="eq-name">Negative Sampling Objective (per center-context pair)</span>
+  <div class="eq-line">J<sub>NS</sub> = log &sigma;(v'<sub>c</sub><sup>T</sup> v<sub>w</sub>) + &sum;<sub>k=1</sub><sup>K</sup> E<sub>n~P<sub>n</sub></sub>[log &sigma;(&minus;v'<sub>n</sub><sup>T</sup> v<sub>w</sub>)]</div>
+  <div class="eq-sub">Maximize this. K=5&ndash;20 negative samples &middot; P<sub>n</sub>(w) &prop; f(w)<sup>3/4</sup></div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Instead of computing softmax over all V words, <strong>negative sampling reframes the problem as binary classification</strong>:
+  for each true (center, context) pair, the model must distinguish it from K randomly sampled "negative" (fake) pairs.
+  <strong>log &sigma;(v'<sub>c</sub><sup>T</sup>v<sub>w</sub>)</strong>: push the true pair's dot product high (toward +&infin;).
+  <strong>log &sigma;(&minus;v'<sub>n</sub><sup>T</sup>v<sub>w</sub>)</strong>: push negative pairs' dot products low (toward &minus;&infin;).
+  Cost drops from O(V) to O(K) per step &mdash; 50,000&times; speedup with K=20.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; K=2 negative samples</div>
+  <div class="step"><strong>True pair:</strong> (center="cat", context="sat"). v<sub>cat</sub>=[1,0], v'<sub>sat</sub>=[0,1]</div>
+  <div class="step"><strong>Negative samples:</strong> "dog" and "the". v'<sub>dog</sub>=[-1,0], v'<sub>the</sub>=[2,1]</div>
+  <div class="step"><strong>True score:</strong> v'<sub>sat</sub><sup>T</sup>v<sub>cat</sub> = [0,1]&middot;[1,0] = <code>0.0</code> &rarr; &sigma;(0)=<code>0.5</code></div>
+  <div class="step"><strong>Neg score 1:</strong> &minus;v'<sub>dog</sub><sup>T</sup>v<sub>cat</sub> = &minus;(&minus;1) = <code>1.0</code> &rarr; &sigma;(1)&asymp;<code>0.73</code></div>
+  <div class="step"><strong>Neg score 2:</strong> &minus;v'<sub>the</sub><sup>T</sup>v<sub>cat</sub> = &minus;2 = <code>&minus;2.0</code> &rarr; &sigma;(&minus;2)&asymp;<code>0.12</code></div>
+  <div class="step"><strong>J<sub>NS</sub></strong> = log(0.5)+log(0.73)+log(0.12) = &minus;0.693&minus;0.315&minus;2.12 = <span class="step-result">&minus;3.13</span></div>
+  <div class="step">Training will increase the true pair score and decrease "the"'s high dot product.</div>
+</div>`,
+  questions: [
+    {
+      text: 'Negative sampling reduces the per-step cost from O(V) to O(K). For V=50,000 and K=20, what is the speedup factor?',
+      options: [
+        { letter: 'A', text: '20&times;', correct: false, wrongExplanation: 'K=20 is the number of negative samples, not the speedup. Speedup = V/K = 50,000/20 = 2,500&times;.' },
+        { letter: 'B', text: '2,500&times;', correct: true },
+        { letter: 'C', text: '1,000&times;', correct: false, wrongExplanation: '1,000 would require K=50. Speedup = V/K = 50,000/20 = 2,500&times;.' },
+        { letter: 'D', text: 'Same speed &mdash; negative sampling just samples from full softmax', correct: false, wrongExplanation: 'Negative sampling replaces softmax entirely. It\'s a different objective, not a sampling approximation of the same softmax computation.' }
+      ]
+    },
+    {
+      text: 'Negative words are sampled with P(w) &prop; f(w)<sup>3/4</sup> where f(w) is word frequency. Why the 3/4 power instead of uniform or raw frequency?',
+      options: [
+        { letter: 'A', text: '3/4 is the mathematically optimal exponent proven by Mikolov et al.', correct: false, wrongExplanation: 'The 3/4 value was chosen empirically through experimentation, not derived mathematically. It worked well in practice, not provably optimal.' },
+        { letter: 'B', text: 'It samples common words more than uniform but less than proportional, preventing stop words from dominating negative examples', correct: true },
+        { letter: 'C', text: 'It ensures exactly 3 out of every 4 negative samples are from the top 1,000 most frequent words', correct: false, wrongExplanation: 'The 3/4 is an exponent, not a ratio. f(w)<sup>3/4</sup> smooths the frequency distribution, not a 75% cutoff rule.' },
+        { letter: 'D', text: 'Rare words need 3/4 of the gradient updates to be represented adequately', correct: false, wrongExplanation: 'f(w)<sup>3/4</sup> gives rare words MORE negative sampling probability relative to their frequency than uniform. Common words get slightly less than proportional.' }
+      ]
+    },
+    {
+      text: 'The objective includes log &sigma;(&minus;v\'<sub>n</sub><sup>T</sup>v<sub>w</sub>) for each negative sample n. What does maximizing this term accomplish?',
+      options: [
+        { letter: 'A', text: 'It minimizes the magnitude of negative sample vectors', correct: false, wrongExplanation: 'The term does not directly constrain vector norms. Maximizing log &sigma;(&minus;x) requires x to be a large negative number &mdash; i.e., v\'<sub>n</sub><sup>T</sup>v<sub>w</sub> &lt;&lt; 0.' },
+        { letter: 'B', text: 'It pushes negative word dot products to be strongly negative, so the model distinguishes true pairs from noise pairs', correct: true },
+        { letter: 'C', text: 'It ensures the model attends to rare negative samples more than frequent ones', correct: false, wrongExplanation: 'Rare vs. frequent handling is controlled by the sampling distribution P<sub>n</sub>(w). The log &sigma;(&minus;x) term is about the sign of the dot product, not sampling frequency.' },
+        { letter: 'D', text: 'It normalizes the output vectors v\' to have unit length', correct: false, wrongExplanation: 'Normalization is not enforced by this term. &sigma;(&minus;v\'<sub>n</sub><sup>T</sup>v<sub>w</sub>) is maximized when the dot product is very negative, regardless of individual vector norms.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'glove', track: 'repr', prereqs: ['word2vec_skipgram'],
+  title: 'GloVe: Global Vectors',
+  authors: 'Pennington, Socher, Manning 2014 &mdash; GloVe: Global Vectors for Word Representation',
+  lesson: `
+<div class="prereq-box">Requires: <span>Word2Vec: Skip-gram Objective</span></div>
+<div class="eq-box">
+  <span class="eq-name">GloVe Weighted Least Squares Objective</span>
+  <div class="eq-line">J = &sum;<sub>i,j=1</sub><sup>V</sup> f(X<sub>ij</sub>) (w<sub>i</sub><sup>T</sup>w&#x0303;<sub>j</sub> + b<sub>i</sub> + b&#x0303;<sub>j</sub> &minus; log X<sub>ij</sub>)<sup>2</sup></div>
+  <div class="eq-sub">f(x)=(x/x<sub>max</sub>)<sup>&alpha;</sup> if x&lt;x<sub>max</sub>, else 1 &middot; x<sub>max</sub>=100, &alpha;=3/4</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  GloVe builds a global co-occurrence matrix X first (X<sub>ij</sub> = how often word j appears near word i across the entire corpus).
+  Then it trains word vectors w<sub>i</sub> and w&#x0303;<sub>j</sub> such that their <strong>dot product approximates the log co-occurrence</strong>.
+  The weighting function f(X<sub>ij</sub>) <strong>downweights very frequent pairs</strong> (like "the cat") and <strong>gives zero weight to zero co-occurrences</strong> (log 0 is undefined).
+  Key advantage over Word2Vec: GloVe uses global statistics, not just local windows.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; 3-word vocabulary</div>
+  <div class="step"><strong>Co-occurrence counts:</strong> X<sub>ice,cold</sub>=5, X<sub>ice,steam</sub>=0.1, X<sub>steam,hot</sub>=6</div>
+  <div class="step"><strong>Logs:</strong> log(5)&asymp;1.61, log(0.1)=&minus;2.30, log(6)&asymp;1.79</div>
+  <div class="step"><strong>Training target for (ice, cold):</strong> w<sub>ice</sub><sup>T</sup>w&#x0303;<sub>cold</sub> + b<sub>ice</sub> + b&#x0303;<sub>cold</sub> &asymp; <code>1.61</code></div>
+  <div class="step"><strong>Training target for (ice, steam):</strong> &asymp; <code>&minus;2.30</code> (low dot product = rarely co-occur)</div>
+  <div class="step"><strong>Weight f(5):</strong> (5/100)<sup>3/4</sup> = 0.05<sup>0.75</sup> &asymp; <code>0.084</code> (moderate weight)</div>
+  <div class="step">Final word vector = w + w&#x0303; (sum of both embeddings &mdash; empirically best).</div>
+</div>`,
+  questions: [
+    {
+      text: 'GloVe uses log X<sub>ij</sub> as the target instead of raw co-occurrence count X<sub>ij</sub>. Why?',
+      options: [
+        { letter: 'A', text: 'Log makes the computation faster since it converts multiplications to additions', correct: false, wrongExplanation: 'The log is in the loss target, not in a computational chain rule. The reason is statistical: raw counts vary by orders of magnitude, making "the cat" (millions) dominate "physicist quark" (tens).' },
+        { letter: 'B', text: 'Raw counts vary by orders of magnitude; log compresses the range so all co-occurrences are treated on a comparable scale', correct: true },
+        { letter: 'C', text: 'Log ensures all targets are between 0 and 1 for numerical stability', correct: false, wrongExplanation: 'Log of counts can be any real number (including negative for counts between 0 and 1). The purpose is scale compression, not bounding.' },
+        { letter: 'D', text: 'Log co-occurrence is mathematically equivalent to PMI, and PMI is what word meanings represent', correct: false, wrongExplanation: 'log X<sub>ij</sub> is log joint frequency, not PMI. PMI = log(P(i,j)/P(i)P(j)) = log X<sub>ij</sub> &minus; log X<sub>i</sub> &minus; log X<sub>j</sub>. Close but not the same.' }
+      ]
+    },
+    {
+      text: 'Why does f(X<sub>ij</sub>)=0 when X<sub>ij</sub>=0 (never co-occurring word pairs are excluded from training)?',
+      options: [
+        { letter: 'A', text: 'Pairs with zero co-occurrence would add noise since they are usually very common word pairs', correct: false, wrongExplanation: 'Zero co-occurrence typically means the words rarely or never appear together &mdash; they\'re not necessarily common. The real issue is that log(0) is mathematically undefined (&minus;&infin;).' },
+        { letter: 'B', text: 'log(0) is undefined (&minus;&infin;), and absence of co-occurrence is not evidence that the words are unrelated', correct: true },
+        { letter: 'C', text: 'Zero-count pairs always have incorrect labels that would corrupt the model', correct: false, wrongExplanation: 'There are no labels in GloVe. The log co-occurrence is the target. The problem is that log(0) is computationally undefined.' },
+        { letter: 'D', text: 'Including zero pairs would require V&sup2; storage which is too large for typical vocabularies', correct: false, wrongExplanation: 'Memory is a concern but not the reason for f(0)=0. The fundamental issue is mathematical: the objective requires log(X<sub>ij</sub>), which doesn\'t exist for X<sub>ij</sub>=0.' }
+      ]
+    },
+    {
+      text: 'GloVe\'s final word vector is typically w + w&#x0303; (sum of both embeddings). Why use both?',
+      options: [
+        { letter: 'A', text: 'w is the correct embedding; w&#x0303; is used only during training as a learning aid', correct: false, wrongExplanation: 'Both w and w&#x0303; are trained parameters that encode word semantics from different perspectives. Pennington et al. found that summing both improves downstream task performance.' },
+        { letter: 'B', text: 'Both vectors capture complementary co-occurrence patterns; summing reduces noise and improves analogy task performance', correct: true },
+        { letter: 'C', text: 'The model is symmetric, so w and w&#x0303; are always identical &mdash; summing just doubles the magnitude', correct: false, wrongExplanation: 'w and w&#x0303; are not identical despite the symmetric-looking objective. Different random initialization and gradient paths produce different vectors that complement each other.' },
+        { letter: 'D', text: 'w&#x0303; encodes syntactic information while w encodes semantic information', correct: false, wrongExplanation: 'There is no designed separation by linguistic category. The roles of w and w&#x0303; emerge from training as "center word" and "context word" perspectives, not syntax vs. semantics.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'rnn_gradient', track: 'seq', prereqs: ['word2vec_skipgram'],
+  title: 'Vanishing Gradient in RNNs',
+  authors: 'Hochreiter 1991 &middot; Bengio et al. 1994',
+  lesson: `
+<div class="prereq-box">Requires: <span>Word2Vec: Skip-gram Objective</span></div>
+<div class="eq-box">
+  <span class="eq-name">RNN Gradient Through Time</span>
+  <div class="eq-line">&part;L/&part;h<sub>1</sub> = &prod;<sub>t=2</sub><sup>T</sup> (&part;h<sub>t</sub>/&part;h<sub>t&minus;1</sub>)</div>
+  <div class="eq-line">= &prod;<sub>t=2</sub><sup>T</sup> W<sub>hh</sub><sup>T</sup> &middot; diag(&sigma;'(h<sub>t&minus;1</sub>))</div>
+  <div class="eq-sub">h<sub>t</sub> = &sigma;(W<sub>hh</sub>h<sub>t&minus;1</sub> + W<sub>xh</sub>x<sub>t</sub> + b) &middot; &sigma;'(z) &le; 0.25 for sigmoid</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  To learn long-range dependencies, gradients must flow from the loss at step T back to step 1.
+  Each step multiplies by W<sub>hh</sub><sup>T</sup> &middot; diag(&sigma;') &mdash; a matrix times small sigmoid derivatives.
+  <strong>If ||W<sub>hh</sub>|| &lt; 1:</strong> product of T matrices &rarr; 0 exponentially fast (vanishing).
+  <strong>If ||W<sub>hh</sub>|| &gt; 1:</strong> product grows exponentially (exploding).
+  Result: RNNs cannot learn dependencies beyond ~10 steps. LSTM was designed to fix this.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Gradient magnitude over steps</div>
+  <div class="step"><strong>Assume:</strong> scalar RNN, W<sub>hh</sub>=0.9, sigmoid activation (&sigma;'&asymp;0.25 at typical values)</div>
+  <div class="step"><strong>Per-step factor:</strong> |W<sub>hh</sub>&middot;&sigma;'| = 0.9&times;0.25 = <code>0.225</code></div>
+  <div class="step"><strong>After T=5 steps:</strong> 0.225<sup>5</sup> &asymp; <code>0.00057</code> &nbsp; (tiny but visible)</div>
+  <div class="step"><strong>After T=20 steps:</strong> 0.225<sup>20</sup> &asymp; <span class="step-result">3&times;10<sup>&minus;19</sup></span> (effectively zero)</div>
+  <div class="step"><strong>Exploding case</strong> W<sub>hh</sub>=3: 3<sup>20</sup>&asymp;<span class="step-result">3.5&times;10<sup>9</sup></span> (gradient explosion)</div>
+  <div class="step">Gradient clipping caps exploding; LSTM cell state solves vanishing.</div>
+</div>`,
+  questions: [
+    {
+      text: 'In a scalar RNN with W<sub>hh</sub>=0.9 and sigmoid activations (&sigma;\'&asymp;0.25), what is the approximate gradient magnitude at step 1 after T=100 steps?',
+      options: [
+        { letter: 'A', text: 'About 0.9 (close to the weight value)', correct: false, wrongExplanation: '0.9 is the weight value, not the T-step gradient. Each step multiplies by 0.9&times;0.25=0.225. Over 100 steps: 0.225<sup>100</sup> &asymp; 10<sup>&minus;64</sup> &mdash; essentially machine zero.' },
+        { letter: 'B', text: 'About 0.225 (one step of gradient flow)', correct: false, wrongExplanation: '0.225 is the per-step factor. After T=100 steps the gradient is 0.225<sup>100</sup> which is astronomically small, not just one factor of 0.225.' },
+        { letter: 'C', text: 'Essentially 0 &mdash; exponentially small (&asymp;10<sup>&minus;64</sup>)', correct: true },
+        { letter: 'D', text: '1.0 &mdash; the gradient is preserved by the sigmoid\'s normalization', correct: false, wrongExplanation: 'Sigmoid does not preserve gradient magnitude. &sigma;\'(z) &le; 0.25 always, which means each sigmoid layer reduces the gradient by at least 4&times;.' }
+      ]
+    },
+    {
+      text: 'Gradient clipping fixes exploding gradients but not vanishing gradients. Why?',
+      options: [
+        { letter: 'A', text: 'Clipping only works for negative gradient values', correct: false, wrongExplanation: 'Gradient clipping is magnitude-based: if ||g|| &gt; threshold, g &larr; g &times; (threshold/||g||). It applies to any large-magnitude gradient, positive or negative.' },
+        { letter: 'B', text: 'Clipping caps the gradient norm when it\'s too large; you cannot reverse a near-zero gradient by capping', correct: true },
+        { letter: 'C', text: 'Clipping increases small gradients proportionally, but this causes instability', correct: false, wrongExplanation: 'Clipping only reduces large gradients &mdash; it never increases gradients. If the gradient is already near zero, clipping has no effect.' },
+        { letter: 'D', text: 'Vanishing gradients occur only in the forward pass, not the backward pass', correct: false, wrongExplanation: 'Vanishing gradients are entirely a backward pass phenomenon. The forward pass computes activations. Backward pass multiplies Jacobians &mdash; that\'s where exponential shrinkage occurs.' }
+      ]
+    },
+    {
+      text: 'Why does the LSTM cell state c<sub>t</sub> = f<sub>t</sub> &odot; c<sub>t&minus;1</sub> + i<sub>t</sub> &odot; g<sub>t</sub> solve the vanishing gradient problem?',
+      options: [
+        { letter: 'A', text: 'The sigmoid gates f<sub>t</sub> and i<sub>t</sub> always output 1.0, keeping gradients at full strength', correct: false, wrongExplanation: 'Gates output values in (0,1) &mdash; they can suppress information. The key is the ADDITIVE update path: &part;c<sub>t</sub>/&part;c<sub>t&minus;1</sub> = f<sub>t</sub>, which can be close to 1, not a chain of multiplications by &lt;0.25.' },
+        { letter: 'B', text: 'The additive cell update means &part;c<sub>t</sub>/&part;c<sub>t&minus;1</sub> = f<sub>t</sub> (a single gate), not a product of many small Jacobians', correct: true },
+        { letter: 'C', text: 'LSTMs use ReLU instead of sigmoid, which has gradient 1 or 0 (no 0.25 saturation)', correct: false, wrongExplanation: 'Standard LSTMs use sigmoid for gates and tanh for cell/hidden states, not ReLU. The gradient highway is the cell state additive path, not activation choice.' },
+        { letter: 'D', text: 'LSTMs process sequences in both directions so gradients flow from both ends', correct: false, wrongExplanation: 'Bidirectional LSTMs do process both directions, but the vanishing gradient solution in a standard LSTM is the cell state highway &mdash; present in single-direction LSTMs too.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'lstm_gates', track: 'seq', prereqs: ['rnn_gradient'],
+  title: 'LSTM Gate Equations',
+  authors: 'Hochreiter & Schmidhuber 1997 &mdash; Long Short-Term Memory',
+  lesson: `
+<div class="prereq-box">Requires: <span>Vanishing Gradient in RNNs</span></div>
+<div class="eq-box">
+  <span class="eq-name">LSTM Gates (at time step t)</span>
+  <div class="eq-line">i<sub>t</sub> = &sigma;(W<sub>i</sub>[h<sub>t&minus;1</sub>, x<sub>t</sub>] + b<sub>i</sub>) &nbsp; [input gate]</div>
+  <div class="eq-line">f<sub>t</sub> = &sigma;(W<sub>f</sub>[h<sub>t&minus;1</sub>, x<sub>t</sub>] + b<sub>f</sub>) &nbsp; [forget gate]</div>
+  <div class="eq-line">o<sub>t</sub> = &sigma;(W<sub>o</sub>[h<sub>t&minus;1</sub>, x<sub>t</sub>] + b<sub>o</sub>) &nbsp; [output gate]</div>
+  <div class="eq-line">g<sub>t</sub> = tanh(W<sub>g</sub>[h<sub>t&minus;1</sub>, x<sub>t</sub>] + b<sub>g</sub>) &nbsp; [candidate values]</div>
+  <div class="eq-line">c<sub>t</sub> = f<sub>t</sub> &odot; c<sub>t&minus;1</sub> + i<sub>t</sub> &odot; g<sub>t</sub> &nbsp;&middot;&nbsp; h<sub>t</sub> = o<sub>t</sub> &odot; tanh(c<sub>t</sub>)</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  <strong>Forget gate f<sub>t</sub>&isin;(0,1):</strong> how much of the previous cell state to keep. f=1: keep all. f=0: erase all.
+  <strong>Input gate i<sub>t</sub>&isin;(0,1):</strong> how much of the new candidate g<sub>t</sub> to write.
+  <strong>Candidate g<sub>t</sub>&isin;(&minus;1,1):</strong> the actual content to potentially write (uses tanh for signed values).
+  <strong>Output gate o<sub>t</sub>&isin;(0,1):</strong> what portion of the cell state to expose as h<sub>t</sub>.
+  Cell state c<sub>t</sub> is the "memory highway" &mdash; gradients flow back through it without multiplicative shrinkage.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Tracking subject for verb agreement</div>
+  <div class="step"><strong>Sentence:</strong> "The cats that sat on the mat <em>are</em> hungry"</div>
+  <div class="step"><strong>After "cats":</strong> Cell stores [plural=1.0] in c<sub>t</sub></div>
+  <div class="step"><strong>After "that...mat" (distractor):</strong> f<sub>t</sub>&asymp;0.95 &rarr; c keeps [plural&asymp;0.95]</div>
+  <div class="step"><strong>At "are":</strong> o<sub>t</sub> opens to expose plurality info from cell state</div>
+  <div class="step"><strong>Key:</strong> f<sub>t</sub>=0.95 per step. After 5 distractors: 0.95<sup>5</sup>&asymp;<code>0.77</code> (still readable)</div>
+  <div class="step">vs. vanilla RNN: 0.225<sup>5</sup>&asymp;<code>0.00057</code> (signal lost)</div>
+</div>`,
+  questions: [
+    {
+      text: 'The forget gate computes f<sub>t</sub>=1 for a particular cell dimension. What is the effect on c<sub>t</sub>?',
+      options: [
+        { letter: 'A', text: 'The cell state for that dimension is set to zero', correct: false, wrongExplanation: 'f<sub>t</sub>=0 erases (c<sub>t</sub>=0&middot;c<sub>t&minus;1</sub>+...). f<sub>t</sub>=1 PRESERVES: c<sub>t</sub>=1&middot;c<sub>t&minus;1</sub>+i<sub>t</sub>&odot;g<sub>t</sub>. The previous state passes through unchanged (plus any new input).' },
+        { letter: 'B', text: 'The previous cell state c<sub>t&minus;1</sub> is fully preserved and passed through', correct: true },
+        { letter: 'C', text: 'The output gate opens fully to expose the cell state', correct: false, wrongExplanation: 'Output gate o<sub>t</sub> is independent of forget gate f<sub>t</sub>. f<sub>t</sub>=1 controls cell state retention, not what is exposed to h<sub>t</sub>.' },
+        { letter: 'D', text: 'The input gate i<sub>t</sub> is forced to 1 as well', correct: false, wrongExplanation: 'All gates are computed independently. f<sub>t</sub>=1 does not constrain i<sub>t</sub>. The four gates are computed from the same input [h<sub>t&minus;1</sub>, x<sub>t</sub>] via separate weight matrices.' }
+      ]
+    },
+    {
+      text: 'Why does the candidate g<sub>t</sub> use tanh while gates i<sub>t</sub>, f<sub>t</sub>, o<sub>t</sub> use sigmoid?',
+      options: [
+        { letter: 'A', text: 'Tanh is faster to compute on GPUs than sigmoid for large matrices', correct: false, wrongExplanation: 'Both sigmoid and tanh have comparable GPU computation costs. The choice is mathematical: gates need [0,1] for proportional gating; candidates need [&minus;1,1] for signed content.' },
+        { letter: 'B', text: 'Gates need outputs in [0,1] to act as proportions; the candidate needs [&minus;1,1] to represent content that can increase or decrease cell values', correct: true },
+        { letter: 'C', text: 'Tanh produces larger gradients than sigmoid, helping the candidate update train faster', correct: false, wrongExplanation: 'tanh\'(z) &le; 1 while sigmoid\'(z) &le; 0.25, so tanh does have larger gradients &mdash; but that\'s not the primary reason. The reason is the semantic role: signed content vs. proportional gate.' },
+        { letter: 'D', text: 'Using tanh for g<sub>t</sub> ensures c<sub>t</sub> stays bounded, preventing numerical overflow', correct: false, wrongExplanation: 'While tanh bounding helps stability, the core design reason is representational: g<sub>t</sub> needs to both add and subtract from memory (signed values), which requires output in [&minus;1,1].' }
+      ]
+    },
+    {
+      text: 'What does the output gate o<sub>t</sub> control?',
+      options: [
+        { letter: 'A', text: 'Which words are output from the language model at each step', correct: false, wrongExplanation: 'Language model output vocabulary probabilities are computed separately from h<sub>t</sub> via a linear layer + softmax. o<sub>t</sub> controls what fraction of c<sub>t</sub> becomes h<sub>t</sub>.' },
+        { letter: 'B', text: 'What fraction of the cell state c<sub>t</sub> is exposed as the hidden state h<sub>t</sub> = o<sub>t</sub> &odot; tanh(c<sub>t</sub>)', correct: true },
+        { letter: 'C', text: 'Whether the LSTM produces output at the current time step or skips it', correct: false, wrongExplanation: 'LSTMs always compute h<sub>t</sub> at every step. The output gate modulates the CONTENT of h<sub>t</sub>, not whether h<sub>t</sub> is computed.' },
+        { letter: 'D', text: 'The magnitude of the gradient flowing back through h<sub>t</sub>', correct: false, wrongExplanation: 'Gradient flow is controlled by o<sub>t</sub> implicitly through backpropagation, but its designed purpose is to let the cell store information without immediately exposing it in h<sub>t</sub>.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'bahdanau_attention', track: 'seq', prereqs: ['lstm_gates'],
+  title: 'Bahdanau Attention',
+  authors: 'Bahdanau, Cho, Bengio 2015 &mdash; Neural Machine Translation by Jointly Learning to Align and Translate',
+  lesson: `
+<div class="prereq-box">Requires: <span>LSTM Gate Equations</span></div>
+<div class="eq-box">
+  <span class="eq-name">Bahdanau Attention Mechanism</span>
+  <div class="eq-line">e<sub>tj</sub> = v<sub>a</sub><sup>T</sup> tanh(W<sub>a</sub>s<sub>t&minus;1</sub> + U<sub>a</sub>h<sub>j</sub>)</div>
+  <div class="eq-line">&alpha;<sub>tj</sub> = softmax(e<sub>tj</sub>) = exp(e<sub>tj</sub>) / &sum;<sub>k</sub> exp(e<sub>tk</sub>)</div>
+  <div class="eq-line">c<sub>t</sub> = &sum;<sub>j</sub> &alpha;<sub>tj</sub> h<sub>j</sub></div>
+  <div class="eq-sub">s = decoder state &middot; h = encoder hidden states &middot; c = context vector</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Classic Seq2Seq compresses the entire source sentence into a single fixed vector &mdash; the encoder bottleneck.
+  Bahdanau attention lets the decoder <strong>look back at all encoder states h<sub>j</sub></strong> when producing each output word.
+  <strong>e<sub>tj</sub></strong>: alignment score = how well decoder state s<sub>t&minus;1</sub> matches encoder state h<sub>j</sub>.
+  <strong>&alpha;<sub>tj</sub></strong>: normalized attention weights (sum to 1 over j).
+  <strong>c<sub>t</sub></strong>: context vector = weighted average of encoder states &mdash; a soft alignment.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Translating "el gato" &rarr; "the cat"</div>
+  <div class="step"><strong>Encoder:</strong> h<sub>1</sub>=[1,0] ("el"), h<sub>2</sub>=[0,1] ("gato")</div>
+  <div class="step"><strong>Decoder state s<sub>0</sub>=[0.8,0.1]</strong> (about to generate "the")</div>
+  <div class="step"><strong>Scores (simplified dot attention):</strong></div>
+  <div class="step">e<sub>01</sub> = s<sub>0</sub>&middot;h<sub>1</sub> = [0.8,0.1]&middot;[1,0] = <code>0.8</code></div>
+  <div class="step">e<sub>02</sub> = s<sub>0</sub>&middot;h<sub>2</sub> = [0.8,0.1]&middot;[0,1] = <code>0.1</code></div>
+  <div class="step"><strong>&alpha;<sub>01</sub></strong> = e<sup>0.8</sup>/(e<sup>0.8</sup>+e<sup>0.1</sup>) = 2.23/3.11 &asymp; <span class="step-result">0.72</span> (attends to "el")</div>
+  <div class="step"><strong>c<sub>0</sub></strong> = 0.72&times;[1,0]+0.28&times;[0,1] = <span class="step-result">[0.72, 0.28]</span></div>
+</div>`,
+  questions: [
+    {
+      text: 'The attention weights &alpha;<sub>tj</sub> sum to 1 across all source positions j. What does this mean geometrically?',
+      options: [
+        { letter: 'A', text: 'Each encoder state is normalized to unit length before the weighted sum', correct: false, wrongExplanation: 'Encoder states h<sub>j</sub> are not normalized. The &alpha;<sub>tj</sub> summing to 1 means c<sub>t</sub> = &sum;&alpha;<sub>tj</sub>h<sub>j</sub> is a convex combination (weighted average) of the h<sub>j</sub>.' },
+        { letter: 'B', text: 'The context vector c<sub>t</sub> is a convex combination of encoder states &mdash; a weighted average lying within their convex hull', correct: true },
+        { letter: 'C', text: 'The model can only attend to one source position at a time (hard alignment)', correct: false, wrongExplanation: 'That\'s hard attention. Bahdanau uses SOFT attention: &alpha; values are fractional (e.g., 0.7, 0.2, 0.1) so c<sub>t</sub> blends multiple positions simultaneously.' },
+        { letter: 'D', text: 'The total probability of generating any output word sums to 1', correct: false, wrongExplanation: 'Output word probabilities sum to 1 via the decoder\'s softmax, not the attention weights. Attention weights &alpha;<sub>tj</sub> sum to 1 over source positions j, independently of output probabilities.' }
+      ]
+    },
+    {
+      text: 'The alignment score e<sub>tj</sub> = v<sub>a</sub><sup>T</sup> tanh(W<sub>a</sub>s<sub>t&minus;1</sub> + U<sub>a</sub>h<sub>j</sub>). What does this score measure?',
+      options: [
+        { letter: 'A', text: 'The translation probability of source word j given decoder history', correct: false, wrongExplanation: 'e<sub>tj</sub> is an unnormalized compatibility score before softmax. Translation probability comes from the decoder\'s output softmax, not the alignment score.' },
+        { letter: 'B', text: 'Compatibility between what the decoder needs (s<sub>t&minus;1</sub>) and what encoder position j captured (h<sub>j</sub>)', correct: true },
+        { letter: 'C', text: 'The cosine similarity between source and target sentence embeddings', correct: false, wrongExplanation: 'Bahdanau attention is not cosine similarity. It\'s a learned additive compatibility function parametrized by W<sub>a</sub>, U<sub>a</sub>, v<sub>a</sub>.' },
+        { letter: 'D', text: 'The distance between source position j and target position t', correct: false, wrongExplanation: 'e<sub>tj</sub> is a learned, content-based score, not positional distance. Attention learns to align "la maison" with "the house" regardless of their position offsets.' }
+      ]
+    },
+    {
+      text: 'Bahdanau attention solved the encoder bottleneck problem. What was the bottleneck?',
+      options: [
+        { letter: 'A', text: 'RNNs process words sequentially and cannot be parallelized', correct: false, wrongExplanation: 'Sequential processing is a speed bottleneck that Transformers later addressed. The encoder bottleneck Bahdanau solved was the fixed-size vector problem, not parallelism.' },
+        { letter: 'B', text: 'The entire source sentence was compressed into one fixed-size vector c, losing information for long sentences', correct: true },
+        { letter: 'C', text: 'The encoder could only process sentences up to 128 tokens due to memory constraints', correct: false, wrongExplanation: 'There was no hard length limit. The problem was information loss: a fixed-size vector c encodes everything, and performance degraded as sentences grew longer.' },
+        { letter: 'D', text: 'Encoder weights were not trained jointly with decoder weights', correct: false, wrongExplanation: 'Encoder and decoder were always trained jointly end-to-end in Seq2Seq models. The bottleneck was the information capacity of the single context vector.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'positional_encoding', track: 'transformer', prereqs: ['bahdanau_attention'],
+  title: 'Positional Encoding',
+  authors: 'Vaswani et al. 2017 &mdash; Attention Is All You Need',
+  lesson: `
+<div class="prereq-box">Requires: <span>Bahdanau Attention</span></div>
+<div class="eq-box">
+  <span class="eq-name">Sinusoidal Positional Encoding</span>
+  <div class="eq-line">PE(pos, 2i) = sin(pos / 10000<sup>2i/d</sup>)</div>
+  <div class="eq-line">PE(pos, 2i+1) = cos(pos / 10000<sup>2i/d</sup>)</div>
+  <div class="eq-sub">pos = position in sequence &middot; i = dimension index &middot; d = model dimension</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Transformers process all positions in parallel &mdash; unlike RNNs they have no inherent notion of sequence order.
+  Positional encoding <strong>adds a unique vector to each position's embedding</strong> before attention.
+  The sinusoidal formula creates a <strong>multi-frequency encoding</strong>: low dimensions change rapidly (fine-grained position),
+  high dimensions change slowly (coarse global position). Like a clock: seconds hand spins fast, hour hand slowly.
+  Key property: <strong>PE(pos+k) = f(PE(pos))</strong> &mdash; relative positions can be computed from absolute ones.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; d=4, first 3 positions</div>
+  <div class="step"><strong>Dimension i=0 (high frequency):</strong> denominator = 10000<sup>0</sup> = 1</div>
+  <div class="step">PE(0,0)=sin(0/1)=<code>0.000</code> &nbsp; PE(1,0)=sin(1)=<code>0.841</code> &nbsp; PE(2,0)=sin(2)=<code>0.909</code></div>
+  <div class="step"><strong>Dimension i=1 (low frequency):</strong> denominator = 10000<sup>2/4</sup> = 100</div>
+  <div class="step">PE(0,2)=sin(0/100)=<code>0.000</code> &nbsp; PE(1,2)=sin(0.01)=<code>0.010</code> &nbsp; PE(2,2)=sin(0.02)=<code>0.020</code></div>
+  <div class="step">High-dim positions: nearly identical for nearby positions &rarr; encode global order.</div>
+  <div class="step">Low-dim positions: very different &rarr; distinguish adjacent tokens.</div>
+</div>`,
+  questions: [
+    {
+      text: 'Why can\'t Transformers just use the position index (0, 1, 2, ...) as a positional signal instead of sin/cos?',
+      options: [
+        { letter: 'A', text: 'The attention mechanism cannot accept integer inputs', correct: false, wrongExplanation: 'Integers can be embedded just like word indices. The problem with raw integers is their unbounded range and the model\'s inability to generalize to longer sequences not seen in training.' },
+        { letter: 'B', text: 'Raw integers grow unboundedly; the model sees position 1000 differently from position 100 without knowing their ratio, and cannot generalize to lengths unseen in training', correct: true },
+        { letter: 'C', text: 'Integer positions would conflict with word embedding values that are also integers', correct: false, wrongExplanation: 'Word embeddings are floating-point vectors, not integers. The conflict issue doesn\'t apply. The real problem is generalization and unbounded scale.' },
+        { letter: 'D', text: 'Transformer attention already implicitly tracks position, making any positional encoding redundant', correct: false, wrongExplanation: 'Attention is permutation-equivariant without positional encoding: the same output regardless of input order. Positional encoding is essential for the model to know word order.' }
+      ]
+    },
+    {
+      text: 'PE(0, 0) = sin(0/10000<sup>0/512</sup>) = sin(0) = 0. PE(1, 0) = sin(1/10000<sup>0/512</sup>) = sin(1). What is PE(1, 0) approximately?',
+      options: [
+        { letter: 'A', text: '0.0 (sin is near 0 for small arguments)', correct: false, wrongExplanation: 'sin(0)=0 but sin(1 radian)&asymp;0.841. The argument is 1.0 radian, which is about 57 degrees &mdash; not a small angle.' },
+        { letter: 'B', text: '0.841', correct: true },
+        { letter: 'C', text: '1.0 (sin of any nonzero argument)', correct: false, wrongExplanation: 'sin(x)=1 only at x=&pi;/2&asymp;1.571. sin(1)&asymp;0.841.' },
+        { letter: 'D', text: '0.0001 (the 10000 denominator makes values tiny)', correct: false, wrongExplanation: 'In dimension i=0, the denominator is 10000<sup>0/d</sup>=1. So PE(1,0)=sin(1/1)=sin(1)&asymp;0.841. The 10000 denominator only affects higher dimensions.' }
+      ]
+    },
+    {
+      text: 'The 10000<sup>2i/d</sup> denominator creates different frequencies across dimensions. What is the intuition?',
+      options: [
+        { letter: 'A', text: 'Higher dimensions store more important positional information than lower dimensions', correct: false, wrongExplanation: 'There\'s no importance ordering. Lower dimensions encode high-frequency (local position) information; higher dimensions encode low-frequency (global order). Both are needed.' },
+        { letter: 'B', text: 'Like a clock with multiple hands: low-index dimensions change rapidly between positions (seconds), high-index dimensions change slowly (hours), encoding position at multiple scales', correct: true },
+        { letter: 'C', text: 'The 10000 base ensures the model only needs to process sequences up to 10,000 tokens', correct: false, wrongExplanation: '10,000 is chosen to produce a wide frequency range, not to cap sequence length. The model can process any length &mdash; though performance degrades beyond training lengths.' },
+        { letter: 'D', text: 'Different frequencies prevent interference between word embedding values and positional encoding values', correct: false, wrongExplanation: 'Since PE is simply added to the word embedding, there will always be some interaction. The frequency design is about encoding position at multiple resolution levels, not avoiding interference.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'layer_norm', track: 'transformer', prereqs: ['positional_encoding'],
+  title: 'Layer Normalization',
+  authors: 'Ba, Kiros, Hinton 2016 &mdash; Layer Normalization',
+  lesson: `
+<div class="prereq-box">Requires: <span>Positional Encoding</span></div>
+<div class="eq-box">
+  <span class="eq-name">Layer Normalization</span>
+  <div class="eq-line">LN(x) = &gamma; &middot; (x &minus; &mu;) / (&sigma; + &epsilon;) + &beta;</div>
+  <div class="eq-sub">&mu; = (1/H)&sum;x<sub>i</sub> &nbsp;&middot;&nbsp; &sigma; = &radic;[(1/H)&sum;(x<sub>i</sub>&minus;&mu;)<sup>2</sup>] &nbsp;&middot;&nbsp; &gamma;,&beta; are learned scalars</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  LayerNorm normalizes the activations <strong>across features for a single example</strong> (not across the batch).
+  After normalization: mean=0, std=1. Then <strong>&gamma; (scale) and &beta; (shift)</strong> let the network undo normalization if needed.
+  Transformers use LayerNorm (not BatchNorm) because: sequences have variable lengths, batch sizes in NLP are small, and LayerNorm works independently per example.
+  Applied in Transformer: <strong>x + LN(Sublayer(x))</strong> &mdash; residual connection first, then normalize.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; H=5 features</div>
+  <div class="step"><strong>Input x = [1, 2, 3, 4, 5]</strong></div>
+  <div class="step"><strong>&mu;</strong> = (1+2+3+4+5)/5 = <code>3.0</code></div>
+  <div class="step"><strong>&sigma;</strong> = &radic;[((1&minus;3)&sup2;+(2&minus;3)&sup2;+(3&minus;3)&sup2;+(4&minus;3)&sup2;+(5&minus;3)&sup2;)/5] = &radic;[(4+1+0+1+4)/5] = &radic;2 &asymp; <code>1.414</code></div>
+  <div class="step"><strong>Normalized:</strong> [(1&minus;3)/1.414, (2&minus;3)/1.414, 0, (4&minus;3)/1.414, (5&minus;3)/1.414]</div>
+  <div class="step">= [<code>&minus;1.41, &minus;0.71, 0.00, 0.71, 1.41</code>]</div>
+  <div class="step"><strong>With &gamma;=1, &beta;=0:</strong> output = normalized values above</div>
+  <div class="step">If network learns &gamma;=2, &beta;=1: output = [&minus;1.83, &minus;0.41, 1.00, 2.41, 3.83]</div>
+</div>`,
+  questions: [
+    {
+      text: 'LayerNorm normalizes across the H features of ONE example. BatchNorm normalizes across N examples for ONE feature. Why prefer LayerNorm for Transformers?',
+      options: [
+        { letter: 'A', text: 'LayerNorm has fewer learned parameters than BatchNorm', correct: false, wrongExplanation: 'Both use the same number of learned parameters: scale &gamma; and shift &beta; per feature. LayerNorm is preferred for NLP-specific reasons, not parameter count.' },
+        { letter: 'B', text: 'Batch statistics become unreliable with variable-length sequences and small NLP batch sizes; LayerNorm computes stats per-example so batch size doesn\'t matter', correct: true },
+        { letter: 'C', text: 'BatchNorm cannot be computed for sequences with more than 512 tokens', correct: false, wrongExplanation: 'BatchNorm has no inherent token length limit. The problem is variable-length sequences make batch statistics across examples noisy, and small NLP batches make estimates unstable.' },
+        { letter: 'D', text: 'LayerNorm is faster to compute on GPUs due to simpler tensor operations', correct: false, wrongExplanation: 'BatchNorm can be faster with large batches. LayerNorm is used for correctness and flexibility in NLP settings, not GPU efficiency.' }
+      ]
+    },
+    {
+      text: 'After normalizing x=[1,2,3,4,5] (&mu;=3, &sigma;&asymp;1.414), what is the normalized value for x=5?',
+      options: [
+        { letter: 'A', text: '1.0', correct: false, wrongExplanation: '(5&minus;3)/1.414 = 2/1.414 &asymp; 1.414. x=4 gives (4&minus;3)/1.414 = 1/1.414 &asymp; 0.707.' },
+        { letter: 'B', text: '1.414', correct: true },
+        { letter: 'C', text: '0.707', correct: false, wrongExplanation: '0.707 = 1/&radic;2 is the normalized value of x=4: (4&minus;3)/1.414. For x=5: (5&minus;3)/1.414 = 2/1.414 &asymp; 1.414.' },
+        { letter: 'D', text: '5.0 (normalization doesn\'t change the maximum value)', correct: false, wrongExplanation: 'Normalization subtracts the mean and divides by std. The maximum value 5 becomes (5&minus;3)/1.414 &asymp; 1.414, not 5.' }
+      ]
+    },
+    {
+      text: 'Why are &gamma; (scale) and &beta; (shift) learned parameters in LayerNorm rather than fixed to &gamma;=1, &beta;=0?',
+      options: [
+        { letter: 'A', text: 'Fixed &gamma;=1, &beta;=0 would cause gradient vanishing in deep networks', correct: false, wrongExplanation: 'The gradient flow argument doesn\'t specifically require learnable &gamma; and &beta;. The reason is representational: sometimes the normalized distribution is NOT what the next layer needs.' },
+        { letter: 'B', text: 'The network may learn that a particular layer benefits from non-zero mean or non-unit variance; &gamma; and &beta; let it undo normalization if needed', correct: true },
+        { letter: 'C', text: 'Without learnable &gamma;, &beta;, LayerNorm would always output the same values regardless of input', correct: false, wrongExplanation: 'LayerNorm without &gamma;,&beta; would output standardized values (mean=0, std=1) which still depend on the input. The purpose of &gamma;,&beta; is expressive flexibility, not distinctness.' },
+        { letter: 'D', text: '&gamma; and &beta; are required to make LayerNorm differentiable for backpropagation', correct: false, wrongExplanation: 'LayerNorm is differentiable with or without &gamma;,&beta;. These parameters increase representational power by allowing the normalized output to be re-scaled and shifted.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'softmax_temperature', track: 'eval', prereqs: ['positional_encoding'],
+  title: 'Softmax Temperature Scaling',
+  authors: 'Ackley, Hinton, Sejnowski 1985 (Boltzmann Machine) &middot; LLM Sampling',
+  lesson: `
+<div class="prereq-box">Requires: <span>Positional Encoding</span></div>
+<div class="eq-box">
+  <span class="eq-name">Temperature-Scaled Softmax</span>
+  <div class="eq-line">p<sub>i</sub> = exp(z<sub>i</sub> / T) / &sum;<sub>j</sub> exp(z<sub>j</sub> / T)</div>
+  <div class="eq-sub">T&rarr;0: argmax (greedy) &middot; T=1: standard softmax &middot; T&rarr;&infin;: uniform</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Dividing logits by temperature T <strong>controls the sharpness of the probability distribution</strong> before softmax.
+  <strong>Low T (T=0.5):</strong> differences between logits are amplified &rarr; the highest logit dominates &rarr; less diverse, more deterministic output.
+  <strong>High T (T=2.0):</strong> logit differences are compressed &rarr; more probability mass on lower-ranked tokens &rarr; more diverse, creative, unpredictable output.
+  Used in LLM sampling, knowledge distillation, and reinforcement learning exploration.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Logits z=[2, 1, 0]</div>
+  <div class="step"><strong>T=1 (standard):</strong> exp([2,1,0]) = [7.39, 2.72, 1.00] &rarr; sum=11.11</div>
+  <div class="step">p = [<span class="step-result">0.665, 0.245, 0.090</span>] &mdash; strong preference for top token</div>
+  <div class="step"><strong>T=0.5 (sharp):</strong> z/T = [4, 2, 0] &rarr; exp = [54.6, 7.39, 1.00] &rarr; sum=63.0</div>
+  <div class="step">p = [<span class="step-result">0.867, 0.117, 0.016</span>] &mdash; even stronger top preference</div>
+  <div class="step"><strong>T=2.0 (soft):</strong> z/T = [1, 0.5, 0] &rarr; exp = [2.72, 1.65, 1.00] &rarr; sum=5.37</div>
+  <div class="step">p = [<span class="step-result">0.506, 0.307, 0.186</span>] &mdash; more uniform, others get a chance</div>
+</div>`,
+  questions: [
+    {
+      text: 'As T&rarr;0, what does the temperature-scaled softmax approach?',
+      options: [
+        { letter: 'A', text: 'A uniform distribution over all tokens', correct: false, wrongExplanation: 'Uniform distribution is the T&rarr;&infin; limit. As T&rarr;0, logit differences are amplified infinitely, concentrating all probability on the maximum logit.' },
+        { letter: 'B', text: 'A one-hot distribution on the highest-logit token (argmax / greedy decoding)', correct: true },
+        { letter: 'C', text: 'The output becomes undefined (division by zero)', correct: false, wrongExplanation: 'The limit T&rarr;0 is mathematically well-defined: the distribution converges to a one-hot on argmax(z). Practically, T must be kept small but positive.' },
+        { letter: 'D', text: 'The model outputs negative logits which softmax cannot handle', correct: false, wrongExplanation: 'Softmax handles any real-valued logits, including negatives. exp(z/T) is always positive regardless of z or T.' }
+      ]
+    },
+    {
+      text: 'Logits z=[3, 1, &minus;1]. At T=0.5, which probability is closest to 1.0?',
+      options: [
+        { letter: 'A', text: 'p<sub>2</sub> (z=1) &asymp; 0.50', correct: false, wrongExplanation: 'At T=0.5: z/T=[6, 2, &minus;2]. exp([6,2,&minus;2])=[403, 7.39, 0.135]. p<sub>1</sub>=403/410.5&asymp;0.982 dominates. Low T amplifies the gap between z=3 and others.' },
+        { letter: 'B', text: 'p<sub>1</sub> (z=3) &asymp; 0.98', correct: true },
+        { letter: 'C', text: 'All three are approximately equal at 0.33', correct: false, wrongExplanation: 'Equal distribution is the high-T limit. T=0.5 sharpens the distribution. The top logit z=3 dominates strongly: z/T=6 vs 2 vs &minus;2, giving p<sub>1</sub>&asymp;0.98.' },
+        { letter: 'D', text: 'p<sub>3</sub> (z=&minus;1) &asymp; 0.0 but not exactly 0', correct: false, wrongExplanation: 'p<sub>3</sub> is essentially 0 at T=0.5 (exp(&minus;2)/410.5&asymp;0.0003), which is the correct answer for p<sub>3</sub>, but the question asks which is closest to 1.0 &mdash; that\'s p<sub>1</sub>&asymp;0.982.' }
+      ]
+    },
+    {
+      text: 'Knowledge distillation trains a small student model to match a large teacher model\'s soft probability outputs (T&gt;1) rather than hard labels. Why use high temperature?',
+      options: [
+        { letter: 'A', text: 'High temperature forces the student to learn faster by providing larger gradients', correct: false, wrongExplanation: 'High T actually spreads probability more evenly, which can reduce gradient magnitude for the top class. The benefit is richer supervision, not speed.' },
+        { letter: 'B', text: 'Soft targets encode the teacher\'s uncertainty across similar classes (e.g., "cat" vs "tiger" both get some probability), providing richer information than a one-hot label', correct: true },
+        { letter: 'C', text: 'High temperature removes the need for labeled training data', correct: false, wrongExplanation: 'Knowledge distillation still requires labeled data to train the teacher. High temperature is about the quality of the supervisory signal from the teacher, not eliminating labels.' },
+        { letter: 'D', text: 'T&gt;1 is required to ensure the student model\'s outputs are numerically stable', correct: false, wrongExplanation: 'Standard softmax (T=1) is numerically stable. T&gt;1 compresses logit differences &mdash; it changes the learning signal, not numerical stability.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'perplexity', track: 'eval', prereqs: ['softmax_temperature'],
+  title: 'Perplexity',
+  authors: 'Shannon 1948 &middot; Standard NLP Evaluation Metric',
+  lesson: `
+<div class="prereq-box">Requires: <span>Softmax Temperature Scaling</span></div>
+<div class="eq-box">
+  <span class="eq-name">Perplexity</span>
+  <div class="eq-line">PP(W) = P(w<sub>1</sub>w<sub>2</sub>&hellip;w<sub>N</sub>)<sup>&minus;1/N</sup></div>
+  <div class="eq-line">= exp(&minus;(1/N) &sum;<sub>i=1</sub><sup>N</sup> log P(w<sub>i</sub> | w<sub>1</sub>&hellip;w<sub>i&minus;1</sub>))</div>
+  <div class="eq-sub">= 2<sup>H(P,Q)</sup> where H is cross-entropy in bits &middot; lower is better</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Perplexity measures <strong>how surprised the model is</strong> on average per word in a test set.
+  Intuition: PP=K means the model is as uncertain as if it had to choose uniformly among K options at each step.
+  PP=1: perfect predictor. PP=V (vocabulary size): random guessing.
+  Cross-entropy loss in nats = ln(PP). So lower cross-entropy loss = lower perplexity.
+  Used to compare LLMs: GPT-2 achieves PP&asymp;18 on Penn Treebank; GPT-4 approaches PP&asymp;5 on similar benchmarks.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; 4-word test sentence</div>
+  <div class="step"><strong>Sentence W:</strong> "the cat sat mat"</div>
+  <div class="step"><strong>Model probabilities:</strong></div>
+  <div class="step">P("the"|&lt;start&gt;) = 0.10 &rarr; log = &minus;2.303</div>
+  <div class="step">P("cat"|"the") = 0.20 &rarr; log = &minus;1.609</div>
+  <div class="step">P("sat"|"the cat") = 0.15 &rarr; log = &minus;1.897</div>
+  <div class="step">P("mat"|...) = 0.05 &rarr; log = &minus;2.996</div>
+  <div class="step"><strong>Cross-entropy:</strong> &minus;(1/4)(&minus;2.303&minus;1.609&minus;1.897&minus;2.996) = (8.805)/4 = <code>2.201 nats</code></div>
+  <div class="step"><strong>PP = exp(2.201) = <span class="step-result">9.03</span></strong> &mdash; the model is as uncertain as if choosing among 9 equally likely words</div>
+</div>`,
+  questions: [
+    {
+      text: 'A language model achieves cross-entropy loss H=3.0 nats per token. What is its perplexity?',
+      options: [
+        { letter: 'A', text: '3.0', correct: false, wrongExplanation: 'Perplexity = exp(H) = exp(3.0) &asymp; 20.1. Cross-entropy in nats and perplexity are related by the exponential function, not the same value.' },
+        { letter: 'B', text: '8.1', correct: false, wrongExplanation: 'exp(2) &asymp; 7.4, not 8.1. PP = exp(H) = exp(3.0) &asymp; 20.1. Make sure to use e&asymp;2.718, not 2.' },
+        { letter: 'C', text: '20.1', correct: true },
+        { letter: 'D', text: '0.05', correct: false, wrongExplanation: '1/20.1 &asymp; 0.05 is the probability of the average word if perplexity were a uniform distribution &mdash; but PP is exp(H), not H itself.' }
+      ]
+    },
+    {
+      text: 'A perfect language model assigns probability 1.0 to every correct next word. What is its perplexity?',
+      options: [
+        { letter: 'A', text: '0', correct: false, wrongExplanation: 'PP=0 would require exp(&minus;&infin;), meaning infinite negative log-probability. Perfect prediction gives P=1 for each word, so log(1)=0, H=0, PP=exp(0)=1.' },
+        { letter: 'B', text: '1', correct: true },
+        { letter: 'C', text: '&infin;', correct: false, wrongExplanation: 'PP=&infin; means the model assigns zero probability to some test word &mdash; complete surprise. Perfect prediction is the opposite: no surprise, PP=1.' },
+        { letter: 'D', text: 'Vocabulary size V', correct: false, wrongExplanation: 'PP=V is the perplexity of a uniform random model (always guessing uniformly over V words). Perfect prediction gives PP=1, not V.' }
+      ]
+    },
+    {
+      text: 'Why can\'t perplexity be compared across datasets with different vocabulary sizes or domain types?',
+      options: [
+        { letter: 'A', text: 'Perplexity is measured in different units for different vocabulary sizes', correct: false, wrongExplanation: 'Perplexity is a dimensionless number regardless of vocabulary size. The comparison problem is about information content difficulty, not units.' },
+        { letter: 'B', text: 'Easy/predictable text (e.g., legal boilerplate) naturally has lower perplexity than diverse text; low PP on easy data doesn\'t mean the model is better than high PP on complex data', correct: true },
+        { letter: 'C', text: 'Larger vocabularies cause integer overflow in perplexity computation', correct: false, wrongExplanation: 'Perplexity is computed via log-probabilities which handle large vocabularies fine (softmax normalization keeps probabilities in (0,1)). The comparison issue is about test set difficulty.' },
+        { letter: 'D', text: 'Perplexity can only be compared if both models use the same tokenizer', correct: false, wrongExplanation: 'Tokenizer differences do affect perplexity comparisons (different token granularity). But the deeper issue is test set difficulty &mdash; a model should be evaluated on the same test set for fair comparison.' }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'bleu_score', track: 'eval', prereqs: ['perplexity'],
+  title: 'BLEU Score',
+  authors: 'Papineni et al. 2002 &mdash; BLEU: a Method for Automatic Evaluation of Machine Translation',
+  lesson: `
+<div class="prereq-box">Requires: <span>Perplexity</span></div>
+<div class="eq-box">
+  <span class="eq-name">Bilingual Evaluation Understudy (BLEU)</span>
+  <div class="eq-line">BLEU = BP &middot; exp(&sum;<sub>n=1</sub><sup>N</sup> w<sub>n</sub> log p<sub>n</sub>)</div>
+  <div class="eq-sub">BP = exp(1&minus;r/c) if c&lt;r, else 1 &nbsp;&middot;&nbsp; p<sub>n</sub> = clipped n-gram precision &nbsp;&middot;&nbsp; w<sub>n</sub>=1/N</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  BLEU measures <strong>n-gram overlap</strong> between a machine translation and a reference translation.
+  <strong>p<sub>n</sub></strong>: what fraction of n-grams in the hypothesis appear in the reference (with clipping to prevent repetition cheating).
+  <strong>BP (Brevity Penalty)</strong>: penalizes overly short translations (short translations can have high precision by saying little).
+  Combines 1-gram through 4-gram precision using geometric mean. Higher is better; 1.0 = perfect match; typical MT systems score 0.3&ndash;0.5 on WMT benchmarks.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Unigram precision</div>
+  <div class="step"><strong>Reference:</strong> "the cat sat on the mat"</div>
+  <div class="step"><strong>Hypothesis:</strong> "the the the the the" (length c=5)</div>
+  <div class="step"><strong>Without clipping:</strong> "the" appears 5 times in hypothesis, 2 times in reference</div>
+  <div class="step">Naive p<sub>1</sub> = 5/5 = 1.0 (perfect precision!) &mdash; this is wrong</div>
+  <div class="step"><strong>With clipping:</strong> count("the") clipped to min(5,2)=2</div>
+  <div class="step">Clipped p<sub>1</sub> = 2/5 = <span class="step-result">0.40</span> &mdash; correctly penalizes repetition</div>
+  <div class="step"><strong>BP:</strong> c=5 &lt; r=6 &rarr; BP = exp(1&minus;6/5) = exp(&minus;0.2) &asymp; <span class="step-result">0.819</span></div>
+</div>`,
+  questions: [
+    {
+      text: 'A hypothesis of 5 words has 3 unigrams (1-grams) matching the reference (after clipping). What is p<sub>1</sub>?',
+      options: [
+        { letter: 'A', text: '3/6 = 0.5 (denominator is reference length)', correct: false, wrongExplanation: 'p<sub>n</sub> uses the HYPOTHESIS length as denominator (total n-grams in hypothesis). Here: p<sub>1</sub> = clipped matches / hypothesis length = 3/5 = 0.60.' },
+        { letter: 'B', text: '3/5 = 0.60', correct: true },
+        { letter: 'C', text: '1.0 (all matching n-grams count fully)', correct: false, wrongExplanation: '1.0 would mean all hypothesis n-grams match the reference. With only 3/5 matching: p<sub>1</sub>=0.60.' },
+        { letter: 'D', text: '3/3 = 1.0 (numerator divided by number of matches)', correct: false, wrongExplanation: 'Precision divides matching count by hypothesis length (total n-grams generated), not by the matching count itself. 3/3=1 would not measure anything useful.' }
+      ]
+    },
+    {
+      text: 'The hypothesis has length c=8 tokens and the reference has length r=10 tokens. What is the Brevity Penalty?',
+      options: [
+        { letter: 'A', text: '1.0 (no penalty since the translation is long enough)', correct: false, wrongExplanation: 'BP=1 requires c&ge;r. Here c=8&lt;r=10, so BP = exp(1&minus;r/c) = exp(1&minus;10/8) = exp(&minus;0.25) &asymp; 0.779.' },
+        { letter: 'B', text: 'exp(&minus;0.25) &asymp; 0.779', correct: true },
+        { letter: 'C', text: 'c/r = 8/10 = 0.8', correct: false, wrongExplanation: '0.8 = c/r is part of the formula but not BP directly. BP = exp(1&minus;r/c) = exp(1&minus;1.25) = exp(&minus;0.25) &asymp; 0.779.' },
+        { letter: 'D', text: 'exp(1&minus;c/r) = exp(&minus;0.2) &asymp; 0.819', correct: false, wrongExplanation: 'The formula is BP = exp(1&minus;r/c), not exp(1&minus;c/r). With c=8, r=10: 1&minus;r/c = 1&minus;10/8 = &minus;0.25. BP = exp(&minus;0.25) &asymp; 0.779.' }
+      ]
+    },
+    {
+      text: 'BLEU uses n-gram precision up to N=4. Why do bigrams and trigrams matter beyond unigrams?',
+      options: [
+        { letter: 'A', text: 'Longer n-grams capture word order and phrase-level fluency that unigrams miss', correct: true },
+        { letter: 'B', text: 'Higher n-grams are required to handle languages with longer average word lengths', correct: false, wrongExplanation: 'N-grams are sequences of words, not characters. The choice of N=4 is about capturing multi-word expressions and word order, not individual word length.' },
+        { letter: 'C', text: 'Unigrams are non-differentiable, so higher n-grams are needed for gradient-based optimization', correct: false, wrongExplanation: 'BLEU is non-differentiable at all n-gram orders (it uses discrete counts). This is a known limitation of BLEU, not solved by higher n-grams.' },
+        { letter: 'D', text: 'N=4 is the maximum because 5-grams would only match if the translation is identical to the reference', correct: false, wrongExplanation: 'While 5+ gram matches become rare, they do occur and could in principle be included. N=4 was chosen empirically as the sweet spot between capturing fluency and penalizing non-identical sentences too harshly.' }
+      ]
+    }
+  ]
+}
+
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+const state = {
+  active: null,
+  tab: 'lesson',
+  answered: {},
+  qIndex: 0,
+  completed: new Set(JSON.parse(localStorage.getItem('math2_completed') || '[]'))
+};
+
+function save() {
+  localStorage.setItem('math2_completed', JSON.stringify([...state.completed]));
+}
+
+function isPaperUnlocked(paper) {
+  return paper.prereqs.every(id => state.completed.has(id));
+}
+
+function updateBadge() {
+  document.getElementById('badge').textContent = `${state.completed.size} / 12 completed`;
+}
+
+function getTrackLabel(trackId) {
+  return TRACKS.find(t => t.id === trackId)?.label || trackId;
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+
+function renderSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  let html = '';
+  TRACKS.forEach(track => {
+    const papers = PAPERS.filter(p => p.track === track.id);
+    if (!papers.length) return;
+    html += `<div class="track-label">${track.label}</div>`;
+    papers.forEach(paper => {
+      const unlocked = isPaperUnlocked(paper);
+      const done = state.completed.has(paper.id);
+      const active = state.active === paper.id;
+      const icon = unlocked ? (done ? '&#10003;' : '&#9675;') : '&#128274;';
+      let classes = 'sidebar-item' + (active ? ' active' : '') + (!unlocked ? ' locked' : '');
+      const clickHandler = unlocked ? `onclick="openPaper('${paper.id}')"` : '';
+      html += `<div class="${classes}" ${clickHandler}>
+        <span class="si-icon">${icon}</span>
+        <span class="si-title">${paper.title}</span>
+        ${done ? '<span class="si-done">&#10003;</span>' : ''}
+      </div>`;
+    });
+  });
+  sidebar.innerHTML = html;
+}
+
+// ─── WELCOME ─────────────────────────────────────────────────────────────────
+
+function renderWelcome() {
+  document.getElementById('paper-view').style.display = 'none';
+  const wv = document.getElementById('welcome-view');
+  wv.style.display = 'block';
+  wv.innerHTML = `
+    <div id="welcome-screen">
+      <h2>NLP Mathematics</h2>
+      <p class="sub">The equations behind Transformers, Word2Vec, Seq2Seq, and attention &mdash; built for deep understanding.</p>
+      <div class="stats-row">
+        <div class="stat-card"><div class="num">12</div><div class="lbl">Equations</div></div>
+        <div class="stat-card"><div class="num">36</div><div class="lbl">Problems</div></div>
+        <div class="stat-card"><div class="num">${state.completed.size}</div><div class="lbl">Solved</div></div>
+      </div>
+      <p class="welcome-desc">
+        From Word2Vec's skip-gram objective to BLEU score, each paper covers one equation: the formula, the intuition, a worked numerical example, and 3 problems. Must pass all 3 to unlock dependent topics.
+      </p>
+      <div class="start-btns">
+        <button class="btn" onclick="openPaper('word2vec_skipgram')">Start: Word2Vec</button>
+        <button class="btn secondary" onclick="openPaper('rnn_gradient')">Start: RNN Gradients</button>
+      </div>
+      <div class="track-overview">
+        <h3>Tracks</h3>
+        <div class="track-list">
+          ${TRACKS.map(t => {
+            const count = PAPERS.filter(p => p.track === t.id).length;
+            const done = PAPERS.filter(p => p.track === t.id && state.completed.has(p.id)).length;
+            return `<div class="track-chip"><span>${t.label}</span><br>${done}/${count} complete</div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── OPEN PAPER ──────────────────────────────────────────────────────────────
+
+function openPaper(id) {
+  const paper = PAPERS.find(p => p.id === id);
+  if (!paper || !isPaperUnlocked(paper)) return;
+  state.active = id;
+  state.tab = 'lesson';
+  state.answered = {};
+  state.qIndex = 0;
+  document.getElementById('welcome-view').style.display = 'none';
+  document.getElementById('paper-view').style.display = 'block';
+  renderSidebar();
+  renderTabContent();
+  document.getElementById('main').scrollTop = 0;
+}
+
+function showTab(tab) {
+  state.tab = tab;
+  renderTabContent();
+}
+
+function renderTabContent() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  if (!paper) return;
+  const pv = document.getElementById('paper-view');
+  const lessonActive = state.tab === 'lesson' ? 'active' : '';
+  const quizActive = state.tab === 'quiz' ? 'active' : '';
+  pv.innerHTML = `
+    <div class="paper-header">
+      <div class="track-badge">${getTrackLabel(paper.track)}</div>
+      <h2>${paper.title}</h2>
+      <div class="authors">${paper.authors}</div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn ${lessonActive}" onclick="showTab('lesson')">Lesson</button>
+      <button class="tab-btn ${quizActive}" onclick="showTab('quiz')">Problems (${paper.questions.length} questions)</button>
+    </div>
+    <div id="tab-body"></div>`;
+  state.tab === 'lesson' ? renderLesson(paper) : renderQuiz();
+}
+
+function renderLesson(paper) {
+  document.getElementById('tab-body').innerHTML = `
+    <div class="lesson-body">${paper.lesson}</div>
+    <div style="margin-top:28px;"><button class="btn" onclick="showTab('quiz')">Solve the Problems &rarr;</button></div>`;
+}
+
+// ─── QUIZ ────────────────────────────────────────────────────────────────────
+
+function renderQuiz() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  const body = document.getElementById('tab-body');
+  const q = paper.questions[state.qIndex];
+  const answered = state.answered[state.qIndex];
+  const total = paper.questions.length;
+  const doneCount = Object.keys(state.answered).length;
+
+  let optionsHtml = q.options.map(opt => {
+    let cls = 'option-btn';
+    let extraHtml = '';
+    if (answered !== undefined) {
+      if (opt.correct) { cls += ' correct'; extraHtml = `<div class="correct-explanation" style="display:block;">Correct.</div>`; }
+      else if (opt.letter === answered) { cls += ' wrong'; extraHtml = `<div class="wrong-explanation" style="display:block;">${opt.wrongExplanation}</div>`; }
+    }
+    const disabled = answered !== undefined ? 'disabled' : '';
+    const click = answered === undefined ? `onclick="selectOption('${opt.letter}')"` : '';
+    return `<button class="${cls}" ${disabled} ${click}><span class="option-letter">${opt.letter}.</span>${opt.text}</button>${extraHtml}`;
+  }).join('');
+
+  let nextHtml = '';
+  if (answered !== undefined) {
+    nextHtml = state.qIndex < total - 1
+      ? `<button class="btn next-btn" onclick="nextQ()">Next Problem &rarr;</button>`
+      : `<button class="btn next-btn" onclick="checkDone()">Check Results</button>`;
+  }
+
+  body.innerHTML = `
+    <div class="quiz-progress">Problem <span>${state.qIndex + 1}</span> of <span>${total}</span> &nbsp;|&nbsp; ${doneCount} answered</div>
+    <div class="question-card">
+      <div class="question-text">${q.text}</div>
+      ${optionsHtml}
+      ${nextHtml}
+    </div>`;
+}
+
+function selectOption(letter) {
+  if (state.answered[state.qIndex] !== undefined) return;
+  state.answered[state.qIndex] = letter;
+  renderQuiz();
+}
+
+function nextQ() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  if (state.qIndex < paper.questions.length - 1) {
+    state.qIndex++;
+    renderQuiz();
+    document.getElementById('main').scrollTop = 0;
+  }
+}
+
+function checkDone() {
+  const p = PAPERS.find(x => x.id === state.active);
+  const allPass = p.questions.every((q, i) => {
+    const a = state.answered[i];
+    return a !== undefined && q.options.find(o => o.letter === a)?.correct;
+  });
+  if (allPass) {
+    state.completed.add(p.id);
+    save();
+    updateBadge();
+    renderSidebar();
+    renderCompletion(p);
+  } else {
+    state.qIndex = p.questions.findIndex((q, i) => {
+      const a = state.answered[i];
+      return !(a !== undefined && q.options.find(o => o.letter === a)?.correct);
+    });
+    renderQuiz();
+  }
+}
+
+// ─── COMPLETION ──────────────────────────────────────────────────────────────
+
+function renderCompletion(paper) {
+  const body = document.getElementById('tab-body');
+  const unlocked = PAPERS.filter(p => p.prereqs.includes(paper.id) && isPaperUnlocked(p));
+  let unlockedHtml = '';
+  if (unlocked.length > 0) {
+    unlockedHtml = `<div class="unlocked-list"><h4>Newly Unlocked</h4>${unlocked.map(p => `<div class="unlocked-item" onclick="openPaper('${p.id}')">${p.title}</div>`).join('')}</div>`;
+  }
+  const allDone = state.completed.size === PAPERS.length;
+  body.innerHTML = `
+    <div class="completion-card">
+      <div class="completion-icon">&#8734;</div>
+      <h2>${paper.title} Solved</h2>
+      <p>You passed all ${paper.questions.length} problems. This equation is now marked complete.</p>
+      ${unlockedHtml}
+      ${allDone ? '<p style="color:#7C4DFF;font-weight:700;font-size:1rem;">All 12 NLP equations complete.</p>' : ''}
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
+        <button class="btn secondary" onclick="renderWelcome()">Back to Overview</button>
+        ${unlocked.length > 0 ? `<button class="btn" onclick="openPaper('${unlocked[0].id}')">Next: ${unlocked[0].title}</button>` : ''}
+      </div>
+    </div>`;
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+updateBadge();
+renderSidebar();
+renderWelcome();
+</script>
+<!-- Cross-device progress sync -->
+<script>
+(function(){
+  var SU='https://gbkhkbfbarsnpbdkxzii.supabase.co';
+  var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+  var MOD='math2';
+  var LSK='math2_completed';
+  var FMT='array';
+
+  function getIds(){
+    var raw=localStorage.getItem(LSK);
+    if(!raw) return [];
+    try{
+      var p=JSON.parse(raw);
+      if(Array.isArray(p)) return p;
+      return Object.keys(p).filter(function(k){return p[k];});
+    }catch(e){return [];}
+  }
+
+  function push(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    var ids=getIds();
+    if(!ids.length) return;
+    fetch(SU+'/rest/v1/academy_progress',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({email:email,module:MOD,completed:ids,updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }
+
+  var _orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    _orig.call(this,k,v);
+    if(k===LSK) push();
+  };
+
+  window.addEventListener('load',function(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    fetch(SU+'/rest/v1/academy_progress?email=eq.'+encodeURIComponent(email)+'&module=eq.'+MOD+'&select=completed',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(!rows||!rows[0]||!rows[0].completed||!rows[0].completed.length) return;
+      var remote=rows[0].completed;
+      var raw=localStorage.getItem(LSK);
+      var merged;
+      if(FMT==='object'){
+        merged=raw?JSON.parse(raw):{};
+        remote.forEach(function(id){merged[id]=true;});
+        _orig.call(localStorage,LSK,JSON.stringify(merged));
+      } else {
+        var local=raw?JSON.parse(raw):[];
+        var s=new Set(local);
+        remote.forEach(function(id){s.add(id);});
+        _orig.call(localStorage,LSK,JSON.stringify(Array.from(s)));
+      }
+      if(typeof renderTree==='function') renderTree();
+      if(typeof updateProgressBar==='function') updateProgressBar();
+      if(typeof render==='function') render();
+    }).catch(function(){});
+  });
+
+  var btn=document.createElement('a');
+  btn.href='index.html';
+  btn.innerHTML='&#8592; Menu';
+  btn.style.cssText='position:fixed;top:10px;left:10px;z-index:9999;background:#16213E;color:#7C4DFF;border:1px solid #7C4DFF44;padding:5px 12px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;opacity:0.8;transition:opacity 0.2s';
+  btn.onmouseover=function(){this.style.opacity='1';};
+  btn.onmouseout=function(){this.style.opacity='0.8';};
+  document.body.appendChild(btn);
+})();
+</script>
+</body>
+</html>

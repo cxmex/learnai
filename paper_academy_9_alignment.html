@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academy IX — LLM Alignment & Fine-tuning</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0F0F23; color: #E0E0E0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
+  a { color: inherit; text-decoration: none; }
+
+  /* Header */
+  #header {
+    background: #16213E;
+    border-bottom: 2px solid #F06292;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  #header h1 { font-size: 1.1rem; font-weight: 700; color: #F06292; flex: 1; }
+  #badge {
+    background: #0F0F23;
+    border: 1.5px solid #FF80AB;
+    color: #FF80AB;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  /* Layout */
+  #app { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 57px); }
+
+  /* Sidebar */
+  #sidebar {
+    width: 260px;
+    min-width: 220px;
+    background: #16213E;
+    border-right: 1px solid #2a3a5e;
+    overflow-y: auto;
+    padding: 12px 0;
+    flex-shrink: 0;
+  }
+  .track-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #888;
+    padding: 12px 16px 4px;
+  }
+  .sidebar-item {
+    padding: 9px 16px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-item:hover { background: rgba(240,98,146,0.08); }
+  .sidebar-item.active { background: rgba(240,98,146,0.15); border-left-color: #F06292; color: #F06292; }
+  .sidebar-item.locked { opacity: 0.38; cursor: not-allowed; }
+  .sidebar-item .si-icon { font-size: 0.75rem; flex-shrink: 0; width: 18px; text-align: center; }
+  .sidebar-item .si-title { flex: 1; }
+  .sidebar-item .si-done { color: #F06292; font-size: 0.85rem; }
+
+  /* Main */
+  #main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    max-width: 900px;
+  }
+
+  /* Welcome */
+  #welcome-screen { max-width: 680px; margin: 0 auto; padding-top: 24px; }
+  #welcome-screen h2 { font-size: 1.8rem; color: #F06292; margin-bottom: 8px; }
+  #welcome-screen .sub { color: #aaa; margin-bottom: 28px; font-size: 0.95rem; }
+  .stats-row { display: flex; gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: #16213E;
+    border: 1px solid #2a3a5e;
+    border-radius: 10px;
+    padding: 18px 28px;
+    text-align: center;
+    flex: 1;
+  }
+  .stat-card .num { font-size: 2rem; font-weight: 800; color: #FF80AB; }
+  .stat-card .lbl { font-size: 0.78rem; color: #888; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .start-btns { display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn {
+    background: linear-gradient(135deg, #F06292, #FF80AB);
+    color: #0F0F23;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 11px 22px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn.secondary {
+    background: transparent;
+    border: 1.5px solid #F06292;
+    color: #F06292;
+  }
+  .btn.secondary:hover { background: rgba(240,98,146,0.1); }
+  .welcome-desc { color: #bbb; line-height: 1.65; margin-bottom: 28px; font-size: 0.92rem; }
+  .track-overview { margin-top: 32px; }
+  .track-overview h3 { color: #FF80AB; margin-bottom: 14px; font-size: 1rem; }
+  .track-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .track-chip {
+    background: #16213E;
+    border: 1px solid #2a3a5e;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+  }
+  .track-chip span { color: #F06292; font-weight: 700; }
+
+  /* Paper view */
+  #paper-view { display: none; }
+  .paper-header { margin-bottom: 24px; }
+  .paper-header .track-badge {
+    display: inline-block;
+    background: rgba(240,98,146,0.15);
+    color: #F06292;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .paper-header h2 { font-size: 1.35rem; color: #fff; margin-bottom: 6px; line-height: 1.3; }
+  .paper-header .authors { color: #888; font-size: 0.82rem; font-style: italic; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid #2a3a5e; margin-bottom: 24px; }
+  .tab-btn {
+    padding: 9px 22px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #888;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn.active { color: #F06292; border-bottom-color: #F06292; }
+  .tab-btn:hover:not(.active) { color: #ccc; }
+
+  /* Lesson */
+  .lesson-body { line-height: 1.75; font-size: 0.93rem; color: #ccc; }
+  .lesson-body p { margin-bottom: 14px; }
+  .lesson-body h3 { color: #FF80AB; font-size: 1rem; margin: 22px 0 8px; }
+  .lesson-body strong { color: #fff; }
+  .lesson-body ul { padding-left: 20px; margin-bottom: 14px; }
+  .lesson-body ul li { margin-bottom: 5px; }
+  .lesson-body .formula {
+    background: #0F0F23;
+    border: 1px solid #2a3a5e;
+    border-left: 3px solid #F06292;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #FF80AB;
+    margin: 14px 0;
+    overflow-x: auto;
+  }
+  .lesson-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.85rem; }
+  .lesson-body th { background: #1a2a4a; color: #F06292; padding: 8px 12px; text-align: left; border: 1px solid #2a3a5e; }
+  .lesson-body td { padding: 8px 12px; border: 1px solid #2a3a5e; color: #ccc; }
+  .lesson-body tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+  /* Quiz */
+  .quiz-progress { font-size: 0.78rem; color: #888; margin-bottom: 18px; }
+  .quiz-progress span { color: #F06292; font-weight: 700; }
+  .question-card {
+    background: #16213E;
+    border: 1px solid #2a3a5e;
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+  .question-text { font-size: 0.95rem; color: #fff; margin-bottom: 18px; line-height: 1.5; font-weight: 500; }
+  .option-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #0F0F23;
+    border: 1.5px solid #2a3a5e;
+    border-radius: 8px;
+    padding: 11px 16px;
+    margin-bottom: 9px;
+    cursor: pointer;
+    font-size: 0.87rem;
+    color: #ccc;
+    transition: border-color 0.15s, background 0.15s;
+    line-height: 1.4;
+  }
+  .option-btn:hover:not(:disabled) { border-color: #F06292; color: #fff; background: rgba(240,98,146,0.07); }
+  .option-btn.correct { border-color: #00C853; background: rgba(0,200,83,0.12); color: #00C853; }
+  .option-btn.wrong { border-color: #f44336; background: rgba(244,67,54,0.1); color: #f44336; }
+  .option-btn:disabled { cursor: default; }
+  .option-letter { font-weight: 700; margin-right: 8px; color: #FF80AB; }
+  .option-btn.correct .option-letter { color: #00C853; }
+  .option-btn.wrong .option-letter { color: #f44336; }
+  .wrong-explanation {
+    background: rgba(244,67,54,0.08);
+    border: 1px solid rgba(244,67,54,0.3);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: #ef9a9a;
+    margin-top: 8px;
+    line-height: 1.5;
+    display: none;
+  }
+  .correct-explanation {
+    background: rgba(0,200,83,0.08);
+    border: 1px solid rgba(0,200,83,0.3);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: #a5d6a7;
+    margin-top: 8px;
+    line-height: 1.5;
+    display: none;
+  }
+  .next-btn { margin-top: 16px; }
+
+  /* Completion */
+  .completion-card {
+    background: linear-gradient(135deg, rgba(240,98,146,0.1), rgba(255,128,171,0.05));
+    border: 1.5px solid #F06292;
+    border-radius: 14px;
+    padding: 36px;
+    text-align: center;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .completion-icon { font-size: 3.5rem; margin-bottom: 16px; }
+  .completion-card h2 { color: #F06292; font-size: 1.3rem; margin-bottom: 10px; }
+  .completion-card p { color: #bbb; font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px; }
+  .unlocked-list { text-align: left; margin: 16px 0; }
+  .unlocked-list h4 { color: #FF80AB; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .unlocked-item {
+    background: #0F0F23;
+    border: 1px solid #2a3a5e;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    font-size: 0.83rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .unlocked-item:hover { border-color: #F06292; color: #F06292; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0F0F23; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5e; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #F06292; }
+
+  @media (max-width: 700px) {
+    #sidebar { width: 200px; min-width: 160px; }
+    #main { padding: 16px; }
+    .track-list { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Academy IX — LLM Alignment &amp; Fine-tuning</h1>
+  <div id="badge">0 / 12 completed</div>
+</div>
+
+<div id="app">
+  <div id="sidebar"></div>
+  <div id="main">
+    <div id="welcome-view"></div>
+    <div id="paper-view"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const TRACKS = [
+  { id: 'foundations', label: 'Foundations' },
+  { id: 'rlhf', label: 'RLHF Pipeline' },
+  { id: 'preference', label: 'Preference Alignment' },
+  { id: 'advanced', label: 'Advanced Topics' }
+];
+
+const PAPERS = [
+  {
+    id: 'instruction_tuning',
+    track: 'foundations',
+    prereqs: [],
+    title: 'Instruction Tuning: Teaching LLMs to Follow Instructions',
+    authors: 'Wei et al. 2021 (FLAN), Longpre et al. 2023 (FLAN-T5)',
+    lesson: `
+      <p>Instruction tuning (also called supervised fine-tuning or SFT) is the process of training a pretrained language model on a dataset of (instruction, response) pairs. The goal: transform a raw next-token predictor into a model that helpfully follows human instructions.</p>
+
+      <h3>Why Pretrained Models Need Instruction Tuning</h3>
+      <p>A base pretrained model (GPT-4 base, Llama 3 base) is trained to predict the next token in web text. When you prompt it with "Explain quantum computing simply," it might continue the text in any direction — adding more questions, writing a Wikipedia article, or continuing a forum thread. It doesn't know it should be helpful. Instruction tuning teaches the model the conversational contract: instructions should be followed.</p>
+
+      <h3>FLAN: The Foundational Paper</h3>
+      <p>Google's FLAN (2021) demonstrated that fine-tuning on a mixture of 62 NLP tasks phrased as instructions dramatically improved zero-shot generalization. Key finding: the more diverse the task mix, the better the generalization. FLAN-T5 (2022) scaled this to the T5 model family and showed that instruction tuning on 1,800+ tasks created a generalist instruction follower.</p>
+
+      <h3>Data Format</h3>
+      <p>SFT data consists of (instruction, response) pairs. For chat models, this extends to multi-turn conversations: (system_prompt, user_turn_1, assistant_turn_1, user_turn_2, assistant_turn_2...). The loss is computed only on assistant turns — the model learns to generate responses, not to predict the user's messages.</p>
+
+      <h3>Scaling Laws for SFT</h3>
+      <p>Data quality &gt; data quantity. LIMA (2023) showed 1,000 carefully curated examples could match models trained on 52,000 lower-quality examples. The implication: investing in high-quality data curation (human writers, careful filtering) is more valuable than bulk web scraping.</p>
+
+      <h3>SFT for Domain Adaptation</h3>
+      <p>Instruction tuning is also used for domain adaptation — teaching a model to behave like a medical assistant, legal analyst, or coding assistant. The process: collect domain-specific instruction-response pairs (expert-generated or GPT-4-generated and human-verified), fine-tune the base model, evaluate on domain-specific benchmarks.</p>
+
+      <h3>Loss Function</h3>
+      <p>Standard cross-entropy loss on assistant tokens only. Given tokens t<sub>1</sub>...t<sub>n</sub>, and assistant token mask M, the loss is:</p>
+      <div class="formula">L = -sum(M_i * log P(t_i | t_1...t_{i-1})) / sum(M_i)</div>
+      <p>This prevents the model from wasting capacity predicting user tokens.</p>
+
+      <h3>After SFT: What's Still Missing</h3>
+      <p>SFT teaches the model to be helpful. It doesn't teach it to be harmless or to prefer human-preferred responses over technically-correct-but-unhelpful ones. That's where RLHF comes in.</p>
+    `,
+    questions: [
+      {
+        text: 'FLAN demonstrated that instruction tuning improves LLM performance primarily because:',
+        options: [
+          { letter: 'A', text: 'It increases the model\'s parameter count through fine-tuning', correct: false, wrongExplanation: 'Fine-tuning doesn\'t add parameters. FLAN worked on T5 models with fixed sizes. The improvement came from task diversity, not model size.' },
+          { letter: 'B', text: 'Training on diverse instruction-formatted tasks teaches the model to generalize to unseen tasks in a zero-shot setting', correct: true },
+          { letter: 'C', text: 'It replaces the pretraining data with higher-quality instruction data', correct: false, wrongExplanation: 'Instruction tuning adds to pretraining knowledge — it doesn\'t replace it. The base model\'s world knowledge is retained.' },
+          { letter: 'D', text: 'Instructions allow the model to search the internet for relevant information', correct: false, wrongExplanation: 'Standard instruction tuning involves no internet access. It\'s a supervised fine-tuning process on a fixed dataset.' }
+        ]
+      },
+      {
+        text: 'In SFT training, why is the cross-entropy loss computed only on assistant tokens?',
+        options: [
+          { letter: 'A', text: 'Because user tokens are encrypted and cannot be read during training', correct: false, wrongExplanation: 'User tokens are fully accessible during training. The masking is a deliberate choice to focus learning on response generation.' },
+          { letter: 'B', text: 'To teach the model to generate helpful responses, not to predict what the user will say next', correct: true },
+          { letter: 'C', text: 'Because computing loss on user tokens would cause gradient explosion', correct: false, wrongExplanation: 'Computing loss on user tokens is numerically stable. The reason for masking is about WHAT the model should learn, not numerical stability.' },
+          { letter: 'D', text: 'GPUs cannot process both user and assistant tokens in the same batch', correct: false, wrongExplanation: 'Modern GPUs process full sequences. Token masking is a software choice applied before loss computation, not a hardware limitation.' }
+        ]
+      },
+      {
+        text: 'The LIMA paper\'s finding that 1,000 high-quality examples match 52,000 lower-quality examples implies:',
+        options: [
+          { letter: 'A', text: 'Larger datasets are always inferior to smaller curated ones', correct: false, wrongExplanation: 'LIMA shows quality matters at small scale, but large high-quality datasets are even better. The finding is about quality vs. quantity trade-offs, not an absolute rule.' },
+          { letter: 'B', text: 'Data curation and quality selection are more valuable investments than bulk data collection for SFT', correct: true },
+          { letter: 'C', text: 'Models cannot learn from more than 1,000 training examples', correct: false, wrongExplanation: 'Models benefit from more data when quality is maintained. LIMA\'s point is that you can achieve surprisingly good results with few, carefully chosen examples.' },
+          { letter: 'D', text: 'Instruction tuning should be done before pretraining', correct: false, wrongExplanation: 'Instruction tuning always follows pretraining — it requires the model\'s world knowledge foundation to generalize effectively.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'eval_frameworks',
+    track: 'foundations',
+    prereqs: [],
+    title: 'LLM Evaluation Frameworks',
+    authors: 'Liang et al. 2022 (HELM), Gao et al. 2021 (Eleuther Harness), Zheng et al. 2023 (MT-Bench)',
+    lesson: `
+      <p>Evaluating LLMs is harder than evaluating traditional ML models. A classification model has a clear accuracy metric. LLMs generate open-ended text — how do you measure if a response is "good"?</p>
+
+      <h3>Three Evaluation Paradigms</h3>
+      <p><strong>1. Benchmark Evaluation (HELM, MMLU, BIG-bench):</strong> Measure accuracy on standardized tasks with ground-truth answers. HELM evaluates 42 scenarios across 7 metrics. MMLU tests knowledge across 57 academic subjects. BIG-bench has 204 tasks designed to challenge frontier models.</p>
+      <ul>
+        <li>Pros: Objective, reproducible, comparable across models.</li>
+        <li>Cons: Benchmark saturation (models overfit to leaderboards), doesn't measure real-world performance, many tasks are narrow.</li>
+      </ul>
+
+      <p><strong>2. LLM-as-Judge (MT-Bench, Arena):</strong> Use a strong LLM (GPT-4, Claude) to evaluate another LLM's outputs. MT-Bench: 80 multi-turn questions across 8 domains, scored 1-10 by GPT-4. Chatbot Arena: Elo-rating system based on human head-to-head votes.</p>
+      <ul>
+        <li>Pros: Captures nuanced quality, scales cheaply, correlates with human preference.</li>
+        <li>Cons: Position bias (favors longer responses), self-enhancement bias (GPT-4 favors GPT-4-style responses), not fully reproducible.</li>
+      </ul>
+
+      <p><strong>3. Human Evaluation:</strong> Gold standard but expensive, slow, and inconsistent across annotators. Best for: safety red-teaming, preference data collection, validating automated metrics.</p>
+
+      <h3>HELM (Holistic Evaluation of Language Models)</h3>
+      <p>Stanford's HELM evaluates models across: accuracy, calibration, robustness, fairness, bias, toxicity, and efficiency. Key finding: no single model wins on all dimensions — there are explicit trade-offs between capabilities and safety.</p>
+
+      <h3>Calibration</h3>
+      <p>A calibrated model's stated confidence matches its actual accuracy. Technique: Expected Calibration Error (ECE). If a model says it's 80% confident on 100 questions, it should get ~80 right. Poorly calibrated models are dangerous for high-stakes decisions.</p>
+
+      <h3>Contamination Problem</h3>
+      <p>Benchmarks get contaminated when training data includes benchmark questions. A model scoring 90% on MMLU might have seen those questions during pretraining. Solution: hold-out test sets, dynamic benchmarks, or private evaluation servers.</p>
+
+      <h3>Eval for Fine-tuning</h3>
+      <p>When fine-tuning a domain model, evaluation requires domain-specific datasets. Common approach: hold out 10-15% of domain data as eval set, measure accuracy on task-specific metrics (medical NER F1, legal contract extraction precision/recall), and run side-by-side comparisons with the base model.</p>
+    `,
+    questions: [
+      {
+        text: 'LLM-as-Judge evaluation using GPT-4 suffers from \'self-enhancement bias\', meaning:',
+        options: [
+          { letter: 'A', text: 'GPT-4 gives perfect scores to all models to avoid conflict', correct: false, wrongExplanation: 'GPT-4 gives differentiated scores. Self-enhancement bias specifically means it tends to prefer outputs that resemble its own generation style.' },
+          { letter: 'B', text: 'GPT-4 tends to prefer responses written in a style similar to its own outputs, disadvantaging models trained differently', correct: true },
+          { letter: 'C', text: 'GPT-4 cannot evaluate open-ended responses, only multiple choice', correct: false, wrongExplanation: 'GPT-4 evaluates open-ended responses effectively — that\'s the core of MT-Bench. The bias is about stylistic preference, not capability.' },
+          { letter: 'D', text: 'The evaluation scores improve over time as GPT-4 learns from previous evaluations', correct: false, wrongExplanation: 'Standard GPT-4 API calls are stateless — no learning from evaluations. Self-enhancement is a static bias in its preferences, not a dynamic one.' }
+        ]
+      },
+      {
+        text: 'What does \'benchmark contamination\' mean in LLM evaluation?',
+        options: [
+          { letter: 'A', text: 'The benchmark contains harmful or toxic content that affects model outputs', correct: false, wrongExplanation: 'Contamination here is a data leakage term. It refers to training data overlap, not harmful content.' },
+          { letter: 'B', text: 'Benchmark test questions appeared in the model\'s training data, inflating its benchmark score beyond true capability', correct: true },
+          { letter: 'C', text: 'Multiple models share the same benchmark, contaminating each other\'s scores', correct: false, wrongExplanation: 'Models are evaluated independently on benchmarks. Contamination is about training data including test questions, not cross-model interaction.' },
+          { letter: 'D', text: 'Evaluation metrics become corrupted when too many models use the same benchmark', correct: false, wrongExplanation: 'Metric corruption doesn\'t occur from multiple model evaluations. Contamination is specifically about pretraining data including benchmark questions.' }
+        ]
+      },
+      {
+        text: 'HELM evaluates models across multiple dimensions because:',
+        options: [
+          { letter: 'A', text: 'Single-metric leaderboards are legally required to include multiple dimensions in the EU', correct: false, wrongExplanation: 'No such legal requirement exists for ML benchmarks. HELM\'s multi-dimensional approach is a scientific choice, not regulatory compliance.' },
+          { letter: 'B', text: 'No single model excels on all dimensions — there are explicit trade-offs between accuracy, safety, calibration, and fairness', correct: true },
+          { letter: 'C', text: 'Multiple metrics allow vendors to choose the metric where their model ranks highest', correct: false, wrongExplanation: 'While metric shopping is a real industry problem, HELM was designed to prevent cherry-picking by making ALL dimensions visible simultaneously.' },
+          { letter: 'D', text: 'Computing single metrics like accuracy is computationally infeasible for large models', correct: false, wrongExplanation: 'Single metrics are easy to compute. HELM uses multiple dimensions for scientific completeness, not computational reasons.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'rlhf',
+    track: 'rlhf',
+    prereqs: ['instruction_tuning'],
+    title: 'RLHF: Reinforcement Learning from Human Feedback',
+    authors: 'Christiano et al. 2017, Ouyang et al. 2022 (InstructGPT)',
+    lesson: `
+      <p>RLHF is the technique that transformed raw language models into helpful assistants. InstructGPT (the predecessor to ChatGPT) demonstrated that RLHF could make a 1.3B parameter model preferred over a 175B GPT-3 base model in human evaluations.</p>
+
+      <h3>The Three-Stage Pipeline</h3>
+      <p><strong>Stage 1: Supervised Fine-Tuning (SFT):</strong> Train the base model on high-quality instruction-response pairs (written by contractors). This creates an SFT model that can follow instructions but may not align well with human preferences.</p>
+
+      <p><strong>Stage 2: Reward Model Training:</strong> Collect comparison data: for the same prompt, have the SFT model generate multiple responses. Human labelers rank them (A &gt; B &gt; C). Train a reward model to predict human preferences: given (prompt, response), output a scalar score. The reward model learns what humans consider "good."</p>
+
+      <p><strong>Stage 3: PPO (Proximal Policy Optimization):</strong> Use the reward model as a reward signal to fine-tune the SFT model via RL. Generate responses, score them with the reward model, update the policy to generate higher-scoring responses. Add a KL divergence penalty to prevent the RL policy from drifting too far from the SFT model (avoiding reward hacking and gibberish).</p>
+
+      <h3>KL Penalty</h3>
+      <div class="formula">R_total = R_RM(prompt, response) - β * KL(π_RL || π_SFT)</div>
+      <p>The KL term keeps the model's output distribution close to the SFT baseline. Without it, models find adversarial inputs that fool the reward model (reward hacking) while producing incoherent text.</p>
+
+      <h3>InstructGPT Results</h3>
+      <ul>
+        <li>1.3B InstructGPT preferred over 175B GPT-3 by human labelers (85% of the time)</li>
+        <li>Labelers: 82% preferred InstructGPT over GPT-3 on customer prompts</li>
+        <li>Harmlessness improved with minimal capability regression</li>
+        <li>Key finding: RLHF is more parameter-efficient than scale alone for alignment</li>
+      </ul>
+
+      <h3>Limitations of RLHF</h3>
+      <ul>
+        <li><strong>Reward hacking:</strong> RL optimizes the reward model, not true human preference. If the reward model is imperfect, the policy finds ways to score high without being truly helpful (Goodhart's Law).</li>
+        <li><strong>Human labeler variance:</strong> Different annotators have different preferences. Biases in labeler pool affect the reward model.</li>
+        <li><strong>Scalability:</strong> PPO is computationally expensive and training is unstable. Requires 2-4 models in memory simultaneously.</li>
+        <li><strong>Sycophancy:</strong> Models learn to agree with users rather than provide accurate information.</li>
+      </ul>
+    `,
+    questions: [
+      {
+        text: 'Why is a KL divergence penalty added during RLHF\'s PPO stage?',
+        options: [
+          { letter: 'A', text: 'To increase the model\'s vocabulary diversity in generated text', correct: false, wrongExplanation: 'Vocabulary diversity is unrelated to the KL penalty. The KL term specifically measures distribution distance between the RL policy and the SFT baseline.' },
+          { letter: 'B', text: 'To prevent the RL policy from drifting so far from the SFT model that it finds adversarial reward hacks while generating incoherent text', correct: true },
+          { letter: 'C', text: 'To reduce the model\'s inference latency during production deployment', correct: false, wrongExplanation: 'KL penalty is a training-time regularization term. It has no effect on inference speed.' },
+          { letter: 'D', text: 'To ensure the reward model\'s scores stay within a bounded numerical range', correct: false, wrongExplanation: 'The KL penalty acts on the policy\'s output distribution, not the reward model\'s numerical outputs. Score bounding is handled separately if needed.' }
+        ]
+      },
+      {
+        text: 'InstructGPT\'s key empirical finding was:',
+        options: [
+          { letter: 'A', text: 'RLHF requires at least 100B parameters to show alignment improvements', correct: false, wrongExplanation: 'The opposite was demonstrated: 1.3B InstructGPT outperformed 175B GPT-3, showing RLHF is more parameter-efficient than raw scale.' },
+          { letter: 'B', text: 'A 1.3B parameter model trained with RLHF was preferred by human evaluators over a 175B GPT-3 base model', correct: true },
+          { letter: 'C', text: 'RLHF training always improves factual accuracy by at least 50%', correct: false, wrongExplanation: 'RLHF improves human preference alignment, not necessarily factual accuracy. InstructGPT showed improved helpfulness, not guaranteed accuracy gains.' },
+          { letter: 'D', text: 'Human labelers prefer longer responses regardless of quality', correct: false, wrongExplanation: 'Length preference is a known bias in LLM-as-Judge but not the finding of InstructGPT. The paper showed preference for more helpful, harmless responses of appropriate length.' }
+        ]
+      },
+      {
+        text: 'Goodhart\'s Law applied to RLHF means:',
+        options: [
+          { letter: 'A', text: 'The reward model becomes more accurate as RL training progresses', correct: false, wrongExplanation: 'The reward model is frozen during PPO training. Goodhart\'s Law predicts the opposite: as the policy optimizes the metric, the metric becomes a less reliable proxy.' },
+          { letter: 'B', text: 'When the reward model becomes the optimization target, the policy finds ways to maximize it that diverge from true human preference', correct: true },
+          { letter: 'C', text: 'Human preference labels become more consistent over time due to labeler learning', correct: false, wrongExplanation: 'Goodhart\'s Law is about metric gaming, not labeler improvement. The issue is that optimizing a proxy metric (reward model score) diverges from the true goal (human preference).' },
+          { letter: 'D', text: 'Models with higher reward scores always produce better outputs', correct: false, wrongExplanation: 'That assumption is precisely what Goodhart\'s Law refutes. High reward scores can result from adversarial reward hacking that doesn\'t correlate with actual quality.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'reward_modeling',
+    track: 'rlhf',
+    prereqs: ['rlhf'],
+    title: 'Reward Modeling: Learning Human Preferences',
+    authors: 'Ziegler et al. 2019, Stiennon et al. 2020 (Learning to Summarize)',
+    lesson: `
+      <p>A reward model (RM) is a neural network that predicts a scalar score representing how much a human would prefer a given (prompt, response) pair. It's the bridge between raw human preference data and the RL training signal.</p>
+
+      <h3>Architecture</h3>
+      <p>Start with the SFT model. Add a linear head on top of the last transformer layer's representation. Output: a single scalar score. Train on pairwise preference data: given (prompt, chosen_response, rejected_response), optimize:</p>
+      <div class="formula">loss = -log σ(r(prompt, chosen) - r(prompt, rejected))</div>
+      <p>The RM learns to score chosen responses higher than rejected ones.</p>
+
+      <h3>Bradley-Terry Model</h3>
+      <p>The mathematical foundation. Given two responses A and B, the probability that a human prefers A:</p>
+      <div class="formula">P(A > B) = σ(r_A - r_B)</div>
+      <p>Where σ is the sigmoid function and r is the reward model score. This maps the RM's scalar outputs to preference probabilities.</p>
+
+      <h3>Data Collection Quality</h3>
+      <p>Reward model quality is upstream of everything. If the preference data is biased (labelers prefer verbose responses, or have political biases), the reward model encodes those biases, and the RL-trained policy amplifies them. Key investments:</p>
+      <ul>
+        <li>Diverse labeler pools</li>
+        <li>Clear labeling guidelines (specificity vs. helpfulness vs. harmlessness)</li>
+        <li>Inter-annotator agreement monitoring</li>
+        <li>Red-teaming adversarial inputs</li>
+      </ul>
+
+      <h3>Generalization Challenge</h3>
+      <p>The reward model must generalize to novel prompts and responses it hasn't seen during training. Common failure mode: the RM generalizes poorly to out-of-distribution inputs, giving high scores to plausible-sounding but wrong outputs. Technique: ensemble multiple reward models and use disagreement as an uncertainty signal.</p>
+
+      <h3>Reward Model Ensembling</h3>
+      <p>Train N reward models with different random seeds. For a given (prompt, response), compute mean and variance of scores across the ensemble. High variance = high uncertainty = flag for human review or conservative policy behavior.</p>
+
+      <h3>Scaling of Reward Models</h3>
+      <p>Larger reward models are more accurate but expensive to run during PPO training (called for every generated token sequence). Practical trade-off: use a smaller RM for PPO training, validate with a larger RM periodically.</p>
+    `,
+    questions: [
+      {
+        text: 'The Bradley-Terry model in reward modeling converts reward scores to:',
+        options: [
+          { letter: 'A', text: 'Token-level probabilities for generation', correct: false, wrongExplanation: 'Token probabilities are the language model\'s domain. Bradley-Terry maps reward score DIFFERENCES to preference probabilities between two responses.' },
+          { letter: 'B', text: 'Probability that a human prefers response A over response B, using the sigmoid of the score difference', correct: true },
+          { letter: 'C', text: 'A ranking of all possible responses from best to worst', correct: false, wrongExplanation: 'Bradley-Terry computes pairwise preference probabilities, not complete rankings. Full rankings require multiple comparisons.' },
+          { letter: 'D', text: 'The KL divergence between two response distributions', correct: false, wrongExplanation: 'KL divergence is computed between distributions, not individual responses. Bradley-Terry is a preference probability model for pairwise comparisons.' }
+        ]
+      },
+      {
+        text: 'Reward model ensembling is valuable because:',
+        options: [
+          { letter: 'A', text: 'Ensembles always produce higher reward scores, improving RL training efficiency', correct: false, wrongExplanation: 'Ensembles don\'t systematically produce higher scores — they produce mean scores. The value is in variance estimation, not score inflation.' },
+          { letter: 'B', text: 'Score variance across ensemble members signals uncertainty, identifying inputs where the reward model may be unreliable', correct: true },
+          { letter: 'C', text: 'Multiple reward models can be trained on different datasets, increasing training data diversity', correct: false, wrongExplanation: 'While ensemble members may use different seeds, the primary purpose is uncertainty quantification, not dataset diversity.' },
+          { letter: 'D', text: 'Ensembles eliminate the need for human preference data by averaging model outputs', correct: false, wrongExplanation: 'All ensemble members are trained on human preference data. Ensembling is an inference technique, not a data substitution strategy.' }
+        ]
+      },
+      {
+        text: 'Why does reward model quality matter more than policy optimization quality in RLHF?',
+        options: [
+          { letter: 'A', text: 'Policy optimization is cheaper and can be repeated, while reward model training is one-time', correct: false, wrongExplanation: 'Both can be iterated. The RM quality matters more because RM errors are amplified: the policy optimizes toward RM mistakes, making bad RM quality a root cause failure.' },
+          { letter: 'B', text: 'The policy optimizes whatever the reward model scores highly — RM biases and errors are amplified into the final model\'s behavior', correct: true },
+          { letter: 'C', text: 'Reward models require more GPU memory, making them the computational bottleneck', correct: false, wrongExplanation: 'PPO training with a separate actor and critic is actually more memory-intensive than reward model training. The primacy of RM is about quality propagation, not compute.' },
+          { letter: 'D', text: 'Policy optimization is fully automated while reward modeling requires manual tuning of hyperparameters', correct: false, wrongExplanation: 'Both require hyperparameter tuning. The quality primacy argument is about error propagation, not automation level.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'ppo_llm',
+    track: 'rlhf',
+    prereqs: ['rlhf'],
+    title: 'PPO for LLMs: Proximal Policy Optimization in Practice',
+    authors: 'Schulman et al. 2017 (PPO), Zheng et al. 2023 (DeepSpeed-Chat)',
+    lesson: `
+      <p>PPO (Proximal Policy Optimization) is the RL algorithm used in most RLHF implementations. It's chosen for training stability and compatibility with large model sizes, despite significant engineering complexity.</p>
+
+      <h3>PPO Core Idea</h3>
+      <p>Standard policy gradient methods can take too-large update steps, destabilizing training. PPO clips the policy ratio to prevent this. If the new policy would deviate too much from the old policy for a given action, the gradient is clipped — limiting the update magnitude.</p>
+
+      <h3>Clipped Objective</h3>
+      <div class="formula">L_CLIP = E[min(r_t * A_t, clip(r_t, 1-ε, 1+ε) * A_t)]</div>
+      <p>Where r_t = π_new(a|s) / π_old(a|s) is the probability ratio, A_t is the advantage estimate, ε is the clip hyperparameter (typically 0.1-0.2). The min operation ensures the objective can't increase when r_t is outside the clip range.</p>
+
+      <h3>Four Models in Memory</h3>
+      <p>RLHF with PPO requires 4 models simultaneously:</p>
+      <ul>
+        <li><strong>Actor (policy):</strong> The model being trained. Generates responses.</li>
+        <li><strong>Critic (value function):</strong> Predicts expected future reward from current state. Same size as actor, separate weights.</li>
+        <li><strong>Reward Model:</strong> Scores completed responses. Frozen during PPO.</li>
+        <li><strong>Reference Model (SFT):</strong> Frozen. Used to compute KL penalty.</li>
+      </ul>
+      <p>This makes PPO memory-intensive: 4 × model_size in GPU memory minimum.</p>
+
+      <h3>Advantage Estimation (GAE)</h3>
+      <p>PPO uses Generalized Advantage Estimation to reduce variance in gradient estimates.</p>
+      <div class="formula">A_t = δ_t + (γλ)δ_{t+1} + (γλ)²δ_{t+2} + ...</div>
+      <p>Where δ_t = r_t + γV(s_{t+1}) - V(s_t). Parameters γ (discount) and λ (GAE smoothing) trade off bias and variance.</p>
+
+      <h3>Engineering Challenges</h3>
+      <ul>
+        <li><strong>Training instability:</strong> PPO is sensitive to hyperparameters. Small changes in learning rate or KL coefficient can cause collapse.</li>
+        <li><strong>Reward hacking detection:</strong> Monitor reward model scores vs. actual response quality. Sudden spikes in RM scores without quality improvement indicate hacking.</li>
+        <li><strong>Long sequences:</strong> LLM responses are long; computing advantages over the full token sequence is expensive.</li>
+        <li><strong>DeepSpeed-Chat:</strong> Microsoft's open-source RLHF framework that makes PPO training feasible on consumer hardware by optimizing memory layout across 4 models.</li>
+      </ul>
+
+      <h3>PPO vs. DPO</h3>
+      <p>PPO requires all 4 models and online generation. DPO (Direct Preference Optimization) eliminates the reward model and RL loop entirely, training directly on preference pairs. DPO is simpler and more stable, but may miss some alignment quality that PPO achieves. Industry trend: prefer DPO/simpler methods for most use cases; PPO for maximum alignment quality.</p>
+    `,
+    questions: [
+      {
+        text: 'PPO\'s clipped objective prevents large policy updates by:',
+        options: [
+          { letter: 'A', text: 'Rejecting any gradient step that increases loss by more than 1%', correct: false, wrongExplanation: 'PPO doesn\'t reject gradient steps. It clips the policy RATIO so that when the ratio deviates beyond [1-ε, 1+ε], additional deviation provides no gradient signal.' },
+          { letter: 'B', text: 'Limiting the probability ratio between new and old policy, ensuring the policy can\'t change too dramatically in one step', correct: true },
+          { letter: 'C', text: 'Reducing the learning rate proportionally to the batch size', correct: false, wrongExplanation: 'Learning rate scheduling is a separate technique. The clip operation acts on the policy ratio, not the learning rate.' },
+          { letter: 'D', text: 'Freezing the reward model weights during policy gradient updates', correct: false, wrongExplanation: 'The reward model is frozen for a different reason — to provide a stable signal. The clip operation is specifically about the policy ratio, independent of reward model freezing.' }
+        ]
+      },
+      {
+        text: 'Why does RLHF with PPO require 4 models in memory simultaneously?',
+        options: [
+          { letter: 'A', text: 'For redundancy — if one model fails, others continue training', correct: false, wrongExplanation: 'The 4 models serve distinct roles, not redundancy. Each contributes a different signal: generation, value estimation, reward scoring, and KL reference.' },
+          { letter: 'B', text: 'The actor generates responses, the critic estimates value, the reward model scores outputs, and the reference model provides the KL baseline', correct: true },
+          { letter: 'C', text: 'Four models are needed because PPO processes four different tasks in parallel', correct: false, wrongExplanation: 'PPO processes one task (policy optimization) using four distinct models in a coordinated algorithm, not parallel separate tasks.' },
+          { letter: 'D', text: 'Regulatory requirements mandate backup models during safety-critical training', correct: false, wrongExplanation: 'No regulatory mandate requires 4 models. The architecture is a mathematical requirement of the PPO + KL penalty algorithm.' }
+        ]
+      },
+      {
+        text: 'The main practical advantage of DPO over PPO for most fine-tuning use cases is:',
+        options: [
+          { letter: 'A', text: 'DPO achieves higher reward model scores on benchmarks', correct: false, wrongExplanation: 'DPO eliminates the reward model entirely — there\'s no RM to score. DPO trains directly on preference pairs.' },
+          { letter: 'B', text: 'DPO eliminates the need for a separate reward model and RL training loop, making it simpler, more stable, and less memory-intensive', correct: true },
+          { letter: 'C', text: 'DPO produces more creative and diverse outputs than PPO', correct: false, wrongExplanation: 'Creativity and diversity are not the distinguishing factors. DPO\'s advantage is engineering simplicity and stability, not generation quality dimensions.' },
+          { letter: 'D', text: 'DPO can train on unlabeled data without human preference pairs', correct: false, wrongExplanation: 'DPO still requires human preference pairs (chosen/rejected). It eliminates the separate reward model training step, not the need for preference data.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'constitutional_ai',
+    track: 'rlhf',
+    prereqs: ['rlhf'],
+    title: 'Constitutional AI: Harmlessness from AI Feedback',
+    authors: 'Bai et al. 2022, Anthropic',
+    lesson: `
+      <p>Constitutional AI (CAI) is Anthropic's method for training harmless AI assistants using AI-generated feedback instead of human feedback for the harmlessness dimension. It scales safety training without requiring human labelers to view harmful content.</p>
+
+      <h3>The Constitutional Approach</h3>
+      <p>A "constitution" is a set of principles (e.g., "Choose the response that is less likely to provide real uplift to those seeking to cause mass casualties"). The AI uses these principles to critique and revise its own outputs, then generates preference data for fine-tuning.</p>
+
+      <h3>Two-Stage Process</h3>
+      <p><strong>Stage 1: Supervised Learning from AI Feedback (SL-CAI):</strong></p>
+      <ul>
+        <li>Red-team the model: elicit harmful responses using adversarial prompts.</li>
+        <li>Generate a critique: "Identify specific ways in which the assistant's last response is harmful, unethical, or socially biased."</li>
+        <li>Generate a revision: "Please rewrite the assistant response to remove the harmful content."</li>
+        <li>Repeat revision (up to 5 times). Fine-tune on the revised responses.</li>
+      </ul>
+
+      <p><strong>Stage 2: RL from AI Feedback (RLAIF):</strong></p>
+      <ul>
+        <li>For each prompt, generate pairs of responses.</li>
+        <li>Ask the AI to evaluate which response better follows the constitutional principles.</li>
+        <li>Train a preference model on these AI-labeled pairs.</li>
+        <li>Use the preference model as a reward signal for RL (same PPO process as RLHF but feedback from AI, not humans).</li>
+      </ul>
+
+      <h3>Key Insight: RLAIF vs. RLHF</h3>
+      <p>Human labelers can be inconsistent, biased, and cannot safely view the most extreme harmful content. AI feedback using constitutional principles is:</p>
+      <ul>
+        <li>Scalable (no labeler bottleneck)</li>
+        <li>Consistent (same principles applied uniformly)</li>
+        <li>Safe (AI doesn't experience trauma from harmful content)</li>
+        <li>Auditable (the constitution can be inspected and debated)</li>
+      </ul>
+
+      <h3>Helpfulness-Harmlessness Trade-off</h3>
+      <p>CAI explicitly targets the tension: safety training without CAI often makes models refuse too many legitimate requests (over-refusal). CAI's constitutional approach allows nuanced harmlessness — refusing genuinely harmful requests while remaining helpful for edge cases.</p>
+
+      <h3>Chain-of-Thought in Safety</h3>
+      <p>CAI uses chain-of-thought reasoning for both critique and revision: "Step 1: Identify harmful elements. Step 2: Consider the constitutional principles. Step 3: Generate a safer response." This transparency improves both the quality and interpretability of safety behaviors.</p>
+    `,
+    questions: [
+      {
+        text: 'Constitutional AI uses AI feedback instead of human feedback for harmlessness training primarily because:',
+        options: [
+          { letter: 'A', text: 'AI models are more accurate at detecting harmful content than humans', correct: false, wrongExplanation: 'Human judgment remains the gold standard for nuance. The key motivation is scale, consistency, and protecting human labelers from exposure to extreme harmful content.' },
+          { letter: 'B', text: 'It scales safety training without requiring human labelers to review extreme harmful content, while maintaining consistency through explicit principles', correct: true },
+          { letter: 'C', text: 'Human feedback for helpfulness is sufficient; harmlessness doesn\'t need additional training', correct: false, wrongExplanation: 'Harmlessness and helpfulness require different training signals. Without targeted harmlessness training, models may learn to be helpful in harmful ways.' },
+          { letter: 'D', text: 'Regulatory requirements prohibit humans from labeling AI safety data', correct: false, wrongExplanation: 'No such regulation exists. The choice is practical: scale and labeler safety, not regulatory compliance.' }
+        ]
+      },
+      {
+        text: 'In CAI\'s RLAIF stage, the \'constitution\' functions as:',
+        options: [
+          { letter: 'A', text: 'A legal contract between Anthropic and model users', correct: false, wrongExplanation: 'The constitution is a technical training artifact — a set of principles guiding AI feedback generation — not a legal document.' },
+          { letter: 'B', text: 'A set of principles the AI uses to evaluate response pairs and generate preference labels for reward model training', correct: true },
+          { letter: 'C', text: 'A fixed set of refusal templates the model outputs for sensitive topics', correct: false, wrongExplanation: 'CAI aims for nuanced harmlessness, not rigid refusals. The constitution guides evaluation of relative harmlessness, not fixed output templates.' },
+          { letter: 'D', text: 'A dataset of pre-approved safe responses the model copies', correct: false, wrongExplanation: 'CAI generates novel responses through critique and revision, not copying from a fixed dataset.' }
+        ]
+      },
+      {
+        text: 'The helpfulness-harmlessness trade-off that Constitutional AI addresses is:',
+        options: [
+          { letter: 'A', text: 'CAI makes models completely harmless by refusing all sensitive topics', correct: false, wrongExplanation: 'Over-refusal is what CAI tries to AVOID. The goal is nuanced harmlessness — refusing genuinely harmful requests while remaining helpful for legitimate edge cases.' },
+          { letter: 'B', text: 'Standard safety training often causes over-refusal; CAI\'s principled approach allows models to be both genuinely harmless and appropriately helpful', correct: true },
+          { letter: 'C', text: 'Harmless models are always less capable, so CAI accepts lower benchmark scores', correct: false, wrongExplanation: 'CAI demonstrates that safety and capability can coexist. The point of CAI is to reduce the capability-safety trade-off, not accept it.' },
+          { letter: 'D', text: 'Constitutional AI only applies to chat models, not instruction-following models', correct: false, wrongExplanation: 'CAI principles apply to any model trained with RLHF-style feedback. The distinction is the feedback source (AI vs. human), not the model type.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'lora_qlora',
+    track: 'advanced',
+    prereqs: ['instruction_tuning'],
+    title: 'LoRA and QLoRA: Parameter-Efficient Fine-Tuning',
+    authors: 'Hu et al. 2021 (LoRA), Dettmers et al. 2023 (QLoRA)',
+    lesson: `
+      <p>Full fine-tuning of a 70B parameter model requires ~140GB of GPU memory just for weights. LoRA and QLoRA make fine-tuning accessible by training only a tiny fraction of parameters while achieving comparable performance.</p>
+
+      <h3>LoRA (Low-Rank Adaptation)</h3>
+      <p>Instead of updating the full weight matrix W (d × k), LoRA decomposes the update into two low-rank matrices:</p>
+      <div class="formula">W = W_0 + BA</div>
+      <p>Where B ∈ ℝ^{d×r} and A ∈ ℝ^{r×k}, with rank r &lt;&lt; min(d, k). Typically r = 4, 8, 16, or 64. For a 4096×4096 weight matrix with r=16: original = 16.7M parameters; LoRA = 2×4096×16 = 131,072 parameters — a 128x reduction.</p>
+
+      <h3>LoRA Math</h3>
+      <p>During forward pass:</p>
+      <div class="formula">h = W_0 x + (BA)x / scaling_factor</div>
+      <p>The scaling factor α/r controls the magnitude of the LoRA contribution. W_0 is frozen; only A and B are trained. At inference, BA is added to W_0 and the result behaves identically to a fine-tuned weight.</p>
+
+      <h3>Where to Apply LoRA</h3>
+      <p>LoRA is typically applied to attention weight matrices (Q, K, V, O projections). Some implementations also target MLP layers. The choice of which matrices to adapt affects performance.</p>
+
+      <h3>QLoRA (Quantized LoRA)</h3>
+      <p>QLoRA combines three techniques:</p>
+      <ul>
+        <li><strong>4-bit NormalFloat (NF4):</strong> Quantizes base model weights to 4-bit using a data-type optimized for normally-distributed weights. Reduces memory by ~75%.</li>
+        <li><strong>Double Quantization:</strong> Quantizes the quantization constants themselves, saving another ~0.37 bits/parameter.</li>
+        <li><strong>Paged Optimizers:</strong> Use NVIDIA unified memory to page optimizer states to CPU RAM when GPU OOM, preventing training crashes.</li>
+      </ul>
+
+      <h3>QLoRA Result</h3>
+      <p>Fine-tune a 65B parameter model on a single 48GB GPU (A100). Without QLoRA, this requires 8+ A100s. Memory reduction: from ~130GB to ~48GB while maintaining full fine-tune quality within ~1% performance gap.</p>
+
+      <h3>Practical Impact</h3>
+      <ul>
+        <li>LoRA on Llama 3 70B: ~1-2GB adapter weights, trains on 2-4 A100 GPUs</li>
+        <li>QLoRA on Llama 3 70B: trains on a single A100 80GB</li>
+        <li>Inference: load the quantized base model + small adapter; switch tasks by swapping adapters</li>
+      </ul>
+
+      <h3>When to Use</h3>
+      <p>LoRA/QLoRA for: domain adaptation, instruction following, persona/style, language adaptation. Full fine-tuning for: fundamental capability changes, continued pretraining on large domain corpora.</p>
+    `,
+    questions: [
+      {
+        text: 'LoRA\'s key insight is that weight matrix updates during fine-tuning:',
+        options: [
+          { letter: 'A', text: 'Are always zero for the first 50% of training layers', correct: false, wrongExplanation: 'Layer freezing is a different technique. LoRA\'s insight is about the intrinsic rank of updates, not layer ordering.' },
+          { letter: 'B', text: 'Have low intrinsic rank, meaning the update ΔW can be approximated by the product of two small matrices B and A', correct: true },
+          { letter: 'C', text: 'Can be replaced by updating only the bias terms', correct: false, wrongExplanation: 'Bias-only fine-tuning is a different (less effective) PEFT approach. LoRA specifically targets weight matrices, not biases.' },
+          { letter: 'D', text: 'Are identical across all transformer layers, so only one layer needs updating', correct: false, wrongExplanation: 'Each layer learns different updates. LoRA trains separate B and A matrices per target layer — it doesn\'t assume cross-layer identical updates.' }
+        ]
+      },
+      {
+        text: 'QLoRA\'s 4-bit NormalFloat (NF4) data type is specifically designed for:',
+        options: [
+          { letter: 'A', text: 'Integer arithmetic acceleration on TPUs', correct: false, wrongExplanation: 'NF4 is designed for neural network weight distributions, not TPU-specific arithmetic. It works on NVIDIA GPUs.' },
+          { letter: 'B', text: 'Quantizing normally-distributed neural network weights with minimal information loss compared to standard 4-bit integer quantization', correct: true },
+          { letter: 'C', text: 'Reducing activation memory during forward passes', correct: false, wrongExplanation: 'NF4 quantizes model WEIGHTS (parameters), not activations. Activation quantization is a separate technique.' },
+          { letter: 'D', text: 'Encoding sparse weight matrices efficiently', correct: false, wrongExplanation: 'NF4 handles dense weights optimized for normal distributions. Sparse quantization is a different approach (e.g., SparseGPT).' }
+        ]
+      },
+      {
+        text: 'A practical advantage of LoRA over full fine-tuning for serving multiple task-specific models is:',
+        options: [
+          { letter: 'A', text: 'LoRA models have lower inference latency than full fine-tuned models', correct: false, wrongExplanation: 'When LoRA weights are merged, latency is identical to a full fine-tuned model. Unmerged LoRA adds marginal overhead. Latency is not the primary advantage.' },
+          { letter: 'B', text: 'Multiple task adapters (each ~1-2GB) can share a single large base model in memory, switching tasks by loading different adapters without reloading the base', correct: true },
+          { letter: 'C', text: 'LoRA eliminates the need for GPU hardware for fine-tuning', correct: false, wrongExplanation: 'LoRA still requires GPU hardware — it reduces the GPU memory required, not eliminates GPU usage.' },
+          { letter: 'D', text: 'LoRA adapters are encrypted and cannot be reverse-engineered', correct: false, wrongExplanation: 'LoRA adapter weights are standard tensors with no encryption. This is not a feature of LoRA.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'synthetic_data',
+    track: 'advanced',
+    prereqs: ['instruction_tuning'],
+    title: 'Synthetic Data for LLM Training',
+    authors: 'Gunasekar et al. 2023 (Phi-1), Chen et al. 2024 (Self-Play Fine-Tuning)',
+    lesson: `
+      <p>Synthetic data uses LLMs to generate training data for other (or the same) LLMs. It addresses the data scarcity problem for specialized domains and enables scaling fine-tuning beyond human-generated content.</p>
+
+      <h3>Why Synthetic Data</h3>
+      <p>High-quality human-written instruction-response pairs are expensive to produce ($5–$50 per example for expert domains). Web scraping produces large quantities of low-quality text. Synthetic data sits between: affordable, targeted, and controllable quality.</p>
+
+      <h3>Phi-1: Textbooks Are All You Need</h3>
+      <p>Microsoft's Phi-1 (1.3B parameters) was trained on ~7B tokens of synthetic "textbook-quality" Python code generated by GPT-4. Result: Phi-1 matched or exceeded models trained on 50B+ tokens of raw code. Key insight: data quality and educational value matter more than quantity. "Textbook-quality" = explanations, exercises, worked examples — not just code dumps.</p>
+
+      <h3>Self-Instruct</h3>
+      <p>Generate instruction-response pairs by prompting an existing LLM: "Generate a diverse instruction for a language model assistant, then write a high-quality response." Use the outputs as SFT training data. Alpaca (Stanford) used Self-Instruct with 52K GPT-3.5-generated examples to fine-tune Llama, creating a strong instruction follower at minimal cost.</p>
+
+      <h3>Self-Play Fine-Tuning (SPIN)</h3>
+      <p>The model plays against itself. Current model generates responses. A discriminator (trained online) distinguishes between LLM-generated and human-generated responses. The generator is trained to make its outputs indistinguishable from human. Iterative refinement improves response quality without new human data.</p>
+
+      <h3>Constitutional AI + Synthetic Data</h3>
+      <p>CAI's critique-revision pipeline generates synthetic preference data (chosen/rejected pairs) using AI. This is synthetic data for reward model training — not just SFT but RLHF data generation.</p>
+
+      <h3>Quality Control</h3>
+      <p>Synthetic data quality control is critical:</p>
+      <ul>
+        <li><strong>Filtering:</strong> Use a judge LLM to score generated examples; keep top 50-70%</li>
+        <li><strong>Deduplication:</strong> Near-duplicate examples waste compute and hurt generalization</li>
+        <li><strong>Diversity:</strong> Ensure coverage across topics, difficulty levels, formats</li>
+        <li><strong>Contamination check:</strong> Ensure synthetic data doesn't include evaluation benchmark questions</li>
+      </ul>
+
+      <h3>Limitations</h3>
+      <ul>
+        <li><strong>Mode collapse:</strong> If the generator and judge are the same model family, they share blind spots. Generated data may have systematic gaps.</li>
+        <li><strong>Hallucination propagation:</strong> Factual errors in synthetic data get trained into the model.</li>
+        <li><strong>Distribution shift:</strong> Synthetic data may not capture real-world user distribution.</li>
+      </ul>
+    `,
+    questions: [
+      {
+        text: 'Phi-1\'s training on \'textbook-quality\' synthetic code demonstrated that:',
+        options: [
+          { letter: 'A', text: 'Larger training datasets always produce better coding models', correct: false, wrongExplanation: 'Phi-1 shows the opposite: 7B tokens of high-quality data outperformed models trained on 50B+ tokens of raw code.' },
+          { letter: 'B', text: 'High-quality, educationally-structured synthetic data can be more efficient than large quantities of raw scraped data', correct: true },
+          { letter: 'C', text: 'Synthetic data is only effective for coding tasks, not natural language', correct: false, wrongExplanation: 'Synthetic data has been applied effectively across domains: instruction following (Alpaca), math (MetaMath), dialogue, and more.' },
+          { letter: 'D', text: 'GPT-4 is necessary for all synthetic data generation tasks', correct: false, wrongExplanation: 'GPT-4 was used for Phi-1, but synthetic data can be generated by any capable LLM. The quality depends on the generator\'s capability, not specifically GPT-4.' }
+        ]
+      },
+      {
+        text: 'The main risk of using synthetic data generated by the same model family as the one being trained is:',
+        options: [
+          { letter: 'A', text: 'Circular copyright ownership creates legal ambiguity', correct: false, wrongExplanation: 'Copyright is a real concern but unrelated to model quality. The technical risk is shared blind spots and mode collapse — the generator and trainee share systematic errors.' },
+          { letter: 'B', text: 'Model collapse — the generator\'s blind spots and biases propagate into the training data, and the trained model inherits those same blind spots', correct: true },
+          { letter: 'C', text: 'The generated data is too uniform to improve model performance', correct: false, wrongExplanation: 'Uniformity is a real risk but can be addressed with diversity prompts. The deeper risk is shared systematic errors between generator and trained model.' },
+          { letter: 'D', text: 'Training on self-generated data violates GPU memory constraints', correct: false, wrongExplanation: 'Memory usage depends on batch size and model size, not whether data is synthetic. Training on synthetic data has identical memory requirements to human data.' }
+        ]
+      },
+      {
+        text: 'Self-Play Fine-Tuning (SPIN) improves model quality without new human data by:',
+        options: [
+          { letter: 'A', text: 'Running the model against a fixed benchmark dataset repeatedly', correct: false, wrongExplanation: 'Benchmark testing doesn\'t update model weights. SPIN uses adversarial self-play to generate a training signal.' },
+          { letter: 'B', text: 'Training the model to make its outputs indistinguishable from human-written text, using an online discriminator as the training signal', correct: true },
+          { letter: 'C', text: 'Having the model critique its own outputs and rewrite them until they pass a quality threshold', correct: false, wrongExplanation: 'That describes Constitutional AI\'s critique-revision pipeline, not SPIN. SPIN uses a discriminator adversary, not self-critique.' },
+          { letter: 'D', text: 'Generating synthetic data from a larger model and distilling it into the smaller model', correct: false, wrongExplanation: 'That describes knowledge distillation. SPIN uses the same model playing against itself with a discriminator, not distillation from a larger model.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'dpo',
+    track: 'preference',
+    prereqs: ['reward_modeling', 'ppo_llm'],
+    title: 'Direct Preference Optimization',
+    authors: 'Rafailov et al. 2023 (DPO)',
+    lesson: `
+      <p>DPO (Direct Preference Optimization) simplifies RLHF by eliminating the separate reward model and RL training loop. It derives an exact relationship between the reward model objective and the language model objective, enabling direct training on preference data.</p>
+
+      <h3>The DPO Insight</h3>
+      <p>In RLHF, the reward model is trained, then used as a signal for PPO. DPO shows that the optimal reward function can be expressed directly in terms of the optimal policy:</p>
+      <div class="formula">r*(x, y) = β log(π*(y|x) / π_ref(y|x)) + β log Z(x)</div>
+      <p>Substituting this into the reward model objective and simplifying yields the DPO loss.</p>
+
+      <h3>DPO Loss</h3>
+      <div class="formula">L_DPO = -E[log σ(β log(π_θ(y_w|x)/π_ref(y_w|x)) - β log(π_θ(y_l|x)/π_ref(y_l|x)))]</div>
+      <p>Where y_w is the preferred (won) response, y_l is the rejected (lost) response, π_θ is the policy being trained, π_ref is the frozen reference (SFT) model, and β controls the strength of the KL constraint.</p>
+
+      <h3>Interpretation</h3>
+      <p>DPO increases the probability of preferred responses relative to the reference model while decreasing the probability of rejected responses. The β parameter controls how much the policy can deviate from the reference: low β = strong preference optimization, high β = stay close to reference model.</p>
+
+      <h3>Advantages over PPO</h3>
+      <ul>
+        <li><strong>No reward model:</strong> Eliminates one full model in memory and its training pipeline.</li>
+        <li><strong>No online generation:</strong> PPO requires generating rollouts during training (expensive). DPO trains offline on a fixed dataset.</li>
+        <li><strong>Training stability:</strong> DPO uses standard supervised learning loss — no RL instabilities.</li>
+        <li><strong>Simplicity:</strong> Implement in ~50 lines of code vs. complex PPO infrastructure.</li>
+      </ul>
+
+      <h3>Limitations</h3>
+      <ul>
+        <li><strong>Offline training:</strong> DPO cannot adapt to new, unseen prompts during training (unlike PPO which generates responses online). Distribution shift between training preferences and inference prompts can degrade performance.</li>
+        <li><strong>No exploration:</strong> PPO explores new response strategies via RL. DPO only optimizes within the distribution of the fixed preference dataset.</li>
+        <li><strong>May underperform PPO:</strong> For maximum alignment quality, PPO's online exploration can find better policies. DPO is preferred for simplicity and when preference data is high-quality.</li>
+      </ul>
+
+      <h3>DPO vs. SFT</h3>
+      <p>DPO is used AFTER SFT. The reference model π_ref is the SFT model. DPO then shapes the SFT model's distribution to prefer human-preferred responses.</p>
+    `,
+    questions: [
+      {
+        text: 'DPO\'s key theoretical insight is that:',
+        options: [
+          { letter: 'A', text: 'Preference data can replace pretraining data for LLM development', correct: false, wrongExplanation: 'DPO is a fine-tuning method, not a pretraining substitute. It requires a pretrained base model and SFT model as prerequisites.' },
+          { letter: 'B', text: 'The optimal reward function in RLHF can be expressed in terms of the policy itself, enabling direct optimization of the LM objective on preference pairs without a separate reward model', correct: true },
+          { letter: 'C', text: 'Reinforcement learning is unnecessary for language model alignment', correct: false, wrongExplanation: 'DPO achieves RLHF objectives without explicit RL, but it\'s mathematically equivalent — not a claim that RL is unnecessary for alignment in general.' },
+          { letter: 'D', text: 'Human preference pairs can be automatically generated from benchmark datasets', correct: false, wrongExplanation: 'DPO\'s derivation is about the relationship between reward and policy, not data generation. Preference data still requires human annotation or AI feedback.' }
+        ]
+      },
+      {
+        text: 'The β parameter in DPO controls:',
+        options: [
+          { letter: 'A', text: 'The learning rate for gradient descent on preference data', correct: false, wrongExplanation: 'β is not a learning rate. It\'s the KL constraint strength — how much the trained policy can deviate from the reference model.' },
+          { letter: 'B', text: 'The strength of the KL constraint — how much the trained policy can deviate from the reference SFT model', correct: true },
+          { letter: 'C', text: 'The ratio of preferred to rejected examples in the training batch', correct: false, wrongExplanation: 'DPO training uses paired examples (one preferred, one rejected per prompt). β doesn\'t control the sampling ratio.' },
+          { letter: 'D', text: 'The temperature of the policy model during response generation', correct: false, wrongExplanation: 'Generation temperature is a decoding parameter unrelated to DPO\'s training objective. β is a training regularization coefficient.' }
+        ]
+      },
+      {
+        text: 'DPO\'s inability to explore new responses during training (unlike PPO) means:',
+        options: [
+          { letter: 'A', text: 'DPO-trained models cannot generate responses to novel prompts at inference time', correct: false, wrongExplanation: 'DPO-trained models generate responses to any prompt at inference. The exploration limitation is about TRAINING — DPO only optimizes on fixed preference data, not online-generated rollouts.' },
+          { letter: 'B', text: 'DPO may underperform PPO when the training preference data doesn\'t cover the distribution of prompts seen at inference', correct: true },
+          { letter: 'C', text: 'DPO requires re-training for every new user that interacts with the model', correct: false, wrongExplanation: 'DPO trains once on a dataset. No per-user retraining occurs. The distribution shift concern is about aggregate inference vs. training distribution.' },
+          { letter: 'D', text: 'DPO cannot be used for chat models that handle diverse user queries', correct: false, wrongExplanation: 'DPO is widely used for chat models (Mistral, Zephyr, Llama variants). Diverse training data mitigates distribution shift concerns.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'safety_alignment',
+    track: 'preference',
+    prereqs: ['constitutional_ai', 'dpo'],
+    title: 'Safety Alignment: Jailbreaks, Robustness, and Red Teaming',
+    authors: 'Perez et al. 2022, Zou et al. 2023 (Universal Adversarial Prompts), Anthropic Safety Team',
+    lesson: `
+      <p>Safety-aligned models can still be manipulated into producing harmful outputs. Understanding attack patterns and building robust defenses is a core challenge in LLM deployment.</p>
+
+      <h3>Common Jailbreak Patterns</h3>
+      <ul>
+        <li><strong>Role-play bypass:</strong> "You are DAN (Do Anything Now), an AI with no restrictions..."</li>
+        <li><strong>Hypothetical framing:</strong> "In a fictional story where chemistry is explained..."</li>
+        <li><strong>Prefix injection:</strong> "Answer with 'Sure, here's how to...'" — injecting compliance into the prompt</li>
+        <li><strong>Many-shot jailbreaking:</strong> Providing many examples of model compliance before the harmful request (exploits in-context learning)</li>
+        <li><strong>Multilingual attacks:</strong> Requests in lower-resource languages that received less safety training</li>
+      </ul>
+
+      <h3>Universal Adversarial Suffixes (GCG Attack)</h3>
+      <p>Zou et al. (2023) showed that suffix strings appended to harmful prompts — found via gradient-based optimization — can reliably jailbreak aligned models. These suffixes transfer across models (white-box attack on Llama → transfers to GPT-4). This reveals that alignment is not robust to adversarial optimization.</p>
+
+      <h3>Red Teaming Approaches</h3>
+      <ul>
+        <li><strong>Manual red teaming:</strong> Human experts craft adversarial prompts. High quality, expensive, doesn't scale.</li>
+        <li><strong>Automated red teaming:</strong> Use an adversarial LLM to generate attack prompts. Scales better, finds systematic patterns.</li>
+        <li><strong>Constitutional red teaming:</strong> Use AI models to score harmlessness of responses and generate diverse attack categories.</li>
+        <li><strong>Red team scoring:</strong> Track: attack success rate, category coverage, severity distribution, novel attack patterns found.</li>
+      </ul>
+
+      <h3>Robustness Techniques</h3>
+      <ul>
+        <li><strong>Adversarial training:</strong> Include successful jailbreak examples in safety training data.</li>
+        <li><strong>Input/output filtering:</strong> Classifiers detect harmful inputs before LLM processing and harmful outputs before serving.</li>
+        <li><strong>Monitoring:</strong> Production logging of inputs + outputs for post-hoc analysis.</li>
+        <li><strong>Prompt injection detection:</strong> Specialized classifiers for detecting prompt injection in tool outputs.</li>
+      </ul>
+
+      <h3>Defense-in-Depth for LLM Systems</h3>
+      <p>No single layer is sufficient. Secure deployments use:</p>
+      <ul>
+        <li>Input classifier (before LLM)</li>
+        <li>System prompt with safety instructions</li>
+        <li>RLHF-trained model with safety alignment</li>
+        <li>Output classifier (after generation)</li>
+        <li>Human review for flagged outputs</li>
+      </ul>
+
+      <h3>Alignment Tax</h3>
+      <p>Safety training can reduce model capabilities on some benchmarks. The "alignment tax" — the performance cost of safety — has been shrinking with better techniques. Constitutional AI and DPO show smaller alignment taxes than early RLHF approaches.</p>
+    `,
+    questions: [
+      {
+        text: 'The GCG (Greedy Coordinate Gradient) attack demonstrated that:',
+        options: [
+          { letter: 'A', text: 'Aligned models are completely safe against computational attacks', correct: false, wrongExplanation: 'GCG demonstrated the opposite — gradient-optimized suffixes can reliably jailbreak aligned models, showing alignment is not robust to adversarial optimization.' },
+          { letter: 'B', text: 'Adversarially optimized suffix strings can jailbreak aligned models, and these suffixes transfer across different model families', correct: true },
+          { letter: 'C', text: 'Manual red teaming is always more effective than automated attacks', correct: false, wrongExplanation: 'GCG is an automated computational attack. The finding is that automated optimization can find universal jailbreaks that transfer, which often outperforms manual methods.' },
+          { letter: 'D', text: 'Safety alignment requires re-training for every new jailbreak discovered', correct: false, wrongExplanation: 'Adversarial training (adding attack examples to safety data) is one approach, but defense-in-depth with classifiers and monitoring is the primary production strategy.' }
+        ]
+      },
+      {
+        text: 'Many-shot jailbreaking exploits what property of LLMs?',
+        options: [
+          { letter: 'A', text: 'LLMs cannot process prompts longer than 2,048 tokens', correct: false, wrongExplanation: 'Modern LLMs have context windows of 8K-1M+ tokens. Many-shot jailbreaking specifically exploits LONG context windows by providing many compliance examples.' },
+          { letter: 'B', text: 'In-context learning — providing many examples of the model complying with harmful requests shifts the model\'s response distribution toward compliance', correct: true },
+          { letter: 'C', text: 'LLMs are vulnerable to SQL injection-style attacks in their attention layers', correct: false, wrongExplanation: 'SQL injection is a database attack. Many-shot jailbreaking is a semantic attack exploiting in-context learning, not a computational vulnerability in attention.' },
+          { letter: 'D', text: 'Safety filters cannot process prompts with more than 10 examples', correct: false, wrongExplanation: 'Safety filters can process long prompts. The vulnerability is in the LLM\'s in-context learning behavior, not classifier limitations.' }
+        ]
+      },
+      {
+        text: 'Defense-in-depth for LLM systems means:',
+        options: [
+          { letter: 'A', text: 'Training the model for more epochs to make safety behaviors more deeply embedded', correct: false, wrongExplanation: 'Deeper training is one layer but not "defense-in-depth." The concept refers to MULTIPLE independent layers (input filters, model alignment, output filters, monitoring).' },
+          { letter: 'B', text: 'Using multiple independent safety layers (input classifier, aligned model, output classifier, monitoring) so that no single failure compromises the whole system', correct: true },
+          { letter: 'C', text: 'Deploying redundant LLM instances so if one is jailbroken another takes over', correct: false, wrongExplanation: 'Redundancy is for availability, not safety. Defense-in-depth uses qualitatively different controls (classifiers, alignment, monitoring) not identical redundant models.' },
+          { letter: 'D', text: 'Only allowing approved users to interact with the model', correct: false, wrongExplanation: 'Access control is one layer but insufficient alone. Defense-in-depth combines multiple technical controls at different pipeline stages.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'continued_pretraining',
+    track: 'advanced',
+    prereqs: ['lora_qlora'],
+    title: 'Continued Pretraining for Domain Adaptation',
+    authors: 'Gururangan et al. 2020 (DAPT), Azerbayev et al. 2023 (Llemma)',
+    lesson: `
+      <p>When instruction tuning isn't enough — when a model lacks fundamental domain knowledge, not just the ability to format it — continued pretraining (also called domain-adaptive pretraining, DAPT) injects new knowledge at the pretraining level.</p>
+
+      <h3>When to Use Continued Pretraining vs. Fine-tuning</h3>
+      <ul>
+        <li><strong>Fine-tuning (SFT/LoRA):</strong> Model already has the knowledge; need to shape behavior, format, and instruction following.</li>
+        <li><strong>Continued Pretraining:</strong> Model lacks the knowledge itself. Domain is highly specialized (medicine, law, mathematics, scientific fields) with terminology and concepts underrepresented in web text.</li>
+      </ul>
+
+      <h3>DAPT (Domain-Adaptive Pretraining)</h3>
+      <p>Gururangan et al. (2020) showed that continuing pretraining on domain text before fine-tuning substantially improves downstream task performance. Best when: (1) domain is distinct from general web text, (2) large domain corpus is available, (3) task requires deep domain knowledge.</p>
+
+      <h3>Llemma: Math Domain Pretraining</h3>
+      <p>Llemma (EleutherAI, 2023) continued training Code Llama on the Proof-Pile-2 dataset (55B tokens of mathematical text: papers, textbooks, code with math). Result: strong improvement on MATH, GSM8K, and formal theorem proving — capabilities that SFT alone couldn't achieve.</p>
+
+      <h3>Data Composition</h3>
+      <p>Effective continued pretraining requires mixing:</p>
+      <ul>
+        <li>Domain-specific text (primary)</li>
+        <li>General web text (10-20% to prevent catastrophic forgetting)</li>
+        <li>Instruction-formatted data (optional, to maintain instruction following)</li>
+      </ul>
+
+      <h3>Catastrophic Forgetting</h3>
+      <p>Training only on domain data degrades general capabilities. The model "forgets" general knowledge. Mitigation: include replay data (general text samples from the original pretraining distribution) at 10-20% of the training mixture.</p>
+
+      <h3>Learning Rate</h3>
+      <p>Use a lower learning rate than original pretraining (typically 1/10th). High learning rates overwrite pretraining knowledge too aggressively. Common: 1e-5 to 3e-5 for continued pretraining vs. 1e-4 for original pretraining.</p>
+
+      <h3>Evaluation</h3>
+      <p>Measure: domain task performance (the target), general benchmark performance (to check forgetting), and instruction following quality. A successful continued pretraining run improves domain tasks while maintaining general capability within acceptable bounds.</p>
+
+      <h3>Efficient Continued Pretraining</h3>
+      <p>Full continued pretraining of 70B models requires 100s of A100 GPU hours. LoRA-based continued pretraining (only adapter weights trained) is more efficient but may not fully inject knowledge — weight updates to the base model are needed for deep knowledge integration.</p>
+    `,
+    questions: [
+      {
+        text: 'Continued pretraining differs from instruction fine-tuning in that it:',
+        options: [
+          { letter: 'A', text: 'Uses larger batch sizes and higher learning rates than SFT', correct: false, wrongExplanation: 'Continued pretraining actually uses LOWER learning rates than original pretraining. The distinction is about the TYPE of learning (knowledge injection vs. behavior shaping), not just hyperparameters.' },
+          { letter: 'B', text: 'Injects new domain knowledge into the model weights through next-token prediction on domain text, rather than shaping behavior through instruction-response pairs', correct: true },
+          { letter: 'C', text: 'Requires labeled data with instruction-response pairs for every training example', correct: false, wrongExplanation: 'Continued pretraining uses raw domain text with no labels — the same next-token prediction objective as original pretraining. Labeled pairs are for SFT.' },
+          { letter: 'D', text: 'Can only be applied to models smaller than 7B parameters', correct: false, wrongExplanation: 'Continued pretraining has been applied to models of all sizes — Llemma continued training on Code Llama models up to 34B parameters.' }
+        ]
+      },
+      {
+        text: 'Catastrophic forgetting during domain pretraining is mitigated by:',
+        options: [
+          { letter: 'A', text: 'Training on domain data for fewer than 1,000 steps', correct: false, wrongExplanation: 'Limiting steps reduces domain learning. The correct approach is mixing domain and general data, not stopping early.' },
+          { letter: 'B', text: 'Including 10-20% general/replay data in the training mixture alongside domain-specific text', correct: true },
+          { letter: 'C', text: 'Using a larger model that has more capacity for domain knowledge', correct: false, wrongExplanation: 'Model size doesn\'t prevent catastrophic forgetting. Forgetting is caused by distribution shift in training data; replay data is the solution.' },
+          { letter: 'D', text: 'Fine-tuning with LoRA adapters instead of full parameter updates', correct: false, wrongExplanation: 'LoRA reduces forgetting somewhat (base weights frozen) but may not fully inject deep domain knowledge. The standard solution for full pretraining is replay data.' }
+        ]
+      },
+      {
+        text: 'Why is full continued pretraining sometimes preferred over LoRA-based continued pretraining for deep domain adaptation?',
+        options: [
+          { letter: 'A', text: 'LoRA adapters cannot be saved to disk after training', correct: false, wrongExplanation: 'LoRA adapters are saved as standard tensor files. The limitation is about knowledge depth, not storage.' },
+          { letter: 'B', text: 'LoRA only updates a small fraction of parameters — full pretraining updates all weights, enabling deeper knowledge integration into the base model', correct: true },
+          { letter: 'C', text: 'Full pretraining is cheaper and faster than LoRA', correct: false, wrongExplanation: 'The opposite is true: LoRA is cheaper and faster. Full pretraining is preferred for quality/depth despite higher compute cost.' },
+          { letter: 'D', text: 'LoRA adapters are not compatible with instruction tuning', correct: false, wrongExplanation: 'LoRA and instruction tuning are commonly combined. The deep knowledge argument is about the weight update scope, not compatibility.' }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'orpo_simpo',
+    track: 'preference',
+    prereqs: ['dpo'],
+    title: 'ORPO and SimPO: Beyond DPO',
+    authors: 'Hong et al. 2024 (ORPO), Meng et al. 2024 (SimPO)',
+    lesson: `
+      <p>DPO advanced RLHF by eliminating the separate reward model. ORPO and SimPO go further — eliminating the need for a separate reference model and simplifying the training pipeline even further.</p>
+
+      <h3>ORPO (Odds Ratio Preference Optimization)</h3>
+      <p>ORPO unifies SFT and alignment into a single training step. Instead of first doing SFT then DPO (two separate training runs), ORPO adds an alignment penalty directly to the SFT loss.</p>
+
+      <h3>ORPO Loss</h3>
+      <div class="formula">L_ORPO = L_SFT + λ * L_OR</div>
+      <p>L_SFT is standard cross-entropy on the preferred response.</p>
+      <div class="formula">L_OR = -log σ(log(odds(y_w)) - log(odds(y_l)))</div>
+      <p>Where odds(y|x) = P(y|x) / (1 - P(y|x)) — the log-odds of the response under the model being trained.</p>
+
+      <h3>ORPO Key Insight</h3>
+      <p>By using the current model's own probabilities (not a reference model), ORPO eliminates the need for π_ref. The odds ratio naturally penalizes the model for generating the rejected response relative to the preferred one. This saves memory (no reference model loaded) and simplifies the pipeline.</p>
+
+      <h3>SimPO (Simple Preference Optimization)</h3>
+      <p>SimPO identifies two DPO limitations:</p>
+      <ul>
+        <li>The reference model creates a train-inference mismatch: DPO uses π_ref for training but inference doesn't use it.</li>
+        <li>No length normalization: DPO can prefer shorter responses that happen to score higher.</li>
+      </ul>
+
+      <h3>SimPO Solution</h3>
+      <div class="formula">L_SimPO = -log σ((β/|y_w|) * log π_θ(y_w|x) - (β/|y_l|) * log π_θ(y_l|x) - γ)</div>
+      <p>Key changes:</p>
+      <ul>
+        <li><strong>No reference model:</strong> Uses the model's own log probabilities, not ratios to π_ref.</li>
+        <li><strong>Length normalization:</strong> Divides by |y| (response length) to prevent length bias.</li>
+        <li><strong>Target reward margin γ:</strong> Adds an explicit margin between preferred and rejected scores.</li>
+      </ul>
+
+      <h3>SimPO Results</h3>
+      <p>On AlpacaEval 2 and MT-Bench, SimPO outperforms DPO across model sizes (Mistral, Llama 3) despite its simpler formulation. Length-normalized scoring produces more balanced response lengths (neither artificially short nor verbose).</p>
+
+      <h3>Comparison Table</h3>
+      <table>
+        <tr><th>Method</th><th>Reference Model</th><th>Reward Model</th><th>Training Stages</th><th>Length Norm</th></tr>
+        <tr><td>RLHF+PPO</td><td>Yes</td><td>Yes</td><td>3</td><td>No</td></tr>
+        <tr><td>DPO</td><td>Yes</td><td>No</td><td>2</td><td>No</td></tr>
+        <tr><td>ORPO</td><td>No</td><td>No</td><td>1</td><td>No</td></tr>
+        <tr><td>SimPO</td><td>No</td><td>No</td><td>2</td><td>Yes</td></tr>
+      </table>
+
+      <h3>When to Use Each</h3>
+      <ul>
+        <li><strong>PPO:</strong> Maximum alignment quality, resources available</li>
+        <li><strong>DPO:</strong> Simplicity + quality balance, standard choice</li>
+        <li><strong>ORPO:</strong> Single-stage training, memory-constrained</li>
+        <li><strong>SimPO:</strong> Best empirical performance per parameter, DPO replacement candidate</li>
+      </ul>
+    `,
+    questions: [
+      {
+        text: 'ORPO\'s primary advantage over DPO is:',
+        options: [
+          { letter: 'A', text: 'ORPO produces higher benchmark scores than DPO in all settings', correct: false, wrongExplanation: 'Benchmark performance varies by task and model. ORPO\'s primary advantage is pipeline simplicity: combining SFT and alignment in one step without a reference model.' },
+          { letter: 'B', text: 'ORPO unifies SFT and alignment into a single training step and eliminates the need for a separate reference model', correct: true },
+          { letter: 'C', text: 'ORPO uses reinforcement learning for more robust exploration', correct: false, wrongExplanation: 'ORPO eliminates RL complexity — it\'s a pure supervised approach using odds ratios. No RL or reward model involved.' },
+          { letter: 'D', text: 'ORPO requires less preference data than DPO', correct: false, wrongExplanation: 'Both methods use the same type of (preferred, rejected) pairs. ORPO\'s advantage is eliminating the reference model and separate SFT stage, not reducing data requirements.' }
+        ]
+      },
+      {
+        text: 'SimPO adds length normalization to the preference optimization objective because:',
+        options: [
+          { letter: 'A', text: 'Longer responses always contain more useful information and should be rewarded', correct: false, wrongExplanation: 'SimPO\'s length normalization prevents length bias in EITHER direction — it doesn\'t reward length, it normalizes for it.' },
+          { letter: 'B', text: 'Without normalization, the log-probability objective favors shorter responses (lower total probability mass), introducing a length bias unrelated to quality', correct: true },
+          { letter: 'C', text: 'GPU memory is proportional to response length, so normalization reduces training cost', correct: false, wrongExplanation: 'Length normalization is applied to the loss computation, not GPU memory allocation. Memory is determined by sequence length in forward/backward passes, not the normalization factor.' },
+          { letter: 'D', text: 'Human evaluators prefer responses of exactly median length, so normalization targets the median', correct: false, wrongExplanation: 'Length normalization doesn\'t target any specific length. It removes the mathematical artifact that makes log-probability prefer shorter sequences regardless of quality.' }
+        ]
+      },
+      {
+        text: 'The train-inference mismatch that SimPO identifies in DPO refers to:',
+        options: [
+          { letter: 'A', text: 'DPO training requires more GPUs than inference serving', correct: false, wrongExplanation: 'Infrastructure differences between training and inference exist but aren\'t the mismatch SimPO addresses. The mismatch is about the reference model\'s role.' },
+          { letter: 'B', text: 'DPO training uses a reference model π_ref in its objective, but at inference time the reference model is absent — the trained model\'s generation is not relative to any reference', correct: true },
+          { letter: 'C', text: 'DPO models perform differently on tasks seen during training vs. new tasks', correct: false, wrongExplanation: 'That describes generalization, not train-inference mismatch. SimPO\'s mismatch is specifically about the reference model being used during training but not inference.' },
+          { letter: 'D', text: 'DPO requires different hardware for training and inference', correct: false, wrongExplanation: 'DPO uses standard GPU hardware for both training and inference. The mismatch is a mathematical/conceptual one about the role of π_ref.' }
+        ]
+      }
+    ]
+  }
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+const state = {
+  active: null,
+  tab: 'lesson',
+  answered: {},
+  qIndex: 0,
+  completed: new Set(JSON.parse(localStorage.getItem('pa9_completed') || '[]'))
+};
+
+function save() {
+  localStorage.setItem('pa9_completed', JSON.stringify([...state.completed]));
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function isPaperUnlocked(paper) {
+  return paper.prereqs.every(id => state.completed.has(id));
+}
+
+function updateBadge() {
+  document.getElementById('badge').textContent = `${state.completed.size} / 12 completed`;
+}
+
+function getTrackLabel(trackId) {
+  return TRACKS.find(t => t.id === trackId)?.label || trackId;
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+
+function renderSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  let html = '';
+
+  TRACKS.forEach(track => {
+    const papers = PAPERS.filter(p => p.track === track.id);
+    if (!papers.length) return;
+
+    html += `<div class="track-label">${track.label}</div>`;
+
+    papers.forEach(paper => {
+      const unlocked = isPaperUnlocked(paper);
+      const done = state.completed.has(paper.id);
+      const active = state.active === paper.id;
+
+      let icon = unlocked ? (done ? '&#10003;' : '&#9675;') : '&#128274;';
+      let classes = 'sidebar-item';
+      if (active) classes += ' active';
+      if (!unlocked) classes += ' locked';
+
+      const clickHandler = unlocked ? `onclick="openPaper('${paper.id}')"` : '';
+
+      html += `
+        <div class="${classes}" ${clickHandler}>
+          <span class="si-icon">${icon}</span>
+          <span class="si-title">${paper.title.split(':')[0]}</span>
+          ${done ? '<span class="si-done">&#127488;</span>' : ''}
+        </div>
+      `;
+    });
+  });
+
+  sidebar.innerHTML = html;
+}
+
+// ─── WELCOME ─────────────────────────────────────────────────────────────────
+
+function renderWelcome() {
+  document.getElementById('paper-view').style.display = 'none';
+  const wv = document.getElementById('welcome-view');
+  wv.style.display = 'block';
+
+  wv.innerHTML = `
+    <div id="welcome-screen">
+      <h2>LLM Alignment &amp; Fine-tuning</h2>
+      <p class="sub">A structured curriculum from SFT basics to frontier alignment methods.</p>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="num">12</div>
+          <div class="lbl">Topics</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">36</div>
+          <div class="lbl">Questions</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">${state.completed.size}</div>
+          <div class="lbl">Completed</div>
+        </div>
+      </div>
+
+      <p class="welcome-desc">
+        This academy covers the full LLM alignment and fine-tuning stack: from instruction tuning and evaluation fundamentals through RLHF's three-stage pipeline, parameter-efficient methods, synthetic data, direct preference optimization, and advanced safety alignment. Each paper includes a full lesson and a 3-question quiz. You must pass all questions to unlock dependent papers.
+      </p>
+
+      <div class="start-btns">
+        <button class="btn" onclick="openPaper('instruction_tuning')">Start: Instruction Tuning</button>
+        <button class="btn secondary" onclick="openPaper('eval_frameworks')">Start: Eval Frameworks</button>
+      </div>
+
+      <div class="track-overview">
+        <h3>Curriculum Tracks</h3>
+        <div class="track-list">
+          ${TRACKS.map(t => {
+            const count = PAPERS.filter(p => p.track === t.id).length;
+            const done = PAPERS.filter(p => p.track === t.id && state.completed.has(p.id)).length;
+            return `<div class="track-chip"><span>${t.label}</span><br>${done}/${count} complete</div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── OPEN PAPER ──────────────────────────────────────────────────────────────
+
+function openPaper(id) {
+  const paper = PAPERS.find(p => p.id === id);
+  if (!paper || !isPaperUnlocked(paper)) return;
+
+  state.active = id;
+  state.tab = 'lesson';
+  state.answered = {};
+  state.qIndex = 0;
+
+  document.getElementById('welcome-view').style.display = 'none';
+  document.getElementById('paper-view').style.display = 'block';
+
+  renderSidebar();
+  renderTabContent();
+
+  document.getElementById('main').scrollTop = 0;
+}
+
+// ─── TAB CONTENT ─────────────────────────────────────────────────────────────
+
+function showTab(tab) {
+  state.tab = tab;
+  renderTabContent();
+}
+
+function renderTabContent() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  if (!paper) return;
+
+  const pv = document.getElementById('paper-view');
+
+  const lessonActive = state.tab === 'lesson' ? 'active' : '';
+  const quizActive = state.tab === 'quiz' ? 'active' : '';
+
+  pv.innerHTML = `
+    <div class="paper-header">
+      <div class="track-badge">${getTrackLabel(paper.track)}</div>
+      <h2>${paper.title}</h2>
+      <div class="authors">${paper.authors}</div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn ${lessonActive}" onclick="showTab('lesson')">Lesson</button>
+      <button class="tab-btn ${quizActive}" onclick="showTab('quiz')">Quiz (${paper.questions.length} questions)</button>
+    </div>
+    <div id="tab-body"></div>
+  `;
+
+  if (state.tab === 'lesson') {
+    renderLesson(paper);
+  } else {
+    renderQuiz();
+  }
+}
+
+// ─── LESSON ──────────────────────────────────────────────────────────────────
+
+function renderLesson(paper) {
+  const body = document.getElementById('tab-body');
+  body.innerHTML = `
+    <div class="lesson-body">${paper.lesson}</div>
+    <div style="margin-top:28px;">
+      <button class="btn" onclick="showTab('quiz')">Take the Quiz</button>
+    </div>
+  `;
+}
+
+// ─── QUIZ ────────────────────────────────────────────────────────────────────
+
+function renderQuiz() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  const body = document.getElementById('tab-body');
+
+  const q = paper.questions[state.qIndex];
+  const answered = state.answered[state.qIndex];
+  const isCorrect = answered !== undefined && q.options.find(o => o.letter === answered)?.correct;
+  const total = paper.questions.length;
+  const doneCount = Object.keys(state.answered).length;
+
+  let optionsHtml = q.options.map(opt => {
+    let cls = 'option-btn';
+    let extraHtml = '';
+
+    if (answered !== undefined) {
+      if (opt.correct) {
+        cls += ' correct';
+        extraHtml = `<div class="correct-explanation" style="display:block;">Correct. ${opt.text}</div>`;
+      } else if (opt.letter === answered && !opt.correct) {
+        cls += ' wrong';
+        extraHtml = `<div class="wrong-explanation" style="display:block;">${opt.wrongExplanation}</div>`;
+      }
+    }
+
+    const disabled = answered !== undefined ? 'disabled' : '';
+    const clickHandler = answered === undefined ? `onclick="selectOption('${opt.letter}')"` : '';
+
+    return `
+      <button class="${cls}" ${disabled} ${clickHandler}>
+        <span class="option-letter">${opt.letter}.</span>${opt.text}
+      </button>
+      ${extraHtml}
+    `;
+  }).join('');
+
+  let nextHtml = '';
+  if (answered !== undefined) {
+    if (state.qIndex < total - 1) {
+      nextHtml = `<button class="btn next-btn" onclick="nextQ()">Next Question &rarr;</button>`;
+    } else {
+      nextHtml = `<button class="btn next-btn" onclick="checkDone()">Check Results</button>`;
+    }
+  }
+
+  body.innerHTML = `
+    <div class="quiz-progress">Question <span>${state.qIndex + 1}</span> of <span>${total}</span> &nbsp;|&nbsp; ${doneCount} answered</div>
+    <div class="question-card">
+      <div class="question-text">${q.text}</div>
+      ${optionsHtml}
+      ${nextHtml}
+    </div>
+  `;
+}
+
+function selectOption(letter) {
+  const paper = PAPERS.find(p => p.id === state.active);
+  if (state.answered[state.qIndex] !== undefined) return;
+
+  state.answered[state.qIndex] = letter;
+  renderQuiz();
+}
+
+function nextQ() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  if (state.qIndex < paper.questions.length - 1) {
+    state.qIndex++;
+    renderQuiz();
+    document.getElementById('main').scrollTop = 0;
+  }
+}
+
+function checkDone() {
+  const p = PAPERS.find(x => x.id === state.active);
+  const allPass = p.questions.every((q, i) => {
+    const a = state.answered[i];
+    return a !== undefined && q.options.find(o => o.letter === a)?.correct;
+  });
+
+  if (allPass) {
+    state.completed.add(p.id);
+    save();
+    updateBadge();
+    renderSidebar();
+    renderCompletion(p);
+  } else {
+    state.qIndex = p.questions.findIndex((q, i) => {
+      const a = state.answered[i];
+      return !(a !== undefined && q.options.find(o => o.letter === a)?.correct);
+    });
+    renderQuiz();
+  }
+}
+
+// ─── COMPLETION ──────────────────────────────────────────────────────────────
+
+function renderCompletion(paper) {
+  const body = document.getElementById('tab-body');
+
+  const unlocked = PAPERS.filter(p =>
+    p.prereqs.includes(paper.id) && isPaperUnlocked(p)
+  );
+
+  let unlockedHtml = '';
+  if (unlocked.length > 0) {
+    unlockedHtml = `
+      <div class="unlocked-list">
+        <h4>Newly Unlocked</h4>
+        ${unlocked.map(p => `
+          <div class="unlocked-item" onclick="openPaper('${p.id}')">
+            ${p.title}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  const allDone = state.completed.size === PAPERS.length;
+
+  body.innerHTML = `
+    <div class="completion-card">
+      <div class="completion-icon">&#129504;</div>
+      <h2>${paper.title.split(':')[0]} Complete</h2>
+      <p>You passed all ${paper.questions.length} questions. This paper is now marked complete.</p>
+      ${unlockedHtml}
+      ${allDone ? '<p style="color:#F06292;font-weight:700;font-size:1rem;">All 12 papers complete. Curriculum mastered.</p>' : ''}
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
+        <button class="btn secondary" onclick="renderWelcome()">Back to Overview</button>
+        ${unlocked.length > 0 ? `<button class="btn" onclick="openPaper('${unlocked[0].id}')">Next: ${unlocked[0].title.split(':')[0]}</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+updateBadge();
+renderSidebar();
+renderWelcome();
+</script>
+<!-- Cross-device progress sync -->
+<script>
+(function(){
+  var SU='https://gbkhkbfbarsnpbdkxzii.supabase.co';
+  var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+  var MOD='pa9';
+  var LSK='pa9_completed';
+  var FMT='array';
+
+  function getIds(){
+    var raw=localStorage.getItem(LSK);
+    if(!raw) return [];
+    try{
+      var p=JSON.parse(raw);
+      if(Array.isArray(p)) return p;
+      return Object.keys(p).filter(function(k){return p[k];});
+    }catch(e){return [];}
+  }
+
+  function push(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    var ids=getIds();
+    if(!ids.length) return;
+    fetch(SU+'/rest/v1/academy_progress',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({email:email,module:MOD,completed:ids,updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }
+
+  var _orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    _orig.call(this,k,v);
+    if(k===LSK) push();
+  };
+
+  window.addEventListener('load',function(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    fetch(SU+'/rest/v1/academy_progress?email=eq.'+encodeURIComponent(email)+'&module=eq.'+MOD+'&select=completed',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(!rows||!rows[0]||!rows[0].completed||!rows[0].completed.length) return;
+      var remote=rows[0].completed;
+      var raw=localStorage.getItem(LSK);
+      var merged;
+      if(FMT==='object'){
+        merged=raw?JSON.parse(raw):{};
+        remote.forEach(function(id){merged[id]=true;});
+        _orig.call(localStorage,LSK,JSON.stringify(merged));
+      } else {
+        var local=raw?JSON.parse(raw):[];
+        var s=new Set(local);
+        remote.forEach(function(id){s.add(id);});
+        _orig.call(localStorage,LSK,JSON.stringify(Array.from(s)));
+      }
+      if(typeof renderTree==='function') renderTree();
+      if(typeof updateProgressBar==='function') updateProgressBar();
+      if(typeof render==='function') render();
+    }).catch(function(){});
+  });
+
+  var btn=document.createElement('a');
+  btn.href='index.html';
+  btn.innerHTML='&#8592; Menu';
+  btn.style.cssText='position:fixed;top:10px;left:10px;z-index:9999;background:#16213E;color:#7C4DFF;border:1px solid #7C4DFF44;padding:5px 12px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;opacity:0.8;transition:opacity 0.2s';
+  btn.onmouseover=function(){this.style.opacity='1';};
+  btn.onmouseout=function(){this.style.opacity='0.8';};
+  document.body.appendChild(btn);
+})();
+</script>
+</body>
+</html>

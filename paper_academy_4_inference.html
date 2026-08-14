@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Academy IV — LLM Inference Optimization</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0F0F23;color:#E0E0E0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+  header{background:#16213E;border-bottom:2px solid #FFD700;padding:16px 24px;display:flex;align-items:center;gap:16px}
+  header h1{font-size:1.3rem;color:#FFD700}
+  header p{font-size:0.85rem;color:#aaa;margin-top:2px}
+  .badge{background:#FFD700;color:#0F0F23;font-size:0.7rem;font-weight:700;padding:3px 8px;border-radius:10px;margin-left:auto}
+  .layout{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 65px)}
+  .sidebar{background:#0a0a1a;border-right:1px solid #222;overflow-y:auto;padding:16px}
+  .track-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#FFD700;margin:16px 0 8px}
+  .track-label:first-child{margin-top:0}
+  .paper-node{background:#16213E;border:1px solid #2a2a4a;border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all 0.2s;position:relative}
+  .paper-node:hover{border-color:#FFD700;background:#1a2a4a}
+  .paper-node.active{border-color:#FFD700;background:#1a2a50;box-shadow:0 0 12px rgba(255,215,0,0.2)}
+  .paper-node.completed{border-color:#FF8F00}
+  .paper-node.locked{opacity:0.4;cursor:not-allowed}
+  .paper-node .title{font-size:0.85rem;font-weight:600;color:#fff}
+  .paper-node .meta{font-size:0.72rem;color:#888;margin-top:3px}
+  .paper-node .check{position:absolute;top:8px;right:10px;color:#FF8F00;font-size:1rem}
+  .paper-node .lock-icon{position:absolute;top:8px;right:10px;color:#555;font-size:0.85rem}
+  .prereq-line{display:flex;align-items:center;gap:4px;margin-left:12px;margin-bottom:2px}
+  .prereq-line::before{content:'↳';color:#555;font-size:0.8rem}
+  .main{overflow-y:auto;padding:24px}
+  .welcome{max-width:700px;margin:40px auto;text-align:center}
+  .welcome h2{color:#FFD700;font-size:2rem;margin-bottom:12px}
+  .welcome p{color:#aaa;line-height:1.7;font-size:0.95rem}
+  .welcome .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}
+  .stat-card{background:#16213E;border:1px solid #2a2a4a;border-radius:8px;padding:16px;text-align:center}
+  .stat-card .num{font-size:2rem;font-weight:700;color:#FFD700}
+  .stat-card .lbl{font-size:0.75rem;color:#888;margin-top:4px}
+  .paper-view{max-width:800px;margin:0 auto}
+  .paper-header{background:#16213E;border:1px solid #2a2a4a;border-radius:12px;padding:24px;margin-bottom:20px}
+  .paper-header h2{color:#FFD700;font-size:1.4rem;margin-bottom:8px}
+  .paper-meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+  .pill{background:#0F0F23;border:1px solid #2a2a4a;border-radius:20px;padding:4px 12px;font-size:0.75rem;color:#aaa}
+  .pill.gold{border-color:#FFD700;color:#FFD700}
+  .tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid #2a2a4a}
+  .tab{padding:10px 20px;cursor:pointer;font-size:0.9rem;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s}
+  .tab:hover{color:#fff}
+  .tab.active{color:#FFD700;border-bottom-color:#FFD700}
+  .lesson-body{background:#16213E;border:1px solid #2a2a4a;border-radius:12px;padding:24px;line-height:1.8;font-size:0.93rem}
+  .lesson-body h3{color:#FFD700;margin:20px 0 10px}
+  .lesson-body h3:first-child{margin-top:0}
+  .lesson-body p{margin-bottom:12px;color:#ccc}
+  .lesson-body ul{margin:8px 0 12px 20px;color:#ccc}
+  .lesson-body li{margin-bottom:6px}
+  .lesson-body strong{color:#FFD700}
+  .lesson-body em{color:#FF8F00}
+  .callout{background:#0F0F23;border-left:3px solid #FFD700;border-radius:0 8px 8px 0;padding:12px 16px;margin:16px 0;font-size:0.88rem;color:#bbb}
+  .callout.amber{border-color:#FF8F00}
+  .code{background:#050510;border:1px solid #2a2a4a;border-radius:8px;padding:14px 16px;font-family:'Courier New',monospace;font-size:0.82rem;color:#00E5FF;margin:12px 0;overflow-x:auto;white-space:pre}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:0.83rem}
+  th{background:#0F0F23;color:#FFD700;padding:8px 12px;text-align:left;border-bottom:1px solid #2a2a4a}
+  td{padding:8px 12px;border-bottom:1px solid #1a1a30;color:#ccc}
+  tr:hover td{background:#1a1a2e}
+  .quiz-wrap{background:#16213E;border:1px solid #2a2a4a;border-radius:12px;padding:24px}
+  .quiz-progress{font-size:0.8rem;color:#888;margin-bottom:20px}
+  .q-card{margin-bottom:0}
+  .q-text{font-size:1rem;color:#fff;margin-bottom:16px;line-height:1.6}
+  .option{background:#0F0F23;border:1px solid #2a2a4a;border-radius:8px;padding:12px 16px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;display:flex;gap:12px;align-items:flex-start}
+  .option:hover{border-color:#FFD700;background:#1a1a30}
+  .option.correct{border-color:#00C853;background:#0a1a0f}
+  .option.wrong{border-color:#FF1744;background:#1a0a0a}
+  .option.disabled{cursor:default;pointer-events:none}
+  .opt-letter{width:24px;min-width:24px;height:24px;border-radius:50%;background:#2a2a4a;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#aaa}
+  .option.correct .opt-letter{background:#00C853;color:#000}
+  .option.wrong .opt-letter{background:#FF1744;color:#fff}
+  .opt-body{flex:1}
+  .opt-text{font-size:0.9rem;color:#ddd}
+  .opt-explain{font-size:0.82rem;color:#aaa;margin-top:6px;font-style:italic;display:none}
+  .option.wrong .opt-explain{display:block;color:#ff8888}
+  .option.correct .opt-explain{display:block;color:#88cc88}
+  .q-nav{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+  .btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;transition:all 0.2s}
+  .btn-primary{background:#FFD700;color:#0F0F23}
+  .btn-primary:hover{background:#FF8F00}
+  .btn-secondary{background:#2a2a4a;color:#ccc}
+  .btn-secondary:hover{background:#3a3a5a}
+  .completion{text-align:center;padding:32px}
+  .completion .star{font-size:3rem;margin-bottom:12px}
+  .completion h3{color:#FFD700;font-size:1.5rem;margin-bottom:8px}
+  .completion p{color:#aaa;font-size:0.9rem}
+  .locked-msg{text-align:center;padding:40px;color:#666}
+  .locked-msg h3{color:#444;margin-bottom:8px}
+  .prereq-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .prereq-tag{background:#1a1a30;border:1px solid #FFD700;border-radius:20px;padding:4px 12px;font-size:0.75rem;color:#FFD700}
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:#0a0a1a}
+  ::-webkit-scrollbar-thumb{background:#2a2a4a;border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Paper Academy IV — LLM Inference Optimization</h1>
+    <p>KV Cache · Quantization · Speculative Decoding · vLLM · Parallelism · MoE · Triton · H100 · Serving</p>
+  </div>
+  <div class="badge" id="progress-badge">0 / 10</div>
+</header>
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="main" id="main"></div>
+</div>
+<script>
+const LS_KEY = 'pa4_completed';
+
+const PAPERS = [
+  {
+    id: 'kv_cache',
+    title: 'KV Cache',
+    authors: 'Kwon et al. (PagedAttention), Zhang et al. (H2O)',
+    year: '2023',
+    track: 'Memory Systems',
+    prereqs: [],
+    lesson: `
+<h3>Why Autoregressive Decoding is Expensive</h3>
+<p>Transformers generate tokens one at a time. Without any optimization, computing attention at step N means attending over all N previous tokens — that's O(N²) work per token. For a 4,096-token response, that's catastrophic.</p>
+<h3>What KV Cache Is</h3>
+<p>During the forward pass, each transformer layer computes three projections of each token: Query (Q), Key (K), and Value (V). The Query changes with each new token, but Keys and Values for past tokens are <strong>reusable</strong>. KV Cache stores these K and V tensors so only the new token's projections need to be computed at each step.</p>
+<div class="callout">After caching: each new token requires one forward pass attending to cached K/V. Generating 2,048 tokens goes from N² attention calls to N linear attention operations. 10-100× speedup depending on sequence length.</div>
+<h3>The Memory Problem</h3>
+<p>Memory cost is significant. LLaMA-2 70B uses 80 transformer layers with 8,192-dimensional hidden states. Each token consumes approximately <strong>2.6 MB of KV cache</strong>. A 4,096-token context = ~10 GB of KV cache alone, on top of the 140 GB of model weights.</p>
+<h3>Modern Optimizations</h3>
+<ul>
+  <li><strong>PagedAttention (vLLM, SOSP 2023):</strong> OS-style virtual memory paging for KV cache. Instead of pre-allocating max-length contiguous blocks per request (wasting 60-80% due to variable lengths), blocks are allocated in fixed-size pages on demand. Near-zero fragmentation.</li>
+  <li><strong>H2O (NeurIPS 2023):</strong> "Heavy-Hitter Oracle" — evicts tokens whose K/V entries receive minimal cumulative attention. Keeps heavy hitters + recent tokens. Enables very long contexts on smaller hardware.</li>
+  <li><strong>KIVI (ICML 2024):</strong> 2-bit asymmetric quantization of the KV cache itself. Keys are more sensitive than values, so keys get per-channel quant, values get per-token quant.</li>
+  <li><strong>Grouped-Query Attention (GQA):</strong> Multiple query heads share a single K/V head. If 32 Q heads share 8 K/V heads, that's a 4× reduction in cached tensor size. Used in LLaMA-2, Mistral.</li>
+  <li><strong>DeepSeek MLA:</strong> Compresses K and V into low-rank latent vectors. Radical reduction: from 512 KV dimensions to 128, then reconstruct on demand.</li>
+</ul>
+<h3>Production Impact</h3>
+<p>Without KV cache, generating a 2,048-token response from a 70B model would require re-attending to all prior tokens at every step — effectively impossible at commercial scale. This is the baseline that makes serving LLMs economically viable. vLLM, Together AI, Fireworks AI, Groq (prefix caching), and Anthropic (prompt caching) all build on this foundation.</p>
+<div class="callout amber">Key intuition: the KV cache trades GPU memory for GPU compute. As sequences get longer, the memory cost grows but compute cost per token stays constant.</div>
+    `,
+    questions: [
+      {
+        q: 'Why does KV cache memory grow linearly with sequence length?',
+        options: ['Model weights expand to accommodate longer inputs','Every token processed adds a new K/V pair per layer that must be stored for future attention steps','The N×N attention matrix must be re-computed and stored at each step','GPU VRAM allocation overhead compounds per token'],
+        correct: 1,
+        explain: ['Weights are fixed at load time — they\'re model parameters, not tied to sequence length.', null, 'That\'s exactly what KV cache avoids — by caching K/V, you never need to recompute past tokens.', 'VRAM allocation overhead is a systems concern and tiny compared to the actual K/V tensor data.']
+      },
+      {
+        q: 'What does PagedAttention specifically solve?',
+        options: ['Reduces attention complexity from O(N²) to O(N log N)','Moves KV cache to CPU RAM to free GPU VRAM','Memory fragmentation — earlier systems pre-allocated contiguous max-length chunks per request, wasting 60-80% of KV cache memory','Compresses KV tensors to INT8 precision'],
+        correct: 2,
+        explain: ['PagedAttention doesn\'t change computational complexity — only memory management. FlashAttention reduces the N×N memory footprint.', 'That\'s CPU offloading, a different technique. PagedAttention manages within GPU VRAM.', null, 'That\'s KIVI. PagedAttention doesn\'t change numeric precision at all.']
+      },
+      {
+        q: 'What does H2O\'s "heavy hitter" observation enable?',
+        options: ['Evicting tokens with minimal cumulative attention, keeping heavy hitters + recent tokens — enabling very long contexts on smaller hardware','Mixed-precision KV quantization based on token importance','Skipping attention computation during the prefill phase for known-boring tokens','Reordering tokens by attention score to improve cache locality'],
+        correct: 0,
+        explain: [null, 'Different technique — H2O evicts K/V entries entirely; it doesn\'t change numeric precision.', 'H2O operates on the KV cache during decoding (eviction), not on prefill computation skipping.', 'Reordering tokens breaks language structure and causality in autoregressive generation.']
+      },
+      {
+        q: 'How does Grouped-Query Attention (GQA) reduce KV cache size?',
+        options: ['Fewer transformer layers in the model','Keys and values quantized to INT4 across groups','Multiple query heads share a single K/V head — 32 Q heads sharing 8 K/V heads gives a 4× KV reduction','Caches query vectors instead of keys and values'],
+        correct: 2,
+        explain: ['GQA is an architectural change to attention head grouping — it doesn\'t change layer count.', 'GQA is architectural sharing of K/V heads, not quantization — precision is unchanged.', null, 'Query vectors are computed fresh for each new token; they don\'t need to be cached. Keys and Values for past tokens are what\'s cached.']
+      }
+    ]
+  },
+  {
+    id: 'quantization',
+    title: 'Quantization (INT8, INT4, GPTQ, AWQ)',
+    authors: 'Dettmers et al. (bitsandbytes); Frantar et al. (GPTQ); Lin, Tang et al. (AWQ)',
+    year: '2022–2024',
+    track: 'Compression',
+    prereqs: [],
+    lesson: `
+<h3>The Core Idea</h3>
+<p>LLaMA-2 70B in FP16 requires 140 GB of VRAM. In INT8, that's 70 GB. In INT4, it's 35 GB. Quantization reduces weight precision to shrink memory footprint, often speeding up matrix math as a bonus. The challenge: precision loss degrades model quality.</p>
+<h3>Why Naive INT8 Fails on LLMs</h3>
+<p>Standard quantization divides the min-max range into 256 equal buckets (INT8). LLMs have <strong>activation outliers</strong> — a tiny fraction (~0.1%) of values that are 100× larger than average. These outliers force the quantization scale so high that normal-magnitude values collapse to just a few discrete levels, causing significant quality degradation.</p>
+<h3>bitsandbytes INT8 — Mixed-Precision Decomposition</h3>
+<p>Dettmers et al. (NeurIPS 2022) solve this with LLM.int8(): decompose matrix multiplication into two parts. Outlier columns (identified dynamically) stay in FP16; all other values use INT8. The outlier fraction is typically less than 0.1% of values, so memory savings remain substantial while quality is preserved.</p>
+<h3>GPTQ — Second-Order Post-Training Quantization</h3>
+<p>GPTQ (Frantar et al., ICLR 2023) targets INT4. Instead of quantizing weights independently, it processes weights row by row using <strong>Hessian information</strong> — measuring each weight's sensitivity to quantization error. After quantizing one weight, it compensates by adjusting the remaining weights in that row to minimize reconstruction error. This "second-order" approach achieves near-FP16 quality at INT4.</p>
+<div class="code">GPTQ loss: E[||WX - Q(W)X||²]
+Hessian captures d²L/dw² — curvature of loss surface
+High curvature → quantize carefully
+Low curvature → quantize aggressively</div>
+<h3>AWQ — Activation-Aware Weight Quantization</h3>
+<p>AWQ (Lin, Tang et al., MLSys 2024) takes a different approach: <em>which weights matter most?</em> By analyzing activations across a calibration dataset, AWQ identifies ~1% of weight channels that are most frequently and strongly activated. These salient channels are scaled up before uniform quantization (so they receive more of the quantization budget), then the scaling is folded back in — no precision mixed, all INT4, but where precision counts most is preserved.</p>
+<div class="callout">AWQ numbers: 4× memory reduction, up to 8.5× latency speedup, ~3.25× throughput gain vs FP16. Best quality-per-bit of any post-training INT4 method as of 2024.</div>
+<h3>What Each Enables</h3>
+<table>
+<tr><th>Method</th><th>Precision</th><th>Memory vs FP16</th><th>Key Idea</th><th>Use Case</th></tr>
+<tr><td>bitsandbytes</td><td>INT8</td><td>50% reduction</td><td>Mixed-precision for outliers</td><td>Research, low-overhead</td></tr>
+<tr><td>GPTQ</td><td>INT4</td><td>75% reduction</td><td>Hessian compensation</td><td>Local inference, edge</td></tr>
+<tr><td>AWQ</td><td>INT4</td><td>75% reduction</td><td>Activation-aware scaling</td><td>Best quality at INT4</td></tr>
+</table>
+<p><strong>Ecosystem:</strong> Ollama (GGUF/GPTQ), LM Studio, Together AI, Modal Labs, Hugging Face (AutoGPTQ, bitsandbytes integration).</p>
+    `,
+    questions: [
+      {
+        q: 'Why does naive INT8 quantization fail on LLMs?',
+        options: ['INT8 cannot represent negative numbers','Activation outliers — a tiny fraction of values 100× larger than average — force the quantization scale so high that normal values collapse to a few discrete levels','INT8 matrix math is slower than FP16 on modern GPUs','LoRA adapters modify weights during inference, invalidating static quantization'],
+        correct: 1,
+        explain: ['Signed INT8 covers -128 to 127 — negative numbers are fully supported.', null, 'INT8 is generally faster. The problem is quality degradation from outlier-driven scale setting, not speed.', 'Weight quantization is applied statically before serving; LoRA is a separate fine-tuning technique unrelated to INT8 inference failures.']
+      },
+      {
+        q: 'What does GPTQ\'s "second-order information" mean in practice?',
+        options: ['Two quantization passes: first weights, then activations','A second validation model checks quality after quantization','Computing the Hessian of layer reconstruction error to capture weight sensitivity, then compensating for each weight\'s quantization error by adjusting remaining weights in the row','Quantizing every second layer at INT4 while keeping alternating layers at FP16'],
+        correct: 2,
+        explain: ['"Second-order" is a Taylor expansion concept referring to curvature (Hessian), not two passes.', 'No second model — the Hessian is computed analytically from the target model and calibration data.', null, 'GPTQ quantizes all layers. "Second-order" describes mathematical order of derivatives, not architectural alternation.']
+      },
+      {
+        q: 'AWQ\'s key advantage over GPTQ?',
+        options: ['AWQ identifies ~1% of salient weight channels via activation statistics, scales them before uniform INT4 quantization — preserving effective precision exactly where the model\'s accuracy depends most','AWQ quantizes weight channels in ascending magnitude order to minimize rounding error first','AWQ applies quantization only to FFN layers, keeping attention in FP16','AWQ uses larger calibration datasets than GPTQ, improving accuracy regardless of method'],
+        correct: 0,
+        explain: [null, 'AWQ identifies importance via activation statistics (how often and how strongly a channel is activated), not by weight magnitude. Low-magnitude weights can still be critical.', 'AWQ applies to all weight matrices. Selective application is not its contribution.', 'GPTQ also uses calibration data. Dataset size isn\'t AWQ\'s distinguishing contribution — activation-aware channel scaling is.']
+      }
+    ]
+  },
+  {
+    id: 'speculative_decoding',
+    title: 'Speculative Decoding',
+    authors: 'Chen et al. (Google DeepMind); Leviathan, Kalman, Matias (Google Brain)',
+    year: '2023',
+    track: 'Memory Systems',
+    prereqs: ['kv_cache'],
+    lesson: `
+<h3>The Memory Bandwidth Problem</h3>
+<p>Single-user LLM inference at small batch sizes is <strong>memory-bandwidth-bound</strong>. Generating each token requires loading all model weights from HBM (High Bandwidth Memory) once. A 70B FP16 model = 140 GB of weights. At 3.35 TB/s (H100 HBM), that's ~42ms per token minimum — regardless of how many FLOPs are available. The GPU is spending most of its time waiting for data, not computing.</p>
+<h3>The Draft-Verify Trick</h3>
+<p>Speculative decoding exploits a key asymmetry: <em>verifying K tokens in parallel costs roughly the same as generating 1 token</em>. Here's why: model weights are still loaded once from HBM, but the forward pass now processes K tokens in parallel (a batch of K), producing K+1 useful outputs in the same memory-bound step.</p>
+<div class="callout">
+<strong>Algorithm:</strong><br>
+1. Small draft model generates K tokens cheaply (cheap weights → cheap HBM load)<br>
+2. Large target model verifies all K tokens in one parallel forward pass<br>
+3. Accept token i with probability min(1, p_target(i) / p_draft(i))<br>
+4. If rejected at position j, sample from corrected distribution and discard drafts j+1…K<br>
+5. Repeat from next token
+</div>
+<h3>The Mathematical Guarantee</h3>
+<p>The acceptance criterion is <strong>token-level rejection sampling</strong>. The joint process samples exactly from p_target, provably — no quality loss regardless of draft model quality. Poor draft models just have lower acceptance rates (more iterations), but never produce incorrect distributions.</p>
+<p>Acceptance rates in practice: 70-90% for same-family draft/target pairs (e.g., TinyLlama drafting for LLaMA-2). Net speedup: <strong>2-4× over standard generation</strong>.</p>
+<h3>Variants</h3>
+<ul>
+  <li><strong>Classic speculative decoding:</strong> Separate small draft model (e.g., 7B draft + 70B target)</li>
+  <li><strong>Medusa:</strong> Extra "heads" attached to the target model itself — no separate draft model needed</li>
+  <li><strong>EAGLE:</strong> Autoregressive draft head trained to mimic the target's hidden states — highest acceptance rates</li>
+  <li><strong>Prompt lookup decoding:</strong> Uses repetitions in the input prompt as draft — free, effective for summarization/editing tasks</li>
+</ul>
+<h3>Real-World Use</h3>
+<p>Groq hardware integrates speculative decoding natively. vLLM supports all major variants. TensorRT-LLM bundles it. Google Gemini uses it in production serving infrastructure. The technique is most impactful for <em>latency-sensitive, low-batch applications</em> — chatbots, interactive agents — where throughput optimization (continuous batching) gives diminishing returns.</p>
+    `,
+    questions: [
+      {
+        q: 'How does speculative decoding guarantee output quality matches the original model?',
+        options: ['The draft model has identical weights with some layers pruned, preserving output distribution','Token-level rejection sampling with acceptance probability min(1, p_target/p_draft) — ensuring the joint process samples exactly from p_target regardless of draft model quality','The target model runs on all tokens and discards positions where it disagrees with the draft','Logits are averaged between draft and target models at each step'],
+        correct: 1,
+        explain: ['The guarantee comes from rejection sampling mathematics, not architectural similarity. Even a random draft model preserves the distribution (at low acceptance rate).', null, 'That would eliminate the speedup entirely — the target would process every token and you\'d gain nothing.', 'Averaging logits changes the output distribution. The guarantee requires rejection sampling, not averaging.']
+      },
+      {
+        q: 'Why does verifying K draft tokens cost roughly the same as generating 1 token?',
+        options: ['The draft model compresses tokens before sending to the target','The target model runs on a dedicated faster GPU during verification','LLM inference at small batch sizes is memory-bandwidth-bound — loading weights is the bottleneck. Processing K tokens in one parallel pass loads weights once but produces up to K+1 useful tokens','The draft model uses a different (shorter) tokenizer, producing fewer tokens per verification step'],
+        correct: 2,
+        explain: ['No compression — both models use the same vocabulary and token representations.', 'Speculative decoding works on a single GPU. The speedup doesn\'t require dedicated hardware.', null, 'Draft and target MUST share the same tokenizer for probability ratio comparison (p_target/p_draft) to be defined.']
+      },
+      {
+        q: 'What happens when a draft token is rejected at position j?',
+        options: ['The entire draft sequence is discarded and the draft model starts completely over','The target model is called again for position j to get the correct token','A corrected token is sampled from the residual distribution max(0, p_target − p_draft), normalized; all subsequent draft tokens are discarded; next draft sequence starts from this corrected token','The draft model\'s weights are updated via online learning to learn from the rejection'],
+        correct: 2,
+        explain: ['Only position j onwards is discarded — accepted tokens at positions 0 to j-1 stand and are not wasted.', 'The corrected token is sampled from the residual distribution in one operation — no additional target forward pass needed.', null, 'No weight updates happen during inference. The draft model remains frozen throughout serving.']
+      }
+    ]
+  },
+  {
+    id: 'continuous_batching',
+    title: 'Continuous Batching + vLLM',
+    authors: 'Yu et al. (Orca, OSDI 2022); Kwon, Li et al. (vLLM, SOSP 2023)',
+    year: '2022–2023',
+    track: 'Memory Systems',
+    prereqs: ['kv_cache'],
+    lesson: `
+<h3>The Static Batching Problem</h3>
+<p>Early LLM serving systems used <strong>static batching</strong>: group N requests into a batch, process the batch until all sequences finish, then load the next batch. This has a critical flaw: <em>the entire batch must wait for the longest sequence</em>. If 7 of 8 requests finish in 100 tokens but 1 runs to 2,000 tokens, 7 GPU slots sit idle for 1,900 steps. GPU utilization: 30-40% in production workloads.</p>
+<div class="callout">Static batching: "the convoy problem." The entire convoy moves at the speed of the slowest truck.</div>
+<h3>Iteration-Level Scheduling (Orca, 2022)</h3>
+<p>Orca (Yu et al., OSDI 2022) introduced <strong>continuous batching</strong>: make the scheduling decision at every forward pass step, not per batch. When a sequence finishes, its slot is immediately freed. New requests from the waiting queue are inserted at the next step. GPU utilization jumps from ~40% to 70-80%+.</p>
+<h3>PagedAttention (vLLM, 2023)</h3>
+<p>Continuous batching exposed the next bottleneck: KV cache memory management. With variable-length sequences joining and leaving constantly, naive pre-allocation wastes 60-80% of KV cache memory. vLLM solved this with <strong>PagedAttention</strong>:</p>
+<ul>
+  <li>KV cache divided into fixed-size "pages" (e.g., 16 tokens × layer dimensions)</li>
+  <li>Pages allocated on demand, stored in a virtual-to-physical mapping</li>
+  <li>Non-contiguous physical pages can be logically adjacent (like OS virtual memory)</li>
+  <li>Memory waste reduced to ~4% (one partial page per sequence, maximum)</li>
+</ul>
+<h3>Prefix Sharing</h3>
+<p>PagedAttention's paged addressing enables a bonus: <strong>KV cache sharing for identical prefixes</strong>. If 1,000 concurrent requests all start with the same 500-token system prompt, those prompt pages are computed once and shared across all requests via copy-on-write. This makes high-concurrency RAG and chatbot deployments dramatically more efficient.</p>
+<div class="callout amber">vLLM vs baselines: 24× throughput over HuggingFace Transformers, 3.5× over TGI (at time of release, 2023).</div>
+<h3>What It Enabled</h3>
+<p>Together AI, Fireworks AI, Replicate, Baseten, and Anyscale all built commercial serving infrastructure on vLLM or equivalent continuous batching systems. The combination of iteration-level scheduling + paged memory is now the baseline for any serious LLM serving deployment.</p>
+    `,
+    questions: [
+      {
+        q: 'Why does a single long request reduce throughput for all others in static batching?',
+        options: ['All requests must wait for the slowest sequence to finish before any new requests are added — short-sequence slots sit idle for hundreds of wasted steps','Long sequences consume all GPU L2 cache, forcing cache evictions that slow shorter requests','The GPU must serialize computation between different-length sequences, losing SIMD efficiency','Long sequences require more attention heads, blocking GPU resources'],
+        correct: 0,
+        explain: [null, 'L2 cache effects are real but minor. The dominant problem is synchronized batch completion — idle slots waiting.', 'The GPU batches different-length sequences in parallel (with padding for computation); the issue is synchronized release, not computation serialization.', 'All sequences use the same fixed architecture — head count doesn\'t change per request.']
+      },
+      {
+        q: 'How does PagedAttention enable KV cache sharing across requests?',
+        options: ['It compresses shared KV tensors to fit more requests in the same memory','Pages with identical prefix content map to the same physical memory via virtual addressing — copy-on-write if a request needs to diverge','It computes a single shared KV cache broadcast to all sequences at batch initialization','It stores shared prefix KV cache in CPU RAM and streams to GPU on demand'],
+        correct: 1,
+        explain: ['Compression (quantization) is orthogonal to PagedAttention\'s addressing mechanism — paging doesn\'t change numeric precision.', null, 'Each sequence has its own KV state after the shared prefix diverges. Only the identical prefix portion can share physical memory.', 'That\'s CPU offloading. PagedAttention operates entirely within GPU VRAM using virtual-to-physical address mapping.']
+      },
+      {
+        q: 'The key scheduling difference between static and continuous batching?',
+        options: ['Continuous batching uses larger batch sizes overall','Continuous batching prioritizes shorter requests to maximize throughput','Continuous batching inserts and removes requests at every token generation step — no idle slots, immediate replacement when sequences complete','Continuous batching requires multiple GPUs; static batching works on a single GPU'],
+        correct: 2,
+        explain: ['Batch size is a byproduct of continuous scheduling, not the defining difference.', 'Scheduling policy (FIFO, priority, length) is orthogonal to the static vs continuous distinction.', null, 'Both paradigms work on any number of GPUs. The distinction is whether scheduling decisions happen per-batch or per-token-step.']
+      }
+    ]
+  },
+  {
+    id: 'tensor_parallelism',
+    title: 'Tensor & Pipeline Parallelism',
+    authors: 'Shoeybi, Patwary, Puri et al. (NVIDIA Megatron-LM)',
+    year: '2020–2021',
+    track: 'Scale',
+    prereqs: [],
+    lesson: `
+<h3>Why Model Parallelism Is Necessary</h3>
+<p>LLaMA-2 70B in FP16 = 140 GB. An H100 has 80 GB. You cannot fit it on one GPU. Model parallelism splits the model across multiple GPUs. There are two primary strategies: tensor parallelism and pipeline parallelism. Production systems use both.</p>
+<h3>Tensor Parallelism</h3>
+<p>Split weight matrices within each layer across GPUs along the hidden dimension. Megatron-LM (NVIDIA, 2020) formalized this for transformers:</p>
+<ul>
+  <li><strong>Column-parallel linear:</strong> Split weight matrix column-wise across N GPUs. Each GPU holds a different subset of output features. No communication needed before the split.</li>
+  <li><strong>Row-parallel linear:</strong> Split weight matrix row-wise. Each GPU holds a different input partition. Requires <strong>AllReduce</strong> to sum partial results after the operation.</li>
+  <li>Each transformer block requires exactly 2 AllReduce operations (one per MLP sub-layer pair).</li>
+</ul>
+<div class="callout">NVLink provides 600-900 GB/s bandwidth within a node. AllReduce for a 70B model's hidden state (~33 MB) takes ~0.04ms at NVLink speeds vs ~5ms at PCIe 4.0 bandwidth (64 GB/s). That's the difference between tensor parallelism being profitable or not.</div>
+<h3>Pipeline Parallelism</h3>
+<p>Assign consecutive transformer layers to different GPUs. GPU 0 handles layers 1-20, GPU 1 handles layers 21-40, etc. Activations are passed between stages via network (InfiniBand for cross-node). The fundamental problem: <strong>pipeline bubbles</strong>.</p>
+<p>In a pipeline of p stages, at startup p-1 stages sit idle. At flush (end of forward pass), p-1 stages again sit idle. Bubble fraction ≈ (p-1) / (m+p-1) where m = number of micro-batches. Minimize bubbles by using many small micro-batches (large m).</p>
+<h3>3D Parallelism (Megatron-LM SC 2021)</h3>
+<p>Production training and inference at scale combines all three:</p>
+<ul>
+  <li><strong>Data parallelism:</strong> Multiple identical model copies on different data shards. Gradients synchronized via AllReduce.</li>
+  <li><strong>Tensor parallelism:</strong> Within-node, using NVLink (600-900 GB/s)</li>
+  <li><strong>Pipeline parallelism:</strong> Across nodes, using InfiniBand (200-400 GB/s)</li>
+</ul>
+<p>GPT-3 175B was trained with 8-way tensor parallelism within each node, 8-way pipeline parallelism across nodes, and 64-way data parallelism. 1,024 A100 GPUs total.</p>
+    `,
+    questions: [
+      {
+        q: 'Why does NVLink vs PCIe bandwidth matter specifically for tensor parallelism?',
+        options: ['AllReduce is required after every transformer layer. At NVLink\'s 900 GB/s this takes microseconds; at PCIe\'s 64 GB/s it takes milliseconds — exceeding compute time and eliminating the parallelism benefit','PCIe does not support FP16 data types, requiring costly conversions that negate compute gains','NVLink enables shared L1 cache access across GPUs, critical for attention computation','Tensor parallelism requires GPUs to be physically adjacent in hardware, and NVLink is the connection mechanism'],
+        correct: 0,
+        explain: [null, 'PCIe transmits raw bytes — there is no data type concept at the bus level. Both FP16 and INT8 transmit identically.', 'NVLink provides HBM-to-HBM transfer, not L1 cache sharing across GPUs.', 'The constraint is bandwidth throughput, not physical adjacency. NVLink-connected GPUs can be in different PCIe slots.']
+      },
+      {
+        q: 'What is a pipeline bubble and how is it minimized?',
+        options: ['Memory allocation failure when multiple stages try to store activations simultaneously — fixed by gradient checkpointing','Idle GPU time at pipeline startup and flush when stages have no data to process — fraction = (p-1)/(m+p-1), minimized by using many micro-batches (large m)','Numerical instability from accumulating gradients across many pipeline stages — fixed by gradient clipping','Network congestion when all pipeline stages send activations simultaneously — fixed by staggered sends'],
+        correct: 1,
+        explain: ['Activation memory issues are real but unrelated to bubbles. Bubbles are about scheduling idle time, not memory allocation failure.', null, 'Gradient explosion is addressed by gradient clipping and LR scheduling, not micro-batching. Bubbles are about idle compute time.', 'Pipeline stages send sequentially, not simultaneously. Congestion of this type isn\'t the bubble problem.']
+      }
+    ]
+  },
+  {
+    id: 'distillation',
+    title: 'Knowledge Distillation',
+    authors: 'Hinton, Vinyals, Dean (2015); Sanh et al. DistilBERT (2019); Hsieh et al. Distilling Step-by-Step (2023)',
+    year: '2015–2024',
+    track: 'Compression',
+    prereqs: ['quantization'],
+    lesson: `
+<h3>The Core Idea: Soft Labels Contain More Information</h3>
+<p>Suppose you train a model to classify animals. The hard label for a cat image is [0, 0, 1, 0, 0] (cat=1, everything else=0). But a powerful teacher model's output might be [0.001, 0.05, 0.92, 0.02, 0.009] — encoding that cats are more similar to tigers than to cars. This <strong>dark knowledge</strong> teaches relationships between classes that binary labels discard.</p>
+<h3>Training Loss</h3>
+<div class="code">L = α × KL(p_teacher(T) || p_student(T)) + (1-α) × CrossEntropy(y_hard, p_student)
+
+T = temperature (softens distributions)
+α = balancing weight (typically 0.5–0.9)
+KL = Kullback-Leibler divergence</div>
+<p>Higher temperature T spreads probability mass to non-top classes, making soft targets more informative about inter-class relationships. At T=1, you get the teacher's raw output. At T=5, even small similarities become visible.</p>
+<h3>DistilBERT (Hugging Face, 2019)</h3>
+<p>First landmark application to large language models. Student architecture: 6 transformer layers (vs BERT's 12), trained on BERT's soft targets + hidden state alignment. Results: <strong>50% fewer parameters, 40% smaller, 60% faster inference, 97% of BERT's GLUE performance</strong>.</p>
+<h3>Distilling Step-by-Step (ACL 2023)</h3>
+<p>A 770M parameter student model was trained not just on teacher output probabilities, but on chain-of-thought <strong>rationales</strong> generated by PaLM-540B. The small student learned the reasoning process, not just the answers. Result: 770M model with CoT rationales outperformed <em>few-shot PaLM-540B</em> on several benchmarks — a <strong>700× parameter reduction</strong> for equivalent task performance.</p>
+<h3>Modern Applications</h3>
+<ul>
+  <li><strong>TinyLlama (2024):</strong> 1.1B parameter model trained on 3T tokens, distilling from LLaMA-2 architecturally — demonstrates that small models can punch above their weight with massive data.</li>
+  <li><strong>Speculative decoding draft models:</strong> Often distilled from the target — better acceptance rates than architecturally different draft models.</li>
+  <li><strong>API compression:</strong> Companies fine-tune small models on outputs from GPT-4/Claude — effectively distilling without access to weights.</li>
+</ul>
+<div class="callout">Key tension: quantization preserves architecture but reduces numerical precision. Distillation preserves numerical precision but changes the architecture. At extreme compression ratios, distillation typically wins. At moderate compression (2-4×), quantization is simpler.</div>
+    `,
+    questions: [
+      {
+        q: 'What is "dark knowledge" in the context of distillation?',
+        options: ['The probability mass assigned to non-correct classes — encoding similarity structure that hard labels discard (e.g., cat prediction includes "dog: 0.05, tiger: 0.01")','Weights not used during inference due to dropout, which could contain latent representations','Gradient information that flows through the teacher but is hidden from the student during training','Internal activations too large to transfer directly, requiring dimensionality reduction'],
+        correct: 0,
+        explain: [null, 'Dropout is training regularization — randomly zeroed weights during training. Dark knowledge is specifically about output probability distributions.', 'Dark knowledge describes output probability distributions, not gradient flow. The teacher doesn\'t share gradients with the student.', 'Dark knowledge is in the output logits, not in intermediate activations (which would be "intermediate layer distillation").']
+      },
+      {
+        q: 'What role does temperature T play in distillation?',
+        options: ['Controls the student\'s learning rate during training','Softens the teacher\'s output distribution — higher T spreads probability mass to non-top classes, making inter-class similarity visible in soft targets','Determines how many teacher layers transfer to the student model','Scales logit magnitudes to prevent gradient explosion during KL divergence computation'],
+        correct: 1,
+        explain: ['Temperature is applied to logits before softmax — it\'s a logit scaling factor, completely separate from the optimizer or learning rate.', null, 'Layer selection in distillation is an architectural decision made before training, independent of the temperature hyperparameter.', 'Temperature does scale logits, but the purpose is information richness of soft targets, not gradient stability. Gradient issues are handled by clipping and learning rate scheduling.']
+      }
+    ]
+  },
+  {
+    id: 'moe',
+    title: 'Mixture of Experts (MoE)',
+    authors: 'Shazeer et al. (Google Brain, 2017); Fedus, Zoph, Shazeer (Switch Transformer, 2022); Mistral AI (Mixtral, 2024)',
+    year: '2017–2024',
+    track: 'Scale',
+    prereqs: ['tensor_parallelism'],
+    lesson: `
+<h3>The Problem MoE Solves</h3>
+<p>Dense models scale quality by adding more parameters — but every parameter is used for every token, making inference more expensive as models grow. MoE decouples <em>capacity</em> from <em>compute per token</em>.</p>
+<h3>Architecture</h3>
+<p>Replace the dense Feed-Forward Network (FFN) layer in each transformer block with N expert networks plus a router:</p>
+<div class="code">For each token x:
+  routing_weights = softmax(Router(x))     # N scores
+  top_k_experts = argtop_k(routing_weights, k=2)
+  output = Σ routing_weights[i] × Expert_i(x) for i in top_k_experts</div>
+<p>Total parameters scale with N experts. Compute per token scales with K (typically 2). Capacity and compute are now independently tunable.</p>
+<h3>Mixtral 8×7B — The Landmark Model</h3>
+<p>Mistral AI's Mixtral 8×7B (2024): 8 expert FFNs, top-2 routing, resulting in:</p>
+<ul>
+  <li><strong>47B total parameters</strong> (8 experts × ~6B FFN params each + shared attention)</li>
+  <li><strong>~13B active parameters per token</strong> (2/8 experts active)</li>
+  <li>Matches LLaMA-2 70B performance at 13B-equivalent compute cost</li>
+  <li>Requires 47B of VRAM (all experts must be loaded for routing decisions)</li>
+</ul>
+<div class="callout">Memory vs compute distinction: you need all 47B in VRAM, but you only run FLOPs through ~13B per token. Memory cost is full model, compute cost is sparse fraction.</div>
+<h3>Training Challenge: Expert Collapse</h3>
+<p>Without intervention, one expert becomes slightly better → gets selected more → improves faster → dominates routing. All other experts are starved. Solution: <strong>load-balancing auxiliary loss</strong> during training that penalizes imbalanced routing distributions, encouraging all experts to be utilized.</p>
+<h3>Inference Challenges</h3>
+<ul>
+  <li>All N experts must be in GPU VRAM (can't know which expert a token will route to until runtime)</li>
+  <li>Expert parallelism: in multi-GPU setups, each GPU hosts a subset of experts. Routing requires all-to-all communication to send tokens to the right GPU.</li>
+  <li>Batch size matters: small batches leave many experts idle, wasting the sparse advantage</li>
+</ul>
+<h3>DeepSeek-V2 + V3</h3>
+<p>DeepSeek-V3 (2024): 671B total parameters, 37B active. Uses MoE + Multi-head Latent Attention (MLA) + an innovative "device-limited routing" — each token is routed to at most M GPUs, bounding communication overhead. Training cost claimed: $5.6M total compute.</p>
+    `,
+    questions: [
+      {
+        q: 'Mixtral 8×7B has 47B total but 13B "active" parameters per token. What does this mean for inference?',
+        options: ['Only 13B parameters are loaded into GPU memory; the remaining 34B stay on disk until needed','The 2/8 active experts contribute ~13B to the forward pass FLOP count per token — compute cost matches a 13B dense model despite 47B capacity, but ALL 47B must be in VRAM for routing decisions','The 13B active parameters run in FP16 while the 34B inactive parameters are stored in INT4','The model dynamically prunes 34B parameters based on input complexity at inference time'],
+        correct: 1,
+        explain: ['ALL 47B must be loaded — routing decisions are made at runtime based on the token, so you cannot know in advance which experts will be needed.', null, 'The 13B/47B distinction is about routing-based activation sparsity, not precision. Precision choices are orthogonal.', 'Pruning permanently removes parameters. MoE routing is dynamic and per-token — all experts remain available.']
+      },
+      {
+        q: 'Why do MoE models need a load-balancing auxiliary loss during training?',
+        options: ['Without it, expert collapse occurs — one expert becomes slightly better, gets selected more, improves faster, and eventually dominates all routing while other experts are never trained','To ensure equal GPU memory usage across experts, preventing VRAM overflow on any single device','To prevent router gradient instability from destabilizing expert weight initialization','Experts have different parameter counts that must be balanced for fair comparison'],
+        correct: 0,
+        explain: [null, 'GPU memory imbalance is a consequence of collapsed routing, not the root cause the loss targets. The fundamental problem is capacity utilization — unused experts don\'t learn.', 'Router gradient issues are addressed with gradient clipping and careful initialization, not load-balancing loss. Load balancing targets routing distribution.', 'In standard MoE (Mixtral, Switch Transformer), all experts are architecturally identical — same parameter count.']
+      }
+    ]
+  },
+  {
+    id: 'triton_cuda',
+    title: 'Triton + Custom CUDA Kernels',
+    authors: 'Tillet, Kung, Cox (Triton, MIT/OpenAI, 2019); Dao et al. (FlashAttention, Stanford, 2022–2024)',
+    year: '2019–2024',
+    track: 'Memory Systems',
+    prereqs: ['kv_cache'],
+    lesson: `
+<h3>GPU Memory Hierarchy</h3>
+<p>Understanding kernel optimization requires understanding GPU memory hierarchy:</p>
+<table>
+<tr><th>Level</th><th>Size</th><th>Bandwidth</th><th>Latency</th></tr>
+<tr><td>Registers</td><td>~256 KB/SM</td><td>~80 TB/s</td><td>~1 cycle</td></tr>
+<tr><td>L1/Shared SRAM</td><td>~20 MB total</td><td>~19 TB/s</td><td>~20 cycles</td></tr>
+<tr><td>L2 Cache</td><td>~50 MB</td><td>~7 TB/s</td><td>~200 cycles</td></tr>
+<tr><td>HBM (global)</td><td>80 GB</td><td>~3.35 TB/s</td><td>~700 cycles</td></tr>
+</table>
+<p>The bottleneck for most LLM operations: HBM reads/writes. PyTorch eager execution writes each operation's output back to HBM and reads it for the next operation. For RMSNorm → Linear → SwiGLU (3 sequential ops), that's 6 HBM trips instead of 1.</p>
+<h3>Kernel Fusion</h3>
+<p>A custom kernel keeps intermediates in on-chip SRAM/registers across multiple compute steps. The fused RMSNorm+Linear+SwiGLU operation: reads input once from HBM, computes all three operations with intermediates in SRAM, writes final output once to HBM. Result: 6× fewer HBM accesses, 8× faster wall-clock time.</p>
+<h3>FlashAttention (Stanford, NeurIPS 2022)</h3>
+<p>Standard attention materializes the N×N attention score matrix in HBM — O(N²) memory, major bottleneck for long sequences. FlashAttention solves this with <strong>IO-aware tiling</strong>:</p>
+<ul>
+  <li>Divide Q, K, V into blocks that fit in SRAM (~20 MB)</li>
+  <li>Compute attention block by block, accumulating output and normalizer incrementally</li>
+  <li>Use <strong>online softmax</strong> — maintains running max and sum to compute correct normalized scores without storing the full matrix</li>
+  <li>Write only the final output to HBM</li>
+</ul>
+<div class="callout">FlashAttention results: O(N) memory instead of O(N²). 7.6× speedup on A100. EXACT same output (not approximate). This is purely an IO optimization — the math is identical, just computed in a smarter order.</div>
+<h3>FlashAttention-2 and FlashAttention-3</h3>
+<p>FA-2 (ICLR 2024): better parallelism across attention heads, reduced non-matmul operations (matmuls are accelerated by Tensor Cores; other ops are not). FA-3: asynchronous pipeline exploiting H100's WGMMA instructions for near-theoretical peak utilization.</p>
+<h3>Triton — Programmable GPU Kernels Without CUDA</h3>
+<p>OpenAI's Triton (2019) provides a Python-native DSL for writing tiled GPU kernels. Instead of writing CUDA C++, you write Triton Python that compiles to efficient PTX. Lowered barrier: ML researchers (not just CUDA engineers) can write custom kernels.</p>
+<p>Triton handles: block scheduling, shared memory management, coalesced memory access. Developer handles: tile sizes, algorithmic structure. The Liger Kernel library (LinkedIn, 2024): pure Triton implementations of RMSNorm, SwiGLU, CrossEntropy, LoRA — 20% throughput improvement on LLaMA training with a one-line import.</p>
+    `,
+    questions: [
+      {
+        q: 'FlashAttention computes the exact same outputs as standard attention but uses less memory. How?',
+        options: ['It uses a low-rank approximation of the attention matrix that is mathematically close but not identical','It tiles Q/K/V into SRAM-sized blocks and uses online softmax to compute correct normalized scores incrementally without ever writing the full N×N matrix to HBM','It quantizes attention scores to INT8 before applying softmax, reducing memory at the cost of minor precision loss','It caches the attention matrix from previous forward passes and reuses it for similar inputs'],
+        correct: 1,
+        explain: ['FlashAttention is exact, not approximate. Linear attention or sparse attention use approximations — FlashAttention does not.', null, 'FlashAttention is precision-preserving — it computes identical FP16/FP32 results to naive attention. No quantization.', 'That would be inter-request KV caching, a different optimization. FlashAttention\'s optimization is within a single forward pass.']
+      },
+      {
+        q: 'Why does a fused Triton kernel for RMSNorm→Linear→SwiGLU run ~8× faster than sequential PyTorch ops?',
+        options: ['The fused kernel uses INT8 arithmetic; sequential PyTorch defaults to FP32','A dedicated hardware unit exists for fused ops that is inaccessible through standard PyTorch','Sequential PyTorch writes each intermediate tensor to HBM then re-reads it for the next op; fusion keeps all intermediates in on-chip SRAM registers, reducing HBM traffic by ~6×','The fused kernel skips gradient computation for intermediate activations, saving backward pass time'],
+        correct: 2,
+        explain: ['Kernel fusion doesn\'t change arithmetic precision — both use the same float types.', 'The same CUDA cores and Tensor Cores process fused and unfused kernels — no secret hardware unit.', null, 'Fused training kernels (like Liger) include fully correct gradients via custom backward implementations. Skipping gradients would produce wrong results.']
+      }
+    ]
+  },
+  {
+    id: 'hardware',
+    title: 'Hardware: H100 vs A100 vs Consumer GPUs',
+    authors: 'NVIDIA Architecture Whitepapers; Roofline Model (Williams, Waterman, Patterson, 2009)',
+    year: '2020–2024',
+    track: 'Scale',
+    prereqs: ['quantization', 'tensor_parallelism'],
+    lesson: `
+<h3>Key Specs Comparison</h3>
+<table>
+<tr><th>Spec</th><th>H100 SXM5 80GB</th><th>A100 SXM4 80GB</th><th>RTX 4090 24GB</th></tr>
+<tr><td>VRAM</td><td>80 GB HBM3</td><td>80 GB HBM2e</td><td>24 GB GDDR6X</td></tr>
+<tr><td>HBM Bandwidth</td><td>3.35 TB/s</td><td>2.0 TB/s</td><td>1.0 TB/s</td></tr>
+<tr><td>FP16 TFLOPs</td><td>989</td><td>312</td><td>165</td></tr>
+<tr><td>FP8 TFLOPs</td><td>1,979</td><td>N/A</td><td>N/A</td></tr>
+<tr><td>NVLink</td><td>900 GB/s (v4)</td><td>600 GB/s (v3)</td><td>None</td></tr>
+<tr><td>70B inference speed</td><td>~270 tok/sec</td><td>~130 tok/sec</td><td>~20 tok/sec</td></tr>
+</table>
+<h3>The Roofline Model — Why Memory Bandwidth Dominates</h3>
+<p>For any GPU operation, performance is limited by either:</p>
+<ul>
+  <li><strong>Compute bound:</strong> FLOPs / (FLOP/s) is the bottleneck</li>
+  <li><strong>Memory bound:</strong> Bytes / Bandwidth is the bottleneck</li>
+</ul>
+<p>LLM inference at small batch sizes: loading 70B parameters = 140 GB. At 3.35 TB/s (H100): ~42ms per token <em>just for weight loading</em>. Available FLOPs are vastly underutilized. The GPU is waiting for memory, not running out of compute.</p>
+<div class="callout">H100 has 3× more FP16 FLOPs than A100, but only 1.67× more HBM bandwidth. The inference speedup is ~2× — matching the bandwidth ratio. FLOPs are mostly irrelevant for single-user LLM generation.</div>
+<h3>H100 Differentiators</h3>
+<ul>
+  <li><strong>Native FP8:</strong> Hardware Tensor Cores for FP8 math (not just storage). Doubles effective throughput vs FP16 for supported ops. Critical for training and high-throughput batch inference.</li>
+  <li><strong>Transformer Engine:</strong> NVIDIA library that automatically selects FP8 or FP16 per operation based on numerical requirements. Developers get FP8 speed without manual precision management.</li>
+  <li><strong>HBM3 vs HBM2e:</strong> HBM3 is faster per pin and can be stacked higher. H100's 3.35 TB/s vs A100's 2.0 TB/s.</li>
+  <li><strong>NVLink v4:</strong> 900 GB/s bidirectional (vs 600 GB/s on A100). Critical for tensor parallelism.</li>
+</ul>
+<h3>Consumer GPU Considerations</h3>
+<p>RTX 4090: 24 GB GDDR6X. LLaMA-2 70B needs 140 GB. Solutions:</p>
+<ul>
+  <li>INT4 quantization → 35 GB → fits 2× RTX 4090 (48 GB)</li>
+  <li>llama.cpp with CPU offloading: layers that don't fit in 24 GB spill to RAM at ~50 GB/s (DDR5) — still much faster than disk</li>
+  <li>Apple M2 Max: 96 GB unified memory at 400 GB/s — fits 70B INT4 (35 GB) with room for KV cache. ~50 tok/sec for 7B models</li>
+</ul>
+    `,
+    questions: [
+      {
+        q: 'H100 has 3× more FP16 FLOPs than A100 but achieves only ~2× faster LLM inference. Why?',
+        options: ['Inference code is not fully optimized for H100 architecture','LLM inference at small batch sizes is memory-bandwidth-bound — the bottleneck is streaming weights from HBM. H100 has only 1.67× HBM bandwidth advantage (3.35 vs 2.0 TB/s), which is the primary latency driver','H100 runs at lower clock speed than A100 to reduce thermal output','H100\'s FP16 improvements apply only to training, not inference workloads'],
+        correct: 1,
+        explain: ['Frameworks like TensorRT-LLM and vLLM specifically target H100 with optimized kernels. The gap is fundamental architecture, not software.', null, 'H100 clocks higher than A100 (1.98 GHz boost vs ~1.41 GHz). Thermal management doesn\'t explain the gap.', 'FP16 matrix operations are identical in nature for training and inference. The bandwidth constraint affects both equally.']
+      },
+      {
+        q: 'An RTX 4090 has 24 GB VRAM. LLaMA-2 70B needs 140 GB in FP16. How do practitioners run it locally?',
+        options: ['Stream model layers from disk (NVMe SSD) one at a time during generation','It\'s impossible without data center GPU hardware','INT4 quantization reduces to ~35 GB; 2× RTX 4090 (48 GB total) fits it with KV cache headroom; llama.cpp also supports mixed GPU+CPU offloading for single-GPU setups','Distillation creates an architecturally identical but smaller model that performs identically'],
+        correct: 2,
+        explain: ['NVMe SSDs: ~7 GB/s. HBM: 3.35 TB/s. Streaming from disk would be ~500× slower than HBM — generation would take minutes per token. Not practical.', 'INT4 quantization and CPU offloading make it feasible. Many users run 70B on consumer hardware today.', null, 'Distillation creates a genuinely smaller model with different performance characteristics — not architecturally identical, and not at equivalent quality.']
+      }
+    ]
+  },
+  {
+    id: 'serving',
+    title: 'LLM Serving Frameworks',
+    authors: 'vLLM (UC Berkeley); TGI (HuggingFace); TensorRT-LLM (NVIDIA); SGLang (UC Berkeley); Ollama (Community)',
+    year: '2022–2024',
+    track: 'Production',
+    prereqs: ['continuous_batching', 'triton_cuda', 'hardware'],
+    lesson: `
+<h3>Why This Is Hard</h3>
+<p>A production LLM serving system must simultaneously handle: dynamic request streams with variable lengths, KV cache memory management under memory pressure, multiple GPUs with model parallelism, batching decisions every ~20ms, different model architectures and quantization formats, and HTTP API compatibility. Each framework makes different trade-offs.</p>
+<h3>Framework Comparison</h3>
+<table>
+<tr><th>Framework</th><th>Origin</th><th>Core Innovation</th><th>Setup Complexity</th></tr>
+<tr><td>vLLM</td><td>UC Berkeley, 2023</td><td>PagedAttention + continuous batching</td><td>Low</td></tr>
+<tr><td>TGI</td><td>HuggingFace, 2022</td><td>HF ecosystem + early continuous batching</td><td>Low</td></tr>
+<tr><td>TensorRT-LLM</td><td>NVIDIA, 2023</td><td>Compiled CUDA engines, FP8, Transformer Engine</td><td>High</td></tr>
+<tr><td>Ollama</td><td>Community, 2023</td><td>One-command local deployment via llama.cpp</td><td>Minimal</td></tr>
+<tr><td>SGLang</td><td>UC Berkeley, 2024</td><td>RadixAttention + structured generation DSL</td><td>Low-Medium</td></tr>
+</table>
+<h3>vLLM — The Production Default</h3>
+<p>Open-source, rapidly iterating. PagedAttention for memory efficiency, continuous batching for throughput, tensor parallelism for multi-GPU. OpenAI-compatible API. Most popular open-source LLM serving framework as of 2024-2025. Weakness: not the highest raw throughput — compiled frameworks beat it at maximum load.</p>
+<h3>TensorRT-LLM — Maximum NVIDIA Throughput</h3>
+<p>Compiles a model into a hardware-specific engine file: fused CUDA kernels, FP8 Transformer Engine, optimal memory layouts for the specific GPU model. 20-40% higher throughput than vLLM at maximum concurrency. Cost: <strong>compilation takes 30 min to 2+ hours</strong> per model/GPU/precision combination and must be regenerated for any change. Not suitable for experimentation; excellent for stable production workloads on known hardware.</p>
+<h3>SGLang — Structured Generation and Prefix Sharing</h3>
+<p>UC Berkeley (2024). RadixAttention: implements a radix tree (trie) indexing all KV cache blocks by their prefix content. Any new request automatically gets the longest matching prefix reuse, without explicit configuration. Critical for RAG workloads where many requests share retrieval context, and for multi-turn agents where system prompts are fixed. The structured generation DSL (SGL) enables efficient multi-call workflows.</p>
+<h3>Ollama — Local Deployment</h3>
+<p>Wraps llama.cpp for one-command model management: `ollama run llama3.2`. Automatic GGUF quantized model downloads, Metal backend for Apple Silicon, CPU+GPU mixed inference. Targets single-user local deployments, not multi-user production serving. Throughput: excellent for one user, poor for concurrent requests.</p>
+<h3>Decision Framework</h3>
+<div class="callout">High-concurrency production → <strong>vLLM</strong><br>
+Max throughput on known NVIDIA hardware → <strong>TensorRT-LLM</strong><br>
+RAG / repeated prefixes / structured outputs → <strong>SGLang</strong><br>
+Local development / Apple Silicon → <strong>Ollama</strong><br>
+HuggingFace model hub integration → <strong>TGI</strong></div>
+    `,
+    questions: [
+      {
+        q: 'TensorRT-LLM achieves higher throughput than vLLM but is rarely used for rapid experimentation. Why?',
+        options: ['TensorRT-LLM does not support INT4 or FP8 precision formats','It requires compiling a hardware-specific engine for each model/GPU/precision combination, taking 30 min to 2+ hours and requiring full recompilation for any model change','It requires writing custom CUDA code for each model architecture you want to deploy','TensorRT-LLM\'s API is not OpenAI-compatible, requiring custom client code'],
+        correct: 1,
+        explain: ['TensorRT-LLM actually has the broadest precision support of any framework — INT8, INT4, FP8, FP16, BF16 with Transformer Engine.', null, 'Pre-built TensorRT-LLM backends exist for LLaMA, Mistral, GPT, Falcon, and other popular architectures.', 'TensorRT-LLM via Triton Inference Server supports OpenAI-compatible REST endpoints. API compatibility is not the barrier.']
+      },
+      {
+        q: 'Ollama uses llama.cpp. What does this mean specifically for Apple M-series users?',
+        options: ['llama.cpp\'s Metal backend uses Apple Silicon\'s unified memory (up to 192 GB on M2 Ultra, 400 GB/s on M2 Max) for GPU inference without an NVIDIA GPU — enabling competitive inference speeds for quantized models','llama.cpp converts models to Core ML format for the Apple Neural Engine','llama.cpp is CPU-only on Apple Silicon; GPU acceleration requires a separate tool','Models must be converted to Apple\'s MLPackage format before Ollama can run them on Mac'],
+        correct: 0,
+        explain: [null, 'llama.cpp uses the Metal API for GPU acceleration, not Core ML. The ANE (Apple Neural Engine) is separate and used for specific Apple-developed models.', 'Metal GPU acceleration is a first-class, well-optimized backend in llama.cpp — it\'s not CPU-only.', 'GGUF format works directly on all platforms including Mac. No format conversion is needed.']
+      },
+      {
+        q: 'What is SGLang\'s RadixAttention advantage over vLLM\'s prefix caching?',
+        options: ['Radix sort speeds up attention score computation across batched requests','A radix tree indexes all cached KV blocks by prefix content, enabling automatic longest-prefix matching for any new request — vLLM requires manual prefix configuration, SGLang catches all sharing automatically','RadixAttention skips certain token positions based on learned attention importance','Splits the attention matrix into radix-2 blocks for faster cache-line-aligned memory access'],
+        correct: 1,
+        explain: ['"Radix" here refers to the radix tree data structure (a compressed trie), not radix sort. Attention computation order is unrelated.', null, 'Sparse attention (skipping positions) is a different class of optimization. RadixAttention computes full, exact attention.', '"Radix" is the data structure (prefix tree), not binary decomposition. Block sizes are determined by PagedAttention/memory constraints, not radix-2.']
+      }
+    ]
+  }
+];
+
+const TRACKS = [
+  { id: 'Memory Systems', label: 'Memory Systems' },
+  { id: 'Compression', label: 'Compression' },
+  { id: 'Scale', label: 'Parallelism & Scale' },
+  { id: 'Production', label: 'Production' }
+];
+
+const state = {
+  completed: new Set(JSON.parse(localStorage.getItem(LS_KEY) || '[]')),
+  active: null,
+  tab: 'lesson',
+  qIndex: 0,
+  answered: {}
+};
+
+function save() {
+  localStorage.setItem(LS_KEY, JSON.stringify([...state.completed]));
+}
+
+function isPaperUnlocked(paper) {
+  return paper.prereqs.every(id => state.completed.has(id));
+}
+
+function updateBadge() {
+  document.getElementById('progress-badge').textContent = `${state.completed.size} / ${PAPERS.length}`;
+}
+
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = '';
+  TRACKS.forEach(track => {
+    const papers = PAPERS.filter(p => p.track === track.id);
+    if (!papers.length) return;
+    const lbl = document.createElement('div');
+    lbl.className = 'track-label';
+    lbl.textContent = track.label;
+    sb.appendChild(lbl);
+    papers.forEach(paper => {
+      const unlocked = isPaperUnlocked(paper);
+      const completed = state.completed.has(paper.id);
+      const div = document.createElement('div');
+      div.className = 'paper-node' + (paper.id === state.active ? ' active' : '') + (completed ? ' completed' : '') + (!unlocked ? ' locked' : '');
+      div.innerHTML = `<div class="title">${paper.title}</div><div class="meta">${paper.year}</div>` +
+        (completed ? '<div class="check">✓</div>' : (!unlocked ? '<div class="lock-icon">🔒</div>' : ''));
+      if (unlocked) div.onclick = () => openPaper(paper.id);
+      sb.appendChild(div);
+    });
+  });
+}
+
+function openPaper(id) {
+  state.active = id;
+  state.tab = 'lesson';
+  state.qIndex = 0;
+  state.answered = {};
+  renderSidebar();
+  renderMain();
+}
+
+function renderMain() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  if (!paper) {
+    renderWelcome();
+    return;
+  }
+  const unlocked = isPaperUnlocked(paper);
+  const completed = state.completed.has(paper.id);
+  const main = document.getElementById('main');
+  if (!unlocked) {
+    main.innerHTML = `<div class="paper-view"><div class="locked-msg"><h3>🔒 Prerequisites Required</h3><p>Complete the following first:</p><div class="prereq-tags">${paper.prereqs.map(id => { const p = PAPERS.find(x=>x.id===id); return `<span class="prereq-tag">${p?p.title:id}</span>`; }).join('')}</div></div></div>`;
+    return;
+  }
+  main.innerHTML = `
+    <div class="paper-view">
+      <div class="paper-header">
+        <h2>${paper.title}</h2>
+        <div class="meta" style="color:#aaa;font-size:0.85rem;margin-top:4px">${paper.authors}</div>
+        <div class="paper-meta">
+          <span class="pill gold">${paper.track}</span>
+          <span class="pill">${paper.year}</span>
+          ${completed ? '<span class="pill" style="border-color:#FF8F00;color:#FF8F00">✓ Completed</span>' : ''}
+          ${paper.prereqs.length ? `<span class="pill">Prereqs: ${paper.prereqs.map(id=>{ const p=PAPERS.find(x=>x.id===id); return p?p.title:id; }).join(', ')}</span>` : '<span class="pill">Starting paper</span>'}
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab ${state.tab==='lesson'?'active':''}" onclick="showTab('lesson')">Lesson</div>
+        <div class="tab ${state.tab==='quiz'?'active':''}" onclick="showTab('quiz')">Quiz (${paper.questions.length}q)</div>
+      </div>
+      <div id="tab-content"></div>
+    </div>`;
+  renderTabContent();
+}
+
+function showTab(tab) {
+  state.tab = tab;
+  state.qIndex = 0;
+  state.answered = {};
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.startsWith(tab === 'lesson' ? 'Lesson' : 'Quiz')));
+  renderTabContent();
+}
+
+function renderTabContent() {
+  const tc = document.getElementById('tab-content');
+  if (!tc) return;
+  if (state.tab === 'lesson') {
+    const paper = PAPERS.find(p => p.id === state.active);
+    tc.innerHTML = `<div class="lesson-body">${paper.lesson}<div style="margin-top:24px"><button class="btn btn-primary" onclick="showTab('quiz')">Start Quiz →</button></div></div>`;
+  } else {
+    renderQuiz();
+  }
+}
+
+function renderQuiz() {
+  const tc = document.getElementById('tab-content');
+  const paper = PAPERS.find(p => p.id === state.active);
+  const q = paper.questions[state.qIndex];
+  const totalQ = paper.questions.length;
+  const answered = state.answered[state.qIndex];
+  const allCorrect = paper.questions.every((_, i) => state.answered[i] === 'correct');
+
+  if (allCorrect) {
+    renderCompletion(paper);
+    return;
+  }
+
+  const letters = ['A','B','C','D'];
+  let optionsHTML = q.options.map((opt, i) => {
+    let cls = 'option';
+    if (answered) {
+      cls += ' disabled';
+      if (i === q.correct) cls += ' correct';
+      else if (answered === i) cls += ' wrong';
+    }
+    const explain = answered !== undefined && i !== q.correct && q.explain[i] ? `<div class="opt-explain">${q.explain[i]}</div>` : '';
+    const correctExplain = answered !== undefined && i === q.correct && answered !== 'correct' ? `<div class="opt-explain" style="display:block;color:#88cc88">This is correct.</div>` : '';
+    return `<div class="${cls}" onclick="selectOption(${i})"><div class="opt-letter">${letters[i]}</div><div class="opt-body"><div class="opt-text">${opt}</div>${explain}${correctExplain}</div></div>`;
+  }).join('');
+
+  let nav = '';
+  if (answered !== undefined) {
+    if (answered === q.correct || answered === 'correct') {
+      if (state.qIndex < totalQ - 1) {
+        nav = `<button class="btn btn-primary" onclick="nextQuestion()">Next Question →</button>`;
+      } else {
+        nav = `<button class="btn btn-primary" onclick="checkAllDone()">Finish Quiz →</button>`;
+      }
+    } else {
+      nav = `<button class="btn btn-secondary" onclick="retryQuestion()">Try Again</button>`;
+      if (state.qIndex < totalQ - 1) {
+        nav += ` <button class="btn btn-primary" onclick="nextQuestion()">Skip for now →</button>`;
+      }
+    }
+  }
+
+  tc.innerHTML = `<div class="quiz-wrap">
+    <div class="quiz-progress">Question ${state.qIndex + 1} of ${totalQ} — ${state.completed.has(paper.id) ? 'Already completed' : 'Must pass ALL to unlock next papers'}</div>
+    <div class="q-card">
+      <div class="q-text">${q.q}</div>
+      ${optionsHTML}
+    </div>
+    <div class="q-nav">${nav}</div>
+  </div>`;
+}
+
+function selectOption(i) {
+  if (state.answered[state.qIndex] !== undefined) return;
+  const paper = PAPERS.find(p => p.id === state.active);
+  const q = paper.questions[state.qIndex];
+  state.answered[state.qIndex] = (i === q.correct) ? 'correct' : i;
+  renderQuiz();
+}
+
+function nextQuestion() {
+  state.qIndex++;
+  renderQuiz();
+}
+
+function retryQuestion() {
+  delete state.answered[state.qIndex];
+  renderQuiz();
+}
+
+function checkAllDone() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  const allCorrect = paper.questions.every((_, i) => state.answered[i] === 'correct' || state.answered[i] === paper.questions[i].correct);
+  // Actually check all answered correctly
+  const allPass = paper.questions.every((q, i) => {
+    const ans = state.answered[i];
+    return ans === 'correct' || ans === q.correct;
+  });
+  if (allPass) {
+    state.completed.add(paper.id);
+    save();
+    updateBadge();
+    renderSidebar();
+    renderCompletion(paper);
+  } else {
+    // Find first failed question
+    const firstFail = paper.questions.findIndex((q, i) => {
+      const ans = state.answered[i];
+      return ans !== 'correct' && ans !== q.correct;
+    });
+    state.qIndex = firstFail;
+    renderQuiz();
+  }
+}
+
+function renderCompletion(paper) {
+  const paper2 = PAPERS.find(p => p.id === state.active);
+  const tc = document.getElementById('tab-content');
+
+  // Mark as completed
+  if (!state.completed.has(paper.id)) {
+    state.completed.add(paper.id);
+    save();
+    updateBadge();
+    renderSidebar();
+  }
+
+  const unlocked = PAPERS.filter(p => p.prereqs.includes(paper.id) && isPaperUnlocked(p));
+  tc.innerHTML = `<div class="quiz-wrap"><div class="completion">
+    <div class="star">⚡</div>
+    <h3>Section Complete: ${paper.title}</h3>
+    <p style="margin-top:8px">All questions answered correctly.</p>
+    ${unlocked.length ? `<p style="margin-top:16px;color:#FFD700">Unlocked: ${unlocked.map(p=>`<strong>${p.title}</strong>`).join(', ')}</p>` : ''}
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-secondary" onclick="showTab('lesson')">Review Lesson</button>
+      ${unlocked.length ? `<button class="btn btn-primary" onclick="openPaper('${unlocked[0].id}')">Next: ${unlocked[0].title} →</button>` : ''}
+    </div>
+  </div></div>`;
+}
+
+function renderWelcome() {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div class="welcome">
+    <h2>LLM Inference Optimization</h2>
+    <p>From KV Cache to serving frameworks — the papers and systems that make large language models fast enough to deploy at scale. Master each concept in order, unlock the next building block.</p>
+    <div class="stats">
+      <div class="stat-card"><div class="num">${PAPERS.length}</div><div class="lbl">Topics</div></div>
+      <div class="stat-card"><div class="num">${PAPERS.reduce((a,p)=>a+p.questions.length,0)}</div><div class="lbl">Quiz Questions</div></div>
+      <div class="stat-card"><div class="num">${state.completed.size}</div><div class="lbl">Completed</div></div>
+    </div>
+    <p>Start with any unlocked paper (no lock icon). Complete the quiz to unlock dependent topics.</p>
+    <div style="margin-top:24px">
+      <button class="btn btn-primary" onclick="openPaper('kv_cache')">Start: KV Cache →</button>
+    </div>
+  </div>`;
+}
+
+// Init
+updateBadge();
+renderSidebar();
+renderWelcome();
+</script>
+<!-- Cross-device progress sync -->
+<script>
+(function(){
+  var SU='https://gbkhkbfbarsnpbdkxzii.supabase.co';
+  var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+  var MOD='pa4';
+  var LSK='pa4_completed';
+  var FMT='array';
+
+  function getIds(){
+    var raw=localStorage.getItem(LSK);
+    if(!raw) return [];
+    try{
+      var p=JSON.parse(raw);
+      if(Array.isArray(p)) return p;
+      return Object.keys(p).filter(function(k){return p[k];});
+    }catch(e){return [];}
+  }
+
+  function push(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    var ids=getIds();
+    if(!ids.length) return;
+    fetch(SU+'/rest/v1/academy_progress',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({email:email,module:MOD,completed:ids,updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }
+
+  var _orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    _orig.call(this,k,v);
+    if(k===LSK) push();
+  };
+
+  window.addEventListener('load',function(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    fetch(SU+'/rest/v1/academy_progress?email=eq.'+encodeURIComponent(email)+'&module=eq.'+MOD+'&select=completed',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(!rows||!rows[0]||!rows[0].completed||!rows[0].completed.length) return;
+      var remote=rows[0].completed;
+      var raw=localStorage.getItem(LSK);
+      var merged;
+      if(FMT==='object'){
+        merged=raw?JSON.parse(raw):{};
+        remote.forEach(function(id){merged[id]=true;});
+        _orig.call(localStorage,LSK,JSON.stringify(merged));
+      } else {
+        var local=raw?JSON.parse(raw):[];
+        var s=new Set(local);
+        remote.forEach(function(id){s.add(id);});
+        _orig.call(localStorage,LSK,JSON.stringify(Array.from(s)));
+      }
+      if(typeof renderTree==='function') renderTree();
+      if(typeof updateProgressBar==='function') updateProgressBar();
+      if(typeof render==='function') render();
+    }).catch(function(){});
+  });
+
+  var btn=document.createElement('a');
+  btn.href='index.html';
+  btn.innerHTML='&#8592; Menu';
+  btn.style.cssText='position:fixed;top:10px;left:10px;z-index:9999;background:#16213E;color:#7C4DFF;border:1px solid #7C4DFF44;padding:5px 12px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;opacity:0.8;transition:opacity 0.2s';
+  btn.onmouseover=function(){this.style.opacity='1';};
+  btn.onmouseout=function(){this.style.opacity='0.8';};
+  document.body.appendChild(btn);
+})();
+</script>
+</body>
+</html>

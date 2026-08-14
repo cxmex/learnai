@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Academy — Google Research → Modern AI</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0F0F23;color:#E0E0E0;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{width:280px;min-width:280px;background:#0a0a1a;border-right:1px solid #1e1e3a;display:flex;flex-direction:column;overflow:hidden}
+#sidebar-header{padding:18px 16px 12px;border-bottom:1px solid #1e1e3a}
+#sidebar-header h1{font-size:1rem;font-weight:800;background:linear-gradient(90deg,#7C4DFF,#00C853);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+#sidebar-header p{font-size:0.68rem;color:#555;margin-top:3px}
+#progress-bar-wrap{padding:10px 16px;border-bottom:1px solid #1e1e3a}
+#progress-label{font-size:0.68rem;color:#555;margin-bottom:5px}
+#progress-bar{height:4px;background:#1e1e3a;border-radius:2px}
+#progress-fill{height:4px;background:linear-gradient(90deg,#7C4DFF,#00C853);border-radius:2px;transition:width 0.4s}
+#tree{flex:1;overflow-y:auto;padding:12px 8px}
+#tree::-webkit-scrollbar{width:4px}
+#tree::-webkit-scrollbar-thumb{background:#2a2a4a;border-radius:2px}
+
+/* TREE NODES */
+.track-label{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#444;padding:12px 8px 4px}
+.paper-node{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;border:1px solid transparent;transition:all 0.15s;position:relative}
+.paper-node:hover:not(.locked){background:#16213E;border-color:#2a2a4a}
+.paper-node.active{background:#16213E;border-color:#7C4DFF55}
+.paper-node.locked{opacity:0.4;cursor:not-allowed}
+.paper-node.completed .node-icon{background:#00C853;color:#000}
+.paper-node.active .node-icon{background:#7C4DFF;color:#fff}
+.paper-node.locked .node-icon{background:#1e1e3a;color:#444}
+.node-icon{width:28px;height:28px;border-radius:50%;background:#1e1e3a;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0}
+.node-text{flex:1;min-width:0}
+.node-title{font-size:0.8rem;font-weight:600;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node-year{font-size:0.65rem;color:#555}
+.node-connector{position:absolute;left:23px;top:100%;width:1px;height:4px;background:#2a2a4a}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{padding:14px 28px;border-bottom:1px solid #1e1e3a;display:flex;align-items:center;gap:12px}
+#paper-tag{font-size:0.7rem;color:#7C4DFF;font-weight:600;background:#7C4DFF11;border:1px solid #7C4DFF33;padding:3px 10px;border-radius:10px}
+#paper-title-main{font-size:1rem;font-weight:700;color:#fff}
+#paper-meta{font-size:0.72rem;color:#555;margin-left:auto}
+
+/* TABS */
+#tabs{display:flex;gap:0;border-bottom:1px solid #1e1e3a;padding:0 28px}
+.tab{padding:10px 20px;font-size:0.8rem;font-weight:600;color:#555;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s}
+.tab.active{color:#7C4DFF;border-bottom-color:#7C4DFF}
+.tab:hover:not(.active){color:#aaa}
+
+/* CONTENT */
+#content{flex:1;overflow-y:auto;padding:28px}
+#content::-webkit-scrollbar{width:6px}
+#content::-webkit-scrollbar-thumb{background:#2a2a4a;border-radius:3px}
+
+/* LESSON */
+.lesson-section{margin-bottom:28px}
+.lesson-section h3{font-size:0.9rem;font-weight:700;color:#7C4DFF;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.lesson-section h3::before{content:'';display:block;width:3px;height:16px;background:#7C4DFF;border-radius:2px}
+.lesson-section p{color:#bbb;line-height:1.8;font-size:0.85rem;margin-bottom:10px}
+.lesson-section ul{margin-left:20px;color:#bbb;font-size:0.85rem;line-height:2}
+.callout{background:#16213E;border-left:3px solid #7C4DFF;border-radius:0 8px 8px 0;padding:14px 16px;margin:16px 0;font-size:0.83rem;color:#ccc;line-height:1.7}
+.callout.green{border-color:#00C853}
+.callout.yellow{border-color:#FFB300}
+.paper-ref{display:inline-block;background:#0a0a1a;border:1px solid #2a2a4a;padding:2px 8px;border-radius:4px;font-size:0.72rem;color:#7C4DFF;font-family:monospace}
+.concept-box{background:#0d0d1f;border:1px solid #2a2a4a;border-radius:10px;padding:16px;margin:14px 0}
+.concept-box .label{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:8px}
+.concept-box .formula{font-size:1rem;color:#00C853;font-family:monospace;text-align:center;padding:8px}
+
+/* QUIZ */
+#quiz-wrap{max-width:700px}
+.quiz-progress{display:flex;gap:6px;margin-bottom:24px}
+.qp-dot{width:8px;height:8px;border-radius:50%;background:#1e1e3a;transition:background 0.3s}
+.qp-dot.done{background:#00C853}
+.qp-dot.current{background:#7C4DFF}
+.question-card{background:#16213E;border:1px solid #2a2a4a;border-radius:12px;padding:24px;margin-bottom:20px}
+.question-num{font-size:0.7rem;color:#555;margin-bottom:8px}
+.question-text{font-size:0.95rem;color:#fff;line-height:1.6;margin-bottom:20px;font-weight:500}
+.options{display:flex;flex-direction:column;gap:10px}
+.option{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#0F0F23;border:1px solid #2a2a4a;border-radius:8px;cursor:pointer;transition:all 0.15s;text-align:left}
+.option:hover:not(.disabled){border-color:#7C4DFF55;background:#16213E}
+.option.selected-wrong{border-color:#FF5252;background:#FF525211;animation:shake 0.3s}
+.option.selected-right{border-color:#00C853;background:#00C85311}
+.option.revealed-right{border-color:#00C853;background:#00C85308}
+.option.disabled{cursor:not-allowed;opacity:0.5}
+.option-letter{width:22px;height:22px;border-radius:50%;background:#1e1e3a;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0;margin-top:1px}
+.option-text{font-size:0.83rem;color:#ccc;line-height:1.5;flex:1}
+.feedback{margin-top:14px;padding:14px;border-radius:8px;font-size:0.82rem;line-height:1.6;display:none}
+.feedback.wrong{display:block;background:#FF525211;border:1px solid #FF525244;color:#FF8A80}
+.feedback.right{display:block;background:#00C85311;border:1px solid #00C85344;color:#69F0AE}
+.feedback strong{color:#fff}
+.next-btn{margin-top:16px;padding:10px 24px;background:#7C4DFF;color:#fff;border:none;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;display:none;transition:background 0.15s}
+.next-btn:hover{background:#6a3de8}
+
+/* COMPLETED STATE */
+#completed-banner{background:linear-gradient(135deg,#001a0a,#0F0F23);border:1px solid #00C85344;border-radius:12px;padding:32px;text-align:center;display:none}
+#completed-banner h2{font-size:1.4rem;font-weight:800;color:#00C853;margin-bottom:8px}
+#completed-banner p{color:#aaa;margin-bottom:20px;font-size:0.85rem}
+#completed-banner .unlock-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:20px}
+#completed-banner .unlock-item{background:#16213E;border:1px solid #00C85344;color:#00C853;padding:5px 14px;border-radius:20px;font-size:0.78rem}
+
+/* HOME */
+#home-screen{max-width:700px}
+#home-screen h2{font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:8px}
+#home-screen p{color:#888;font-size:0.85rem;line-height:1.7;margin-bottom:20px}
+.start-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:20px}
+.start-card{background:#16213E;border:1px solid #2a2a4a;border-radius:10px;padding:16px;cursor:pointer;transition:all 0.15s}
+.start-card:hover{border-color:#7C4DFF55;transform:translateY(-2px)}
+.start-card .sc-year{font-size:0.68rem;color:#7C4DFF;margin-bottom:4px}
+.start-card .sc-title{font-size:0.85rem;font-weight:700;color:#fff;margin-bottom:4px}
+.start-card .sc-desc{font-size:0.72rem;color:#555}
+
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.25s ease forwards}
+
+/* RESET BTN */
+#reset-btn{margin:8px 16px;padding:6px;font-size:0.68rem;color:#333;background:none;border:1px solid #1e1e3a;border-radius:6px;cursor:pointer;width:calc(100% - 32px)}
+#reset-btn:hover{color:#666;border-color:#2a2a4a}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>Paper Academy</h1>
+    <p>Google Research → Modern AI</p>
+  </div>
+  <div id="progress-bar-wrap">
+    <div id="progress-label">0 of 15 papers completed</div>
+    <div id="progress-bar"><div id="progress-fill" style="width:0%"></div></div>
+  </div>
+  <div id="tree"></div>
+  <button id="reset-btn" onclick="resetProgress()">Reset progress</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <span id="paper-tag">Select a paper</span>
+    <span id="paper-title-main">Welcome to Paper Academy</span>
+    <span id="paper-meta"></span>
+  </div>
+  <div id="tabs">
+    <div class="tab active" onclick="showTab('learn')" id="tab-learn">Learn</div>
+    <div class="tab" onclick="showTab('quiz')" id="tab-quiz">Quiz</div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// PAPER DATA
+// ═══════════════════════════════════════════════════════
+const PAPERS = [
+  {
+    id:'gfs', title:'The Google File System', shortTitle:'GFS', year:2003,
+    authors:'Ghemawat, Gobioff, Leung · Google',
+    venue:'SOSP 2003', category:'Infrastructure', prereqs:[],
+    icon:'🗄️', tagline:'Where Google\'s data lives',
+    lesson:[
+      {h:'The Problem Google Had',body:`By 2003 Google was crawling the entire web and needed to store billions of files totaling petabytes of data. Traditional file systems like UNIX assumed hardware was reliable and files were small. Google had the opposite reality: thousands of cheap commodity machines that failed constantly, and files that were gigabytes each (web crawl segments, index shards).
+
+The breakthrough was designing the file system <em>around failure rather than against it</em>. GFS assumes a machine will fail. It doesn't try to prevent it — it plans for it.`},
+      {h:'Architecture: One Master, Many Chunkservers',body:`GFS has three components:
+<ul>
+<li><strong>Master</strong> — one server that tracks metadata (which file lives where). Never stores actual data.</li>
+<li><strong>Chunkservers</strong> — hundreds/thousands of machines that store 64MB chunks of actual file data.</li>
+<li><strong>Clients</strong> — ask the master "where is chunk X?" then talk directly to chunkservers for data.</li>
+</ul>
+Each 64MB chunk is replicated on 3 different chunkservers. If one machine dies, two copies still exist.`,callout:`Why 64MB chunks? Large chunks mean fewer metadata entries on the master, and most Google workloads read huge files sequentially (web crawl data). Random access to small files is rare.`},
+      {h:'Key Design Insight: Append-Only Writes',body:`Google's workloads almost never modified files in the middle. They either read large files (MapReduce inputs) or appended to logs. GFS was designed specifically for this: it has an "atomic record append" operation that is extremely efficient.
+
+This seems like a limitation — but it's actually what made GFS fast. By removing the complexity of arbitrary writes, the system could be optimized for the actual access patterns Google had.`},
+      {h:'Why It Matters for Everything After',body:`GFS created the mental model for all distributed storage that followed. HDFS (Hadoop's file system) is a direct open-source reimplementation. Amazon S3, Azure Blob Storage — all conceptually descended from GFS's chunk-replication-with-metadata-server pattern.
+
+More importantly, GFS made MapReduce possible. You can't distribute computation across thousands of machines unless you have a file system that all of them can read from and write to reliably.`,callout_green:`GFS paper → HDFS → Hadoop → Spark → Databricks ($62B). One architecture decision in 2003 shaped the entire big data industry.`}
+    ],
+    questions:[
+      {q:'What was the most fundamental design assumption that separated GFS from traditional file systems?',
+       opts:['Files are small and need fast random access','Hardware failures are rare and exceptional','Component failures are the norm, not the exception','Security and encryption are the top priority'],
+       correct:2,
+       explain:['Traditional file systems like NTFS or ext4 were designed for this world — small files, fast random reads. GFS was built for the opposite: multi-gigabyte sequential reads of web crawl data. If you chose this, you have the problem inverted.','This is exactly what traditional file systems assumed. GFS made the opposite bet: with 1,000+ commodity machines, failures happen daily. Designing around failure-as-exception would have made GFS fragile. This is the wrong assumption for GFS.',null,'GFS was an internal system and security was not the primary innovation. The breakthrough was reliability through redundancy, not encryption. Authentication was handled at a different layer.']},
+      {q:'Why did GFS use 64MB chunks instead of small blocks like traditional file systems?',
+       opts:['64MB fits perfectly in RAM for caching','Large chunks reduce the metadata burden on the master and suit sequential workloads','Google needed chunks divisible by the number of servers','Small chunks would have required more encryption operations'],
+       correct:1,
+       explain:['RAM caching is determined by the application, not chunk size. The chunk size choice was about metadata overhead and access patterns, not cache fit.',null,'Server count changes constantly as machines are added or fail. Chunk size cannot depend on cluster size — that would make the system fragile.','Encryption cost was not a design factor here. GFS operated on Google\'s internal trusted network.']},
+      {q:'GFS replicates each chunk on 3 chunkservers. What problem does this primarily solve?',
+       opts:['Faster writes by writing to 3 places simultaneously','Durability — if 1 or 2 machines fail, the data still exists on the third','Encryption — each replica holds one part of the key','Load balancing — reads are always split equally across 3 servers'],
+       correct:1,
+       explain:['Writing to 3 places makes writes slightly slower, not faster. The 3-replica strategy is about durability, not write speed. The master coordinates replicas after the primary write confirms.',null,'Encryption is not involved. All 3 replicas hold identical full copies of the chunk — the point is that any one of them can serve a complete read if the others fail.','Reads CAN be load-balanced across replicas, but that\'s a side benefit. The primary reason is fault tolerance. If 2 of 3 machines in a rack die at once (power failure), the third copy still has your data.']},
+      {q:'What happens when the GFS master server fails?',
+       opts:['All data is permanently lost since the master holds all data','Operations pause briefly; a shadow master with replicated metadata takes over','Each chunkserver independently elects a new master','Nothing — chunkservers serve requests directly without the master'],
+       correct:1,
+       explain:['The master does NOT hold actual data — only metadata (file names, chunk locations). Data lives on chunkservers. Master failure means temporary metadata unavailability, not data loss.',null,'Chunkservers don\'t communicate directly with each other for master election in GFS\'s original design. There is a shadow master (read-only replica) that can serve reads, and a failover process handled by Google\'s cluster management.','The master is required to locate which chunkserver holds which chunk. Without it, clients cannot find where data lives. Direct chunkserver access without the master is not how GFS works.']},
+    ]
+  },
+
+  {
+    id:'mapreduce', title:'MapReduce', shortTitle:'MapReduce', year:2004,
+    authors:'Dean & Ghemawat · Google',
+    venue:'OSDI 2004', category:'Infrastructure', prereqs:['gfs'],
+    icon:'⚙️', tagline:'Parallel computation for everyone',
+    lesson:[
+      {h:'The Problem: Computation at Google Scale',body:`Google needed to process billions of web pages to build its search index. Counting word frequencies, building inverted indexes, computing PageRank — all of these require touching every document. On one machine, that takes months. The question was: how do you run one algorithm across 10,000 machines simultaneously without requiring every engineer to become a distributed systems expert?
+
+MapReduce's answer: hide all the distributed complexity inside a framework. You write two simple functions. The framework handles everything else.`},
+      {h:'The Two Functions: Map and Reduce',body:`The model is borrowed from functional programming:
+
+<strong>Map:</strong> Takes one (key, value) pair and emits zero or more (key, value) pairs. Applied to every input record in parallel across thousands of machines.
+
+<strong>Reduce:</strong> Takes a key and all its values (grouped by the framework), and produces a final output.
+
+Classic example — word count:
+<ul>
+<li>Map: for each word in a document, emit (word, 1)</li>
+<li>Framework: sorts and groups all emissions → ("the", [1,1,1,1,1,...])</li>
+<li>Reduce: sum the list → ("the", 47392)</li>
+</ul>`,callout:`The key insight: Map runs in parallel on input chunks (reading from GFS). Reduce runs in parallel on different key groups. The "shuffle" phase in between moves data across the network automatically.`},
+      {h:'Fault Tolerance — The Critical Part',body:`With 10,000 machines, several will fail during any multi-hour job. MapReduce handles this silently:
+<ul>
+<li>A master process pings workers every few seconds</li>
+<li>If a worker doesn't respond, the master re-executes its tasks on another machine</li>
+<li>Since Map and Reduce functions are pure (no side effects), re-execution produces the same output</li>
+</ul>
+This is why functional purity matters: a pure function can be safely restarted anywhere.`},
+      {h:'Legacy: The Entire Big Data Industry',body:`Google never open-sourced MapReduce. But they published the paper. Doug Cutting at Yahoo read it and implemented Hadoop + HDFS in open source. This became the foundation of the big data industry.
+
+Spark (2009, Berkeley) replaced MapReduce with in-memory computation and lazy evaluation. Databricks commercialized Spark and is now worth $62B. AWS EMR, Google Dataproc, Azure HDInsight — all MapReduce descendents. One paper published in 2004 generated an industry worth hundreds of billions of dollars.`,callout_green:`MapReduce paper (2004) → Hadoop (2006) → Spark (2009) → Databricks ($62B) → Every modern data pipeline.`}
+    ],
+    questions:[
+      {q:'What is the core abstraction that MapReduce provides to developers?',
+       opts:['A drag-and-drop interface for building data pipelines','Two pure functions (Map and Reduce) — the framework handles all distribution','A SQL-like query language that compiles to distributed jobs','A real-time streaming API similar to Kafka'],
+       correct:1,
+       explain:['MapReduce is a code API, not a visual tool. The whole point is that programmers write functions in C++ or Java, not drag and drop.', null,'SQL over MapReduce (Hive) came later as a layer built ON TOP of MapReduce. The core abstraction is functional, not declarative SQL.','MapReduce processes static datasets in batch. Real-time streaming (like Kafka/Flink) is a completely different paradigm that came later precisely because MapReduce was too slow for real-time.']},
+      {q:'Why does MapReduce require Map and Reduce functions to be pure (no side effects)?',
+       opts:['Pure functions are faster to execute on a single machine','Side effects would require special GPU hardware','Purity allows the framework to safely re-execute failed tasks on other machines','Pure functions can be written in any programming language'],
+       correct:2,
+       explain:['Function purity doesn\'t affect single-machine speed. It\'s about what happens when machines FAIL, which is the whole design challenge.','Hardware type is irrelevant here. MapReduce runs on commodity CPUs, and purity is a software property.',null,'While purity can help with language interoperability, that\'s not why MapReduce requires it. The critical reason is fault tolerance: if a worker dies mid-task, you need to restart it on another machine and get the EXACT SAME result.']},
+      {q:'In a word-count MapReduce job, what does the "shuffle" phase do?',
+       opts:['Randomly shuffles documents to prevent bias in results','Groups all emitted (key, value) pairs by key and sends them to the correct Reducer','Encrypts the intermediate data before it crosses the network','Sorts the final output alphabetically'],
+       correct:1,
+       explain:['Shuffling documents randomly would destroy the computation — you need all copies of the same word to end up at the same Reducer. There\'s nothing random about the shuffle phase.',null,'There is no encryption in standard MapReduce. The shuffle is about grouping and routing intermediate data, not security.','While the output can be sorted, that\'s a separate optional step. The shuffle\'s core job is grouping by key so each Reducer sees all values for its assigned keys.']},
+      {q:'MapReduce processes data in batch. What does this mean and what problem did it cause?',
+       opts:['It can only process image and video data, not text','Jobs read input from disk, process it entirely, then write output to disk — making it too slow for real-time or iterative algorithms','It requires all data to be in a single file before processing','Batch processing means it only runs once per day, not on demand'],
+       correct:1,
+       explain:['MapReduce operates on any key-value data — text, binary, structured records. File format is not the limitation.',null,'Batch here means you process the entire dataset as one job, reading from and writing to disk (GFS) at each step. Multi-step algorithms (like machine learning training that iterates thousands of times) must write results to disk after every round, then re-read them — extremely slow. This is why Spark was invented.','MapReduce jobs can be triggered anytime. "Batch" refers to the processing model (all-at-once, disk-based), not a scheduling restriction.']},
+    ]
+  },
+
+  {
+    id:'bigtable', title:'Bigtable', shortTitle:'Bigtable', year:2006,
+    authors:'Chang, Dean, Ghemawat et al. · Google',
+    venue:'OSDI 2006', category:'Infrastructure', prereqs:['gfs'],
+    icon:'🗃️', tagline:'Distributed structured storage',
+    lesson:[
+      {h:'Why GFS Wasn\'t Enough',body:`GFS stores files. But Google needed something more structured — a database-like system where you could look up a specific row instantly, rather than scanning a whole file. Web index entries, per-URL crawl timestamps, per-user search histories — all of these need random access patterns that GFS doesn't support efficiently.
+
+Bigtable is a distributed key-value store built ON TOP of GFS. GFS handles the raw file storage; Bigtable handles structured access.`},
+      {h:'The Data Model: Rows, Columns, Timestamps',body:`Bigtable organizes data as a three-dimensional map:
+<ul>
+<li><strong>Row key</strong> — a string up to 64KB. Rows are sorted lexicographically. Scanning a range of rows is fast.</li>
+<li><strong>Column family:qualifier</strong> — columns are grouped into "families" declared at table creation (e.g., <em>contents:</em>, <em>anchor:</em>). Within a family, qualifiers can be anything.</li>
+<li><strong>Timestamp</strong> — every cell can have multiple versions, indexed by timestamp.</li>
+</ul>
+Example: the web index. Row key = reversed URL (com.google.www). Column = "contents:html". Value = the page content. Timestamp = when it was crawled. All versions kept for 30 days.`,callout:`Row keys are reversed URLs (com.google.www not www.google.com) so that all pages from the same domain sort together. This is a key design pattern: choose your row key to match your access pattern.`},
+      {h:'How It Scales: Tablets and the Master',body:`A Bigtable table is split into "tablets" (contiguous ranges of rows). Each tablet is ~200MB and served by one "tablet server." The master assigns tablets to tablet servers and rebalances as the table grows.
+
+When a tablet gets too large, it splits automatically. The metadata of which tablet server holds which row range is itself stored in a special Bigtable table — a recursive design.`},
+      {h:'Legacy: The NoSQL Revolution',body:`Bigtable was published in 2006. Within 2 years, open-source clones appeared: Apache HBase (Bigtable on Hadoop), Apache Cassandra (Facebook's take on Bigtable + Dynamo). Amazon DynamoDB, Google Cloud Bigtable, Azure Cosmos DB — all direct descendants.
+
+The term "NoSQL" was coined to describe this family of systems. MongoDB, CouchDB, and others are all responses to the same insight Bigtable had: relational databases don't scale horizontally for web-scale workloads.`,callout_green:`Bigtable → HBase, Cassandra, DynamoDB, MongoDB — the entire NoSQL database industry.`}
+    ],
+    questions:[
+      {q:'What is the primary difference between Bigtable and GFS?',
+       opts:['Bigtable is faster because it uses SSDs instead of HDDs','Bigtable provides structured random access by key; GFS provides sequential file access','Bigtable is open-source; GFS is proprietary','Bigtable is for small data; GFS is for big data'],
+       correct:1,
+       explain:['Neither GFS nor Bigtable specifically requires SSDs — both were designed for commodity HDDs. Speed difference is about access pattern, not storage hardware.',null,'Both are proprietary internal Google systems. The distinction is conceptual: what kind of access they provide.','Bigtable can store massive amounts of data (petabytes). The distinction is not size but access pattern: structured key-based lookup (Bigtable) vs. file-based sequential access (GFS).']},
+      {q:'Why does Bigtable use reversed URLs as row keys for its web crawl data?',
+       opts:['Reversed URLs are shorter and save storage space','Reversing enables compression of repeated URL prefixes','All pages from the same domain sort together, making domain-range scans efficient','Reversed URLs are required by the GFS file naming convention'],
+       correct:2,
+       explain:['Reversing a URL doesn\'t make it shorter — it\'s the same number of characters. Storage saving is not the reason.',null,'While compression can benefit from sorted data, that\'s a secondary benefit. The PRIMARY reason is that lexicographic sorting of reversed URLs groups all pages from the same domain together — enabling efficient range scans like "give me all Google pages."','GFS stores files by filename; Bigtable manages its own row key namespace independently. GFS has no URL-based naming convention.']},
+      {q:'Bigtable cells can have multiple versions identified by timestamp. What problem does this solve?',
+       opts:['It allows multiple users to write simultaneously without conflicts','It provides a history of changes — e.g., keeping the last 30 days of crawled web page versions','Timestamps are used for sorting rows in the table','It enables the master to track which tablet server last wrote a cell'],
+       correct:1,
+       explain:['Concurrent write conflict resolution is handled differently — by row-level locking. Timestamps don\'t prevent conflicts; they record history.',null,'Rows are sorted by row key, not by timestamp. Timestamps are a within-cell versioning mechanism, not a table ordering mechanism.','The master tracks tablet locations, not individual cell writes. Timestamps are a data model feature for applications, not an internal bookkeeping mechanism.']},
+    ]
+  },
+
+  {
+    id:'alexnet', title:'AlexNet', shortTitle:'AlexNet', year:2012,
+    authors:'Krizhevsky, Sutskever, Hinton · U of Toronto / Google',
+    venue:'NeurIPS 2012', category:'Deep Learning', prereqs:[],
+    icon:'🧠', tagline:'The paper that started the deep learning era',
+    lesson:[
+      {h:'The Problem: ImageNet 2012',body:`Every year from 2010, researchers competed to classify 1.2 million images into 1,000 categories (ImageNet Large Scale Visual Recognition Challenge). The best traditional methods — carefully hand-engineered features (SIFT, HOG) fed into SVMs — achieved ~26% top-5 error. That means the right answer was outside the top 5 predictions 26% of the time.
+
+AlexNet won the 2012 competition with 15.3% error — a 10+ point improvement over second place. It wasn't just better. It was in a completely different league. The field stopped what it was doing and paid attention.`},
+      {h:'The Architecture: Deep Convolutional Neural Network',body:`AlexNet was a convolutional neural network (CNN) with 8 layers: 5 convolutional + 3 fully connected. Previous CNNs had 2-3 layers. The "deep" in deep learning refers to having many layers.
+
+Key innovations:
+<ul>
+<li><strong>ReLU activation</strong> — replaced sigmoid/tanh with max(0, x). Trained 6× faster. Gradients don't vanish.</li>
+<li><strong>Dropout</strong> — randomly zero out 50% of neurons during training. Forces redundancy; prevents overfitting.</li>
+<li><strong>Data augmentation</strong> — randomly crop, flip, and color-shift training images to artificially expand the dataset.</li>
+<li><strong>GPU training</strong> — trained on 2× GTX 580 GPUs (3GB each) in parallel. Made training feasible in 5–6 days.</li>
+</ul>`,callout:`The GPU insight was transformative. Neural network math is matrix multiplication — exactly what GPUs are built for. This connection (deep learning → GPU demand) is what made NVIDIA worth $3T.`},
+      {h:'Why Deep Layers Work',body:`Shallow networks (1-2 layers) can theoretically approximate any function — but require exponentially many neurons. Deep networks factor the problem into hierarchical representations:
+<ul>
+<li>Layer 1: detects edges and color blobs</li>
+<li>Layer 2: combines edges into textures and parts</li>
+<li>Layer 3: combines parts into object parts (eyes, wheels)</li>
+<li>Layer 5: represents whole objects</li>
+</ul>
+This hierarchy mirrors how visual cortex works — each layer builds on the previous one's output.`},
+      {h:'The Shockwave Through Every Field',body:`AlexNet didn't just win a competition. It proved that:
+<ol>
+<li>Neural networks could beat decades of hand-engineered feature extraction</li>
+<li>GPUs could make training feasible</li>
+<li>Large datasets (ImageNet) were essential</li>
+</ol>
+Every lab pivoted to deep learning within a year. Google hired Hinton's team. Every application — speech, translation, medical imaging — was re-examined through the neural network lens. Without AlexNet, the transformer paper (2017) and everything after it doesn't happen.`,callout_green:`AlexNet → deep learning becomes the default approach → neural nets replace hand-engineering in every field → DistBelief → TensorFlow → Word2Vec → Seq2Seq → Attention → Transformer.`}
+    ],
+    questions:[
+      {q:'What was the primary reason AlexNet\'s victory at ImageNet 2012 was significant?',
+       opts:['It was the first neural network ever trained','It beat the second-place system by over 10 percentage points — an unprecedented margin that ended the debate about deep learning','It ran faster than all other systems at inference time','It required no labeled training data'],
+       correct:1,
+       explain:['Neural networks had existed since the 1980s. AlexNet was not the first — it was the one that proved they could dominate at scale. The field had seen neural nets before but dismissed them for years.',null,'Inference speed was not AlexNet\'s primary contribution. The significance was the dramatic accuracy gap that showed deep learning was categorically better than decades of hand-engineered approaches.','AlexNet trained on 1.2 million labeled ImageNet images. Supervised learning with large labeled datasets was central to why it worked.']},
+      {q:'Why did AlexNet use ReLU (max(0,x)) instead of sigmoid or tanh activation functions?',
+       opts:['ReLU uses less memory during training','ReLU doesn\'t saturate — gradients don\'t vanish in deep networks, enabling much faster training','ReLU is mathematically simpler to implement','ReLU is a probabilistic function that handles uncertainty better'],
+       correct:1,
+       explain:['Memory usage is determined by the number of neurons and their stored activations, not the activation function type. Sigmoid and ReLU use similar memory.',null,'Sigmoid and tanh both saturate (output approaches ±1 for large inputs), making gradients nearly zero — gradients must flow backward through many layers to update early weights, and vanishing gradients prevent early layers from learning. ReLU avoids this.','All three functions can be implemented simply. Simplicity wasn\'t the motivation for choosing ReLU.','ReLU is a deterministic function: if input > 0, output = input; otherwise output = 0. It has nothing to do with probability or uncertainty.']},
+      {q:'Dropout randomly zeros 50% of neuron activations during training. Why does this prevent overfitting?',
+       opts:['Fewer active neurons mean faster forward passes, leaving more time for generalization','It forces the network to learn redundant representations — no neuron can rely on others always being present','It reduces the training dataset size, making the problem harder','Zeroing neurons creates a form of data encryption'],
+       correct:1,
+       explain:['Speed of forward pass is a minor side effect. The reason dropout prevents overfitting is about representation learning, not computational efficiency.',null,'Overfitting means the network memorizes training examples rather than learning general patterns. When neurons are randomly dropped, no single neuron can "specialize" in remembering specific training examples — the network must distribute knowledge redundantly.','Dropout doesn\'t change the training dataset. Each training example is still presented — just processed by a randomly masked version of the network.','There\'s no encryption here. Dropout is a regularization technique with a specific statistical interpretation: training on an ensemble of exponentially many sub-networks simultaneously.']},
+      {q:'How did AlexNet\'s use of GPUs change the field of deep learning beyond just AlexNet itself?',
+       opts:['GPUs enabled real-time inference in mobile devices','It revealed that neural network training (matrix multiplication) maps perfectly to GPU parallelism — making larger models and datasets tractable','GPUs allowed AlexNet to run without labeled data','GPU training eliminated the need for data augmentation'],
+       correct:1,
+       explain:['Mobile inference was a different challenge solved years later with model compression and specialized chips (Apple Neural Engine, Snapdragon NPU). AlexNet\'s GPU insight was about training, not mobile deployment.',null,'This is the key insight. GPUs have thousands of cores designed for the same operation on many data points simultaneously — which is exactly what matrix multiplication is. Neural network training IS matrix multiplication. This connection, once demonstrated by AlexNet, sparked the entire GPU+AI industry. NVIDIA\'s market cap went from ~$10B to $3T+ following this trajectory.','AlexNet trained on 1.2 million labeled images. GPU training made labeled-data training faster, not unnecessary.','Data augmentation (flipping, cropping) is independent of GPU vs. CPU. You can do both.']},
+    ]
+  },
+
+  {
+    id:'distbelief', title:'DistBelief / Large Scale Deep Networks', shortTitle:'DistBelief', year:2012,
+    authors:'Dean, Corrado, Monga, Chen, Devin, Ng et al. · Google Brain',
+    venue:'NeurIPS 2012', category:'Deep Learning', prereqs:['alexnet','mapreduce'],
+    icon:'🔗', tagline:'Training neural nets across 1,000 machines',
+    lesson:[
+      {h:'The Challenge: Going Beyond One GPU',body:`AlexNet trained on 2 GPUs. Impressive — but Google's problems were bigger. Recognizing every image in a 1B image corpus. Understanding voice in all of YouTube. These required models with billions of parameters, not millions. One GPU was hopelessly inadequate. The question became: can you train one neural network across a cluster of thousands of machines?
+
+DistBelief was Google Brain's answer. It was the precursor to TensorFlow.`},
+      {h:'Model Parallelism vs Data Parallelism',body:`DistBelief introduced two forms of parallelism:
+<ul>
+<li><strong>Model parallelism:</strong> Split the neural network itself across machines. Each machine holds a shard of the model's parameters. Forward and backward passes involve inter-machine communication.</li>
+<li><strong>Data parallelism:</strong> Run many copies of the entire model on different data shards simultaneously. Each copy computes gradients; a central Parameter Server averages them.</li>
+</ul>`,callout:`The Parameter Server pattern — a centralized store of model weights that workers read from and write gradient updates to — became the dominant architecture for distributed ML training. All modern distributed training frameworks use variants of this.`},
+      {h:'The Famous Cats Experiment',body:`Google Brain used DistBelief to train a neural network with 1 billion parameters on 16,000 CPU cores using 10 million randomly sampled YouTube frames — with NO labels.
+
+Result: the network spontaneously learned to detect faces and cat faces, just from watching unlabeled video. This proved that at sufficient scale, neural networks can discover structure without human supervision.
+
+This experiment made front-page news in the New York Times in 2012 and made Andrew Ng famous. It validated the Google Brain program and led to the hiring of Geoffrey Hinton.`},
+      {h:'Legacy: TensorFlow',body:`DistBelief was a research prototype. In 2015, Google open-sourced TensorFlow — a cleaner, more general reimplementation of the same distributed training ideas. TensorFlow became the ML infrastructure of an entire generation of companies and researchers. Then came JAX (2018), which Google Brain also developed, now the preferred research framework.
+
+The Parameter Server architecture in DistBelief → TensorFlow → PyTorch's distributed training → every large model trained today.`}
+    ],
+    questions:[
+      {q:'What is the difference between model parallelism and data parallelism in distributed training?',
+       opts:['Model parallelism uses more GPUs; data parallelism uses CPUs','Model parallelism splits the model weights across machines; data parallelism runs model copies on different data shards','Model parallelism is for training; data parallelism is only for inference','They are the same thing with different names'],
+       correct:1,
+       explain:['The distinction is about what is parallelized, not the type of hardware. Both can use GPUs or CPUs.',null,'The key distinction is: model parallelism = split the network. Data parallelism = split the data. A very large model might not fit on one GPU, requiring model parallelism. Faster training of a model that fits on one GPU can still benefit from data parallelism (multiple model replicas).','They are genuinely different patterns that address different bottlenecks (model size vs. compute throughput) and have different communication requirements.']},
+      {q:'The "cats experiment" with 1 billion parameters and 10 million YouTube frames had no labels. What did it demonstrate?',
+       opts:['That neural networks work better without labels because labels introduce bias','That at sufficient scale, neural networks can learn meaningful representations from unlabeled data alone','That YouTube videos contain more cats than any other content','That 1 billion parameters is the minimum needed for any neural network to work'],
+       correct:1,
+       explain:['Labels are essential for supervised learning. The experiment showed that unsupervised learning can work at scale — not that labels are harmful. Supervised learning still outperforms unsupervised for most tasks.',null,'The cat detector emerged spontaneously because cats are one of the most common objects in video. But the key finding was not about cats specifically — it was about emergent feature learning. Scale enables the network to discover structure (faces, cat faces) without anyone telling it what to look for.','1 billion parameters was a large model in 2012, but the threshold for "unsupervised feature learning works" depends on dataset size and task, not a fixed number.']},
+      {q:'What is the Parameter Server pattern, and why is it central to distributed deep learning?',
+       opts:['A server that stores training data and serves it to workers on demand','A centralized store of model weights that worker machines read from and write gradient updates to during training','A server that handles HTTP requests for the trained model after deployment','A server that performs all computation while workers only store data'],
+       correct:1,
+       explain:['This describes a data server or batch loader, not a parameter server. The parameter server specifically stores MODEL WEIGHTS (parameters), not training data.',null,'Workers compute gradients on their data shard, send those gradients to the parameter server, which aggregates them (averages across all workers) and updates the global model. Workers then pull the updated weights. This is how gradient descent works across many machines.','The parameter server participates in computation (aggregating gradients). It\'s not a passive store, and the workers do the heavy forward/backward pass computation.','The parameter server handles coordination — storing and updating shared weights. Workers do the computationally intensive forward and backward passes on their data shards.']},
+    ]
+  },
+
+  {
+    id:'word2vec', title:'Word2Vec', shortTitle:'Word2Vec', year:2013,
+    authors:'Mikolov, Chen, Corrado, Dean · Google',
+    venue:'arXiv 2013', category:'Deep Learning', prereqs:['alexnet'],
+    icon:'📝', tagline:'Teaching machines what words mean',
+    lesson:[
+      {h:'The Problem: How Do Computers Understand Words?',body:`Before Word2Vec, the standard approach was "one-hot encoding": a vocabulary of 100,000 words becomes a 100,000-dimensional vector where every dimension is 0 except one. "Cat" is [0,0,...,1,...,0]. "Feline" is a completely different vector. The computer has no idea these words are related.
+
+This made NLP tasks extremely data-hungry — the model had to learn word relationships from scratch every time.`},
+      {h:'The Key Insight: Words Carry Meaning Through Context',body:`Word2Vec is based on the distributional hypothesis: words that appear in similar contexts have similar meanings. "The cat sat on the mat" and "The dog sat on the mat" — cat and dog appear in similar contexts, so they should have similar representations.
+
+Word2Vec trains a shallow neural network to predict either:
+<ul>
+<li><strong>CBOW:</strong> Given surrounding words, predict the center word</li>
+<li><strong>Skip-gram:</strong> Given the center word, predict surrounding words</li>
+</ul>
+The hidden layer weights become the word vectors. Training on billions of words produces 300-dimensional vectors (word embeddings) that encode semantic meaning.`,callout:`The famous result: vector("King") - vector("Man") + vector("Woman") ≈ vector("Queen"). Arithmetic on word vectors produces semantic relationships. The geometry of the embedding space encodes meaning.`},
+      {h:'Why This Was Revolutionary',body:`Word2Vec made two things possible:
+<ul>
+<li><strong>Transfer learning:</strong> Pre-train word vectors on large unlabeled text, then use them in any NLP task. Downstream models start with knowledge, not random noise.</li>
+<li><strong>Semantic similarity:</strong> Cosine similarity between vectors measures word relatedness. Nearest neighbors of "Paris" are "London", "Berlin", "Rome" — not random.</li>
+</ul>
+This was the first widely used case of pre-training in NLP — the idea that would evolve into BERT and GPT.`},
+      {h:'The Road to Transformers',body:`Word2Vec produced static vectors — every word has one vector regardless of context. "Bank" gets one vector whether you mean riverbank or financial bank. The next steps in research would tackle this: Seq2Seq (2014) with context-dependent representations, attention (2015) with dynamic weighting, and finally Transformers (2017) where every token's representation depends on its full context.
+
+Word2Vec was the moment NLP started using dense vector representations. Everything after it builds on this foundation.`}
+    ],
+    questions:[
+      {q:'What is the core problem with one-hot encoding of words that Word2Vec solves?',
+       opts:['One-hot vectors are too large to store in memory','One-hot encoding has no notion of semantic similarity — "cat" and "feline" are as distant as "cat" and "airplane"','One-hot encoding cannot represent numbers','One-hot encoding requires GPU hardware'],
+       correct:1,
+       explain:['One-hot vectors can be stored as sparse formats (just storing the index), so memory isn\'t the core problem. The issue is what they represent, not their size.',null,'In one-hot encoding, EVERY pair of words is equally "distant" — all vectors are orthogonal. This means the model must learn that cat≈feline from task-specific training data every time, with no prior knowledge. Word2Vec\'s dense vectors place similar words near each other in vector space.','One-hot encoding represents any word as a vector of 0s and 1s — you can include numbers or any token in the vocabulary. Number representation isn\'t the issue.','One-hot encoding is simple arithmetic that runs on any hardware. GPU requirements aren\'t the motivation for Word2Vec.']},
+      {q:'The famous equation: vector("King") - vector("Man") + vector("Woman") ≈ vector("Queen"). What does this demonstrate about Word2Vec embeddings?',
+       opts:['That Word2Vec can solve math equations involving royalty','That semantic relationships (like gender) are encoded as geometric directions in the embedding space','That Word2Vec memorized famous analogies from its training data','That 300-dimensional vectors are the optimal size for word representation'],
+       correct:1,
+       explain:['Word2Vec doesn\'t understand royalty as a concept. This analogy works because of geometry, not concept understanding. The finding generalizes: capital cities, verb tenses, comparative adjectives — all have consistent geometric relationships.',null,'This is the key insight. The "gender" dimension in vector space points from man→woman, from king→queen, from actor→actress. You can subtract one concept and add another. This is linear algebraic structure encoding semantic structure — proof that the embedding space has meaningful geometry.','The training data is billions of words of raw text, not analogy pairs. The analogies emerge from the geometry learned from context patterns, not from memorization.','300 dimensions is a practical choice made by Mikolov et al. — there\'s nothing magical about it. The demonstration works regardless of whether you use 100 or 1000 dimensions.']},
+      {q:'Word2Vec produces "static" word vectors. What limitation does this create?',
+       opts:['Static vectors cannot be stored in databases','Every word gets one vector regardless of context — "bank" (financial) and "bank" (river) have the same representation','Static vectors are too slow for real-time applications','Static vectors only work for English'],
+       correct:1,
+       explain:['Vector storage in databases is straightforward and not the limitation. Vector databases (like Pinecone, Weaviate) are built specifically for this purpose.',null,'This is the core limitation that motivates contextual embeddings (ELMo, BERT, GPT). In Word2Vec, "I went to the bank to deposit money" and "I sat by the bank of the river" produce the same vector for "bank." Context-dependence requires the architecture evolution to transformers.','Word2Vec inference (looking up a vector) is essentially a table lookup — extremely fast. Speed is not the limitation.','Word2Vec was trained on English text but the same algorithm works for any language. Many multilingual variants were trained immediately after the paper.']},
+    ]
+  },
+
+  {
+    id:'seq2seq', title:'Seq2Seq + Attention', shortTitle:'Seq2Seq', year:2014,
+    authors:'Sutskever, Vinyals, Le (Seq2Seq) · Bahdanau, Cho, Bengio (Attention) · Google',
+    venue:'NeurIPS 2014 + ICLR 2015', category:'Deep Learning', prereqs:['word2vec'],
+    icon:'🔄', tagline:'Teaching networks to process sequences',
+    lesson:[
+      {h:'The Limitation of Fixed-Size Vectors',body:`Word2Vec gives each word a vector. But what about processing a whole sentence — especially translating it to another language of different length? "How are you?" (3 words) → "¿Cómo estás?" (2 words). You need to map a variable-length input to a variable-length output.
+
+The dominant approach before 2014 was RNNs (Recurrent Neural Networks): process words one at a time, carrying a "hidden state" forward. But by the end of a long sentence, the hidden state has largely forgotten the beginning.`},
+      {h:'Seq2Seq: Encoder-Decoder Architecture',body:`Sutskever, Vinyals, and Le at Google proposed the encoder-decoder architecture:
+<ul>
+<li><strong>Encoder RNN:</strong> Reads the input sentence word by word, producing a single fixed-size "thought vector" (the final hidden state)</li>
+<li><strong>Decoder RNN:</strong> Takes the thought vector and generates output words one at a time</li>
+</ul>
+For translation, the encoder reads English and compresses it into a vector. The decoder reads that vector and generates French.
+
+Result: dramatically better translation quality than previous approaches. This architecture powered Google Translate for years.`,callout:`The bottleneck: the entire input sentence must be compressed into one vector of fixed size. For "The cat sat on the mat" — fine. For a 50-word legal document — the single vector loses information from the beginning.`},
+      {h:'Attention: The Breakthrough Fix',body:`In 2015, Bahdanau, Cho, and Bengio published the attention mechanism. Instead of compressing the input into one vector, the decoder is allowed to "look back" at ALL encoder hidden states when generating each output word.
+
+When translating "bank" in "I went to the bank," the decoder can attend to both "went" and "bank" with high weight, and "I" and "to" with low weight. It dynamically selects which parts of the input matter for the current output step.
+
+This is not attention in the human psychological sense — it's a learned weighted sum of encoder states.`,callout_green:`Attention was the key insight that unlocked sequence modeling. The 2017 Transformer paper asks: what if we ONLY use attention, with no RNN at all?`},
+      {h:'What This Built Toward',body:`Seq2Seq + attention became the foundation for:
+<ul>
+<li>Google Neural Machine Translation (2016) — shipped to 100M users, the best translation system in the world</li>
+<li>Speech-to-text systems (encoder = audio, decoder = text)</li>
+<li>Image captioning (encoder = CNN, decoder = text RNN)</li>
+<li>Code generation (encoder = natural language, decoder = code)</li>
+</ul>
+The 2017 Transformer paper removes the RNN from this architecture entirely — but keeps attention. Everything in seq2seq that wasn't attention turned out to be unnecessary.`}
+    ],
+    questions:[
+      {q:'What fundamental problem with RNNs did the Seq2Seq encoder-decoder architecture address?',
+       opts:['RNNs were too slow to run on GPUs','RNNs could only process fixed-length inputs and outputs','RNNs struggled with variable-length sequences and forgetting early context, especially in translation tasks','RNNs required labeled data; Seq2Seq works without labels'],
+       correct:2,
+       explain:['RNNs can run on GPUs and were used extensively with GPU acceleration. Speed was improved but was not the fundamental problem Seq2Seq addressed.','RNNs actually handle variable-length sequences — they process one token at a time. The problem was the quality of that processing for long sequences, not inability to handle different lengths.',null,'Both RNNs and Seq2Seq require labeled data for supervised tasks like translation. The encoder-decoder architecture doesn\'t change the supervision requirement.']},
+      {q:'In the attention mechanism, what does the "attention weight" for each encoder state represent?',
+       opts:['How many times that encoder state was accessed during training','How much the decoder should focus on that encoder state when generating the current output word','The confidence score that the encoder was correct about that word','The sequential position of that word in the sentence'],
+       correct:1,
+       explain:['Attention weights are computed fresh for every decoder output step — they\'re not cumulative access counts from training.',null,'Attention weights are computed as a softmax over compatibility scores between the current decoder state and all encoder states. High weight → "this part of the input is relevant right now." When translating "bank," the attention mechanism can assign high weights to the encoder states corresponding to context words that disambiguate meaning.','The attention score is about relevance to the current decoding step, not encoder confidence. The encoder doesn\'t produce confidence scores — it produces representations.','Positional information can be encoded, but attention weights specifically represent relevance, not position. A word at position 15 in the input could get the highest attention weight when the decoder is generating word 2.']},
+      {q:'Why is the "bottleneck" in original Seq2Seq (without attention) a fundamental limitation?',
+       opts:['The bottleneck causes GPU memory overflow for long sequences','Compressing any input sequence into one fixed-size vector loses information as sequence length grows','The bottleneck makes training impossible without pre-trained Word2Vec vectors','A bottleneck in encoder-decoder means the decoder cannot output longer sequences than the encoder read'],
+       correct:1,
+       explain:['GPU memory scales with model size and batch size, not the bottleneck vector size specifically. This is not the core limitation.',null,'If you must compress "The defendant, who was the primary instigator of the aforementioned altercation at the premises on the evening of..." into a 512-dimensional vector, information about the beginning of the sentence is lost by the time the encoder finishes. Attention solves this by letting the decoder directly access all encoder states, not just the final compressed one.','Word2Vec pre-training is a separate technique. The bottleneck limitation exists regardless of how word representations are initialized.','Seq2Seq handles different output lengths fine — the decoder generates tokens until it produces a stop token. The bottleneck is about information loss in the single compressed vector, not output length.']},
+    ]
+  },
+
+  {
+    id:'transformer', title:'Attention Is All You Need', shortTitle:'Transformer', year:2017,
+    authors:'Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez, Kaiser, Polosukhin · Google Brain',
+    venue:'NeurIPS 2017', category:'Transformer Era', prereqs:['seq2seq','distbelief'],
+    icon:'⚡', tagline:'The paper that changed everything',
+    lesson:[
+      {h:'The Radical Proposal',body:`By 2017, seq2seq with attention was the state of the art in translation. But RNNs had a critical flaw: they are sequential. To process word 50, you must first process words 1 through 49. This means you cannot parallelize across the sequence length — a fundamental speed bottleneck.
+
+The Transformer paper asks: what if we throw away the RNN entirely? What if attention alone is sufficient?
+
+The answer was yes. "Attention Is All You Need" — the title is the thesis.`},
+      {h:'Self-Attention: Every Word Attends to Every Other Word',body:`In seq2seq attention, the decoder attends to encoder states. Transformers introduce <strong>self-attention</strong>: every word in a sequence attends to every other word in that same sequence.
+
+For the sentence "The animal didn't cross the street because it was too tired" — what does "it" refer to? The model computes attention scores between "it" and every other word. "animal" gets high attention; "street" gets low attention. The representation of "it" is updated to incorporate information from "animal."
+
+Three vectors for each token: Query (what am I looking for?), Key (what do I contain?), Value (what information do I pass?). Attention score = softmax(QKᵀ / √d) · V`,callout:`Self-attention processes ALL tokens in parallel — unlike RNNs which process one at a time. This is why Transformers train dramatically faster on modern hardware.`},
+      {h:'Multi-Head Attention and Positional Encoding',body:`A single attention head captures one type of relationship. <strong>Multi-head attention</strong> runs 8 or 16 parallel attention heads, each learning different relationship types (subject-verb, pronoun-referent, adjective-noun). Their outputs are concatenated and projected.
+
+Problem: self-attention is position-agnostic. "Dog bites man" and "Man bites dog" have the same token set — self-attention treats them identically. Solution: <strong>positional encoding</strong> — add a learned or sinusoidal position signal to each token's embedding before attention.`,callout_green:`The Transformer is a stack of identical layers. Each layer has: (1) multi-head self-attention, (2) a feedforward network applied to each position independently. Layer normalization and residual connections wrap each sublayer.`},
+      {h:'What the Transformer Made Possible',body:`The Transformer's parallelism + attention expressiveness enabled training on far more data with far more parameters than any previous architecture. This led directly to:
+<ul>
+<li><strong>BERT (2018):</strong> Pre-trained transformer encoder for understanding tasks</li>
+<li><strong>GPT-1/2/3/4:</strong> Pre-trained transformer decoder for generation tasks</li>
+<li><strong>Every modern LLM:</strong> Claude, Gemini, LLaMA, Mistral — all are transformers</li>
+<li><strong>Beyond language:</strong> Vision Transformer (ViT), AlphaFold2 (protein folding), Sora (video generation)</li>
+</ul>
+The 8 authors of this paper have collectively founded companies worth over $20 billion. One paper in June 2017 restructured the entire AI industry.`}
+    ],
+    questions:[
+      {q:'Why was replacing RNNs with pure attention a critical breakthrough for training speed?',
+       opts:['Attention uses less memory than RNNs','RNNs require specialized hardware; attention works on standard CPUs','RNNs process tokens sequentially — parallelism across sequence length is impossible. Attention processes all tokens simultaneously.','Attention was already implemented in GPU libraries, making it faster by default'],
+       correct:2,
+       explain:['Both attention and RNNs can be memory-efficient. Memory is not the primary reason for the training speed difference.',null,'Both RNNs and Transformers run on GPUs. The parallelism benefit comes from the algorithm\'s structure, not hardware requirements.','Transformers can utilize GPU parallelism because the computation for different positions is independent — all positions can be processed simultaneously in a matrix operation. RNNs require the output of step t before computing step t+1, so you cannot process the sequence in parallel regardless of how powerful your hardware is.','Libraries existed for both. The breakthrough was algorithmic: the self-attention computation is one giant matrix multiplication, perfectly suited for GPU parallelism. Libraries were written to take advantage of this.']},
+      {q:'In self-attention, what do the Query, Key, and Value vectors represent?',
+       opts:['Q=question, K=knowledge, V=vocabulary — a structured memory lookup','Q=what this token is looking for, K=what this token contains, V=information to pass if selected','Q,K,V are three different layers that must be computed in sequence','Q=question from the user, K=keywords in the document, V=valid answers'],
+       correct:1,
+       explain:['The QKV analogy to memory lookup is useful, but Q/K/V don\'t literally mean question/knowledge/vocabulary. They are learned linear projections of the token embedding.',null,'Attention score = dot product of Q with all Ks (how much does what I\'m looking for match what others contain?), normalized by softmax. The result is a weighted sum of Values. High Q·K → high attention weight → that token\'s V contributes more to my updated representation.','Q, K, and V are computed in parallel from the same input embedding using three different learned weight matrices. They are not sequential layers.','"Query, Key, Value" is a database/dictionary analogy but refers to vectors computed from token embeddings within the model, not external questions or document keywords.']},
+      {q:'Why does the Transformer need positional encoding?',
+       opts:['To encrypt token positions for security','Self-attention is permutation-invariant — "dog bites man" and "man bites dog" would be treated identically without position information','Positional encoding helps the model handle inputs longer than its training data','To replace the word embeddings with something more informative'],
+       correct:1,
+       explain:['Positional encoding is not about security. It\'s about giving the model information about word order.',null,'Self-attention computes relationships between all token pairs — but the computation is symmetric. Without position signals, the attention scores for "dog" with "bites" would be identical regardless of whether dog comes before or after bites. Positional encoding adds a unique signal to each position so the model can distinguish "dog₁ bites₂ man₃" from "man₁ bites₂ dog₃."','Positional encoding addresses position ambiguity, not length generalization. Length generalization is a separate problem that newer architectures like RoPE address.','Positional encodings are ADDED to token embeddings, not replacing them. Both word meaning (embedding) and position (positional encoding) are combined.']},
+      {q:'The paper is titled "Attention Is All You Need." What does this imply about previous seq2seq models?',
+       opts:['Previous models needed more data, not just attention','The RNN component in seq2seq was unnecessary — attention alone can model sequence relationships, and RNNs add complexity and sequential bottlenecks without adding expressive power','Attention was invented in this paper for the first time','Previous models were wrong about using labels for training'],
+       correct:1,
+       explain:['Data amount was not the point. The claim is about architecture: that the recurrent component is the unnecessary part.',null,'This is the core claim. Prior seq2seq models used RNN+attention. The Transformer showed that attention alone — applied in a stacked, multi-head, self-attention architecture — can model all the relationships that the RNN was capturing, while enabling full parallelism. The RNN was a historical accident from when attention didn\'t exist.','Attention mechanisms were introduced by Bahdanau et al. in 2015. The 2017 paper\'s novelty is using ONLY attention with no recurrence — not inventing attention.','The paper doesn\'t change the supervision paradigm. Translation still uses parallel bilingual corpora for training. The breakthrough is architectural.']},
+    ]
+  },
+
+  {
+    id:'bert', title:'BERT', shortTitle:'BERT', year:2018,
+    authors:'Devlin, Chang, Lee, Toutanova · Google AI Language',
+    venue:'NAACL 2019', category:'Transformer Era', prereqs:['transformer'],
+    icon:'🔍', tagline:'Bidirectional transformers for understanding',
+    lesson:[
+      {h:'The Problem with GPT\'s Directionality',body:`The original Transformer has two parts: an encoder (reads the full input) and a decoder (generates output left-to-right). GPT (OpenAI, 2018) used only the decoder — predicting the next word given all previous words. This is unidirectional: when processing "bank" in "I went to the bank," the model has only seen words to the left.
+
+For understanding tasks (question answering, sentiment, named entity recognition), you need context from BOTH directions. "It" in "The animal didn't cross the street because it was too tired" requires seeing words after "it" to resolve the reference.`},
+      {h:'Masked Language Modeling: The Training Trick',body:`BERT's innovation is a training task that forces bidirectionality: Masked Language Modeling (MLM).
+
+During training, 15% of input tokens are randomly replaced with [MASK]. The model must predict the original tokens using context from BOTH left and right. Example:
+
+<em>Input: "The cat [MASK] on the mat"</em><br>
+<em>Task: predict "sat"</em>
+
+The model sees all positions simultaneously (transformer encoder). It must use "The," "cat," "on," "the," "mat" — all of them — to predict "sat." This forces it to build bidirectional representations.`,callout:`BERT also trains on "Next Sentence Prediction" — given two sentences, predict if the second follows the first in the original document. This teaches inter-sentence reasoning.`},
+      {h:'Fine-Tuning: One Model, Every Task',body:`BERT is pre-trained on BooksCorpus + Wikipedia (3.3 billion words). The pre-trained model is then fine-tuned for specific tasks by adding a simple output layer:
+<ul>
+<li>Sentiment analysis: add a classification layer on the [CLS] token</li>
+<li>Question answering: add a span extraction layer</li>
+<li>Named entity recognition: add per-token labels</li>
+</ul>
+Fine-tuning takes hours, not weeks. BERT immediately set the state of the art on 11 NLP benchmarks simultaneously when published. This demonstrated that pre-training on language modeling alone produces representations useful for any language task.`},
+      {h:'Legacy: The Pre-Training Paradigm',body:`BERT established the modern paradigm: pre-train a large model on language (or images, or code) → fine-tune for specific tasks. This replaced the previous approach of training task-specific models from scratch.
+
+BERT's descendants: RoBERTa (Facebook, more training), ALBERT, DeBERTa. BERT representations power Google Search (since 2019), powering understanding of 1 in 10 queries. SciBERT, BioBERT, LegalBERT — domain-specific variants. The bidirectional encoder design became standard for understanding tasks; GPT-style decoders became standard for generation tasks.`}
+    ],
+    questions:[
+      {q:'Why is BERT called "bidirectional" and why does bidirectionality matter?',
+       opts:['BERT can read text forwards and backwards like a palindrome detector','BERT\'s encoder attends to all tokens simultaneously — left and right context — unlike GPT which only attends to previous tokens','BERT uses two separate models: one for left-to-right and one for right-to-left','Bidirectional means BERT works for both classification and generation tasks'],
+       correct:1,
+       explain:['Bidirectionality refers to context, not literal text reversal. BERT doesn\'t reverse strings.',null,'In GPT (decoder-only), each token can only attend to tokens before it — this is enforced by a causal mask. BERT (encoder-only) removes this mask: every token attends to every other token in both directions. For understanding tasks, full context is essential.','ELMo (2018) used two separate unidirectional LSTMs, one in each direction, and concatenated their outputs. BERT is genuinely bidirectional in a single model — attention flows in all directions simultaneously.','Bidirectionality is specifically about context flow, not task capability. BERT is designed for understanding/encoding tasks, not generation. GPT is for generation.']},
+      {q:'What is Masked Language Modeling (MLM) and why does it enable bidirectional training?',
+       opts:['MLM encrypts tokens during training to prevent data leakage','MLM randomly masks 15% of input tokens and trains the model to predict them using full bidirectional context','MLM is a classification task where the model predicts the next sentence','MLM stands for Multi-Layer Masking — applying dropout to multiple layers simultaneously'],
+       correct:1,
+       explain:['MLM has nothing to do with encryption. Masking here means replacing with a special [MASK] token.',null,'If you trained a bidirectional model with the standard "predict next word" objective, the model could trivially cheat by looking at the word immediately to the right. MLM prevents this by hiding the target — the model must use ALL surrounding context to reconstruct the masked word, forcing it to build rich bidirectional representations.','Next Sentence Prediction (NSP) is BERT\'s second training task. MLM is specifically about predicting masked tokens within a sentence, not about sentence relationships.','MLM stands for Masked Language Model/Modeling. Dropout is a separate regularization technique.']},
+    ]
+  },
+
+  {
+    id:'gpt', title:'GPT + Scaling Laws', shortTitle:'GPT & Scale', year:2020,
+    authors:'Brown et al. (GPT-3) · Kaplan et al. (Scaling Laws) · OpenAI (with Google Brain lineage)',
+    venue:'NeurIPS 2020 / arXiv 2020', category:'Transformer Era', prereqs:['transformer','bert'],
+    icon:'📈', tagline:'More parameters = smarter models (reliably)',
+    lesson:[
+      {h:'GPT: Decoder-Only Language Modeling',body:`While BERT used the encoder for understanding, GPT used the decoder for generation: predict the next token given all previous tokens. GPT-1 (2018) was 117M parameters. GPT-2 (2019) was 1.5B. GPT-3 (2020) was 175B — trained on 45TB of text.
+
+The insight: just make the next-word-prediction task the whole objective, at massive scale. Don't add special tasks. Don't add complex architecture changes. Just scale.`},
+      {h:'Scaling Laws: The Predictable Path to Intelligence',body:`In 2020, Kaplan et al. at OpenAI published "Scaling Laws for Neural Language Models" — possibly the most strategically important ML paper ever.
+
+The finding: model performance (measured as test loss) follows a precise power law with respect to three quantities:
+<ul>
+<li><strong>N:</strong> Number of model parameters</li>
+<li><strong>D:</strong> Amount of training data</li>
+<li><strong>C:</strong> Compute used for training</li>
+</ul>
+Double the compute budget → predictable improvement in performance. No phase transitions, no surprises. Loss curves are smooth and follow mathematical laws.`,callout:`This made AI scaling a capital allocation problem. If you can predict exactly how much better a model will be given 10× more compute, you can make investment decisions. OpenAI, Google, Anthropic, and Meta all bet billions of dollars on scaling laws.`},
+      {h:'Few-Shot Learning: Intelligence Without Fine-Tuning',body:`GPT-3 demonstrated "few-shot learning": provide 3-5 examples of a task in the prompt, and the model completes the pattern — without any gradient updates or fine-tuning.
+
+The model was never trained on translation, yet it can translate. Never trained on arithmetic, yet it can add. It develops general capabilities as a byproduct of training on enough internet text.
+
+This was the origin of prompt engineering as a discipline.`},
+      {h:'The Arms Race This Created',body:`Scaling laws told every major lab: if you have more compute and more data, you will get a better model. This started the GPU arms race. NVIDIA stock went from $250 (2021) to $1,000+ (2024). Data center spending by Microsoft, Google, Meta, and Amazon exceeded $250B in 2024 alone.
+
+Claude (Anthropic), Gemini (Google), LLaMA (Meta), Mistral — all are GPT-style autoregressive transformers that exist because scaling laws gave labs the confidence to invest.`}
+    ],
+    questions:[
+      {q:'What do Scaling Laws reveal about the relationship between compute and model performance?',
+       opts:['Performance improves randomly as compute increases — you need to experiment to find improvements','Performance follows a smooth power law with compute, data, and parameters — improvements are predictable','Scaling only helps up to 10B parameters, after which performance plateaus','Scaling laws show that data quality matters more than model size'],
+       correct:1,
+       explain:['Scaling laws proved the opposite: there is a precise mathematical relationship. This predictability is what made large investments rational — you can forecast the return on compute spend.',null,'This is the key finding. If you plot test loss vs. compute on a log-log graph, you get a straight line. Doubling compute produces a consistent, predictable loss reduction. There are no random jumps or arbitrary plateaus (at least in the regime studied). This predictability is the strategic insight.','Scaling laws showed no such plateau in the compute ranges studied (up to GPT-3 scale and beyond). Performance continued to improve with scale. Some capabilities do show phase transitions but the overall loss curve is smooth.','The Chinchilla paper (2022) later showed that data scaling is as important as model size, and many models were under-trained. But the core finding of smooth power laws applies to both dimensions.']},
+      {q:'What is "few-shot learning" as demonstrated by GPT-3, and why was it surprising?',
+       opts:['GPT-3 can learn new languages with only a few training examples','Given a few examples in the prompt, GPT-3 performs new tasks without any weight updates — capabilities emerge from scale without task-specific training','GPT-3 was trained on only a few shots (small dataset) and generalized well','Few-shot means GPT-3 makes few mistakes — a low error rate'],
+       correct:1,
+       explain:['Few-shot learning in this context is about in-context examples at inference time, not learning new languages during training. GPT-3 wasn\'t retrained on anything.',null,'The surprising part: no gradient updates. No fine-tuning. You show GPT-3 "English: Hello → French: Bonjour, English: Goodbye → French: Au revoir, English: Thank you → French:" and it completes with "Merci" — despite never being trained on translation as a task. This emergent capability shocked researchers and immediately changed how people thought about what large language models could do.','GPT-3 trained on 45TB of text (450 billion tokens). It was one of the largest training datasets at the time. Few-shot refers to the inference-time examples, not training data size.','Few-shot is about the number of task examples provided at inference, not error rate. GPT-3 makes many mistakes — it\'s not highly accurate. The surprise is that it can perform tasks at ALL without task-specific training.']},
+    ]
+  },
+
+  {
+    id:'alphago', title:'AlphaGo → AlphaZero → MuZero', shortTitle:'AlphaGo Series', year:2016,
+    authors:'Silver, Huang, Maddison, Hassabis et al. · DeepMind',
+    venue:'Nature 2016/2018 · Science 2020', category:'Reinforcement Learning', prereqs:['alexnet'],
+    icon:'♟️', tagline:'Mastering games without human knowledge',
+    lesson:[
+      {h:'Why Go Was the Grand Challenge',body:`Chess was solved by Deep Blue (IBM, 1997) using brute-force search. Go has a branching factor of ~250 (vs. ~35 for chess) and games 3× longer — making brute force computationally impossible. The best Go AIs were still amateur level in 2015.
+
+The common belief: Go requires human intuition, pattern recognition, and strategic sense that no computer could replicate. DeepMind proved this wrong in 2016.`},
+      {h:'AlphaGo: Combining CNNs and Monte Carlo Tree Search',body:`AlphaGo combined three components:
+<ul>
+<li><strong>Policy Network (CNN):</strong> Trained on 30 million moves from human expert games. Predicts which moves a strong player would make.</li>
+<li><strong>Value Network (CNN):</strong> Evaluates board positions — "who is winning and by how much?"</li>
+<li><strong>Monte Carlo Tree Search:</strong> Uses both networks to guide lookahead search — explore promising moves deeply, prune bad ones quickly.</li>
+</ul>
+AlphaGo defeated Lee Sedol (9-dan professional) 4-1 in March 2016. The world watched. Move 37 — a move no human would make but AlphaGo played — was called "a move from the gods."`,callout:`AlphaGo required millions of human expert games to bootstrap. It learned BY IMITATING humans, then improved. This limitation was eliminated in the next version.`},
+      {h:'AlphaZero: No Human Knowledge, Better Than AlphaGo',body:`In 2017, AlphaZero started from random play — only knowing the rules, nothing else. No human game records. It played itself millions of times, learned purely from wins and losses, and became stronger than AlphaGo in 24 hours. In 8 hours for chess. In 2 hours for shogi.
+
+One network, one algorithm, three games. AlphaGo needed separate trained networks for each. AlphaZero used the same architecture for all three — a transformer-like architecture over board positions.
+
+The implication: human knowledge may be a CEILING rather than a floor. Starting from zero and exploring freely, the AI found strategies humans had never considered in 2,000+ years of Go history.`},
+      {h:'MuZero and What Comes Next',body:`MuZero (2020) removed the last piece of external information: the rules of the game. AlphaZero knew the rules — which moves are legal. MuZero learned the rules itself by building an internal world model. It achieved superhuman performance in Atari games, chess, shogi, and Go without being told the rules.
+
+This "world model" concept — learning a model of how the environment works, then planning within it — is what David Silver took from DeepMind to found Ineffable Intelligence. The same principles apply to any domain where you can get reward signals.`,callout_green:`AlphaGo (human data) → AlphaZero (self-play only) → MuZero (no rules) → Ineffable Intelligence (no human data, any domain) → Physical Intelligence (robotics).`}
+    ],
+    questions:[
+      {q:'What was the key limitation of AlphaGo that AlphaZero eliminated?',
+       opts:['AlphaGo could only play Go; AlphaZero added chess and shogi support','AlphaGo required millions of human expert game records to learn from; AlphaZero started from zero and learned purely through self-play','AlphaGo was too slow at inference; AlphaZero was faster','AlphaGo used too much compute; AlphaZero used less'],
+       correct:1,
+       explain:['While AlphaZero did generalize to chess and shogi with one architecture, that\'s a consequence of its design — not the core limitation it addressed. The limitation was the dependence on human knowledge.',null,'This is the fundamental shift. Human expert data acts as a prior — it\'s a useful starting point but also a ceiling. Human moves reflect human understanding. AlphaZero, starting from random play and using only the game rules as the training signal, discovered strategies that professional players had never considered in thousands of years of Go history. Human knowledge was a limitation, not just a resource.','Speed was not the key difference. AlphaZero actually required more compute to train because it had to generate its own training data through self-play.','AlphaZero required massive compute — it was not more efficient. The improvement was qualitative (superhuman across multiple games, no human data) not quantitative (same capabilities for less compute).']},
+      {q:'Why was "Move 37" in AlphaGo vs. Lee Sedol considered significant?',
+       opts:['It was the 37th game AlphaGo played before learning Go properly','It was a move that no human commentator predicted or understood initially — humans called it a mistake, but it turned out to be brilliant, suggesting the AI explored beyond human strategic understanding','Move 37 was where Lee Sedol made a critical mistake, proving AIs win by human error','It was the move that crashed AlphaGo\'s system briefly'],
+       correct:1,
+       explain:['AlphaGo trained on 30 million games before the match. Move 37 was a specific move in game 2 of the match.',null,'In game 2, AlphaGo played a move that professional commentators immediately said was an error — it violated standard Go principles. AlphaGo paused for over a minute before making it. Lee Sedol left the room for 15 minutes. The move turned out to be strategically profound. It showed the AI was not playing human Go — it was playing something beyond the accumulated strategic knowledge of thousands of years of human play.','Lee Sedol won game 4 through a brilliant move of his own — AlphaGo made an error in that game. Move 37 is about AlphaGo\'s creativity, not Sedol\'s mistakes.','AlphaGo ran stably throughout the match. The pause before Move 37 was AlphaGo\'s evaluation, not a system issue.']},
+      {q:'MuZero eliminated the last piece of external information compared to AlphaZero. What was it?',
+       opts:['The reward signal — MuZero learned without wins or losses','MuZero learned the rules of the game internally, whereas AlphaZero was given the rules explicitly','MuZero eliminated the neural network and used pure search','MuZero needed no GPU hardware'],
+       correct:1,
+       explain:['Without a reward signal, there is nothing to learn from. MuZero still uses wins/losses (rewards) — it just doesn\'t need to be told which moves are legal.',null,'AlphaZero knew which moves were legal at each board state. MuZero built an internal model of the game dynamics — learning what moves are possible and what their consequences are, from experience. It achieved superhuman performance in Go, chess, shogi, AND Atari games without game-specific rules being provided.','Neural networks are central to MuZero. The key innovation was the learned world model (predicting next state and reward) replacing the explicit rules engine.','Hardware requirements for MuZero were substantial — this was not about efficiency.']},
+    ]
+  },
+
+  {
+    id:'alphafold', title:'AlphaFold 2', shortTitle:'AlphaFold', year:2021,
+    authors:'Jumper, Evans, Pritzel, Green, Hassabis et al. · DeepMind',
+    venue:'Nature 2021 · Nobel Prize in Chemistry 2024', category:'Reinforcement Learning', prereqs:['alphago','transformer'],
+    icon:'🧬', tagline:'Solving a 50-year biology problem with AI',
+    lesson:[
+      {h:'The Protein Folding Problem',body:`Proteins are chains of amino acids (up to thousands of them) that fold into 3D structures. The structure determines the function. A misfolded protein can cause Parkinson's, Alzheimer's, cystic fibrosis. Understanding drug targets requires knowing structure.
+
+The problem: given a sequence of amino acids (the 1D string), predict the 3D structure. Experimental methods (X-ray crystallography, cryo-EM) are expensive and slow — solving one protein can take years. The "protein folding problem" was considered one of biology's grand challenges. In 50 years, humanity had solved ~170,000 structures.`},
+      {h:'What AlphaFold Did',body:`AlphaFold 2 predicted protein structures with accuracy competitive with experimental methods — essentially solving the protein folding problem computationally.
+
+The architecture is a transformer-based "Evoformer" module that processes:
+<ul>
+<li>Multiple Sequence Alignments (MSA) — evolutionary relatives of the target protein</li>
+<li>Pairwise residue features — geometric relationships between pairs of amino acids</li>
+</ul>
+The Evoformer runs attention over both sequences and residue pairs simultaneously, building up a geometric understanding that culminates in 3D coordinate prediction.`,callout:`DeepMind released the AlphaFold Protein Structure Database in 2022 with predicted structures for 200 million+ proteins — virtually every protein known to science. Downloaded by 1.5 million researchers in the first month.`},
+      {h:'The Nobel Prize',body:`In October 2024, the Nobel Prize in Chemistry was awarded to Demis Hassabis and John Jumper (AlphaFold) and David Baker (protein design). The Nobel Committee called it "a decades-long dream of bioscientists."
+
+This is the first time an AI system — and specifically a transformer-based deep learning model — directly received a Nobel Prize. It validated the use of AI as a genuine scientific tool, not just an engineering one.`},
+      {h:'The Startup Wave',body:`AlphaFold spawned an entire industry:
+<ul>
+<li><strong>Isomorphic Labs:</strong> DeepMind spinout; $600M raised; $3B in Novartis/Eli Lilly partnerships. Mission: drug discovery using AlphaFold-derived structures.</li>
+<li><strong>Latent Labs:</strong> AlphaFold2 co-developer Simon Kohl; protein design (not just prediction); 91-100% hit rates on macrocycles.</li>
+<li><strong>Inceptive:</strong> Transformer co-author Jakob Uszkoreit; RNA design using the same sequence modeling principles.</li>
+</ul>
+The pattern: transformer + biology = an entirely new drug discovery paradigm.`}
+    ],
+    questions:[
+      {q:'What specifically did AlphaFold solve, and why was it considered a grand challenge?',
+       opts:['AlphaFold created new proteins that don\'t exist in nature','AlphaFold predicted the 3D structure of proteins from their amino acid sequence — a problem unsolved for 50 years because the folding search space is astronomically large','AlphaFold designed drugs that target specific proteins','AlphaFold sequenced the human genome more accurately'],
+       correct:1,
+       explain:['AlphaFold predicts structure from sequence — it doesn\'t design new proteins. That\'s the next step, which Latent Labs and other spinouts are working on.',null,'The number of possible 3D conformations a protein can take is estimated at 10^300. Experimental methods (X-ray crystallography, cryo-EM) are slow and expensive — one structure can take years. AlphaFold reduced this to minutes of compute with accuracy matching experiments. Demis Hassabis and John Jumper received the Nobel Prize in Chemistry 2024 for this.','Drug design is downstream of structure prediction. AlphaFold predicts structure; Isomorphic Labs uses those predictions for drug discovery. They are separate problems.','Genome sequencing (reading DNA) is a different problem from protein structure prediction. AlphaFold works with amino acid sequences (protein building blocks), not DNA.']},
+      {q:'AlphaFold\'s Evoformer processes Multiple Sequence Alignments (MSAs). Why are evolutionary relatives useful for structure prediction?',
+       opts:['More sequences mean more training data for the neural network','Proteins that are evolutionarily related tend to share structural features — correlated mutations across species reveal which residues must be spatially close','MSAs allow AlphaFold to predict structures for all species simultaneously','Evolutionary data provides experimental ground truth to validate predictions'],
+       correct:1,
+       explain:['MSA sequences are input to Evoformer, not training examples. They provide evolutionary context, not additional training data.',null,'If position 10 and position 50 in a protein always mutate together across thousands of species, those positions are probably physically adjacent — a mutation at one creates evolutionary pressure for a compensating mutation at the other. Correlated mutations reveal spatial proximity. AlphaFold uses this signal to constrain the 3D structure prediction.','AlphaFold predicts the structure of the target protein using its evolutionary relatives as evidence. It doesn\'t predict all relatives\' structures simultaneously.','Experimental structures are used as training labels during AlphaFold\'s training. MSAs are input features at inference time, not validation data.']},
+    ]
+  },
+
+  {
+    id:'saycan', title:'SayCan + RT-2', shortTitle:'LLM→Robots', year:2022,
+    authors:'Ahn, Brohan, Finn, Hausman, Ichter et al. · Google Brain Robotics',
+    venue:'arXiv 2022 / Science Robotics 2023', category:'Applications', prereqs:['transformer','alphago'],
+    icon:'🤖', tagline:'Language models learn to control physical robots',
+    lesson:[
+      {h:'The Gap: Language Models Can\'t Act',body:`By 2022, LLMs could write code, answer questions, and translate text. But they had no connection to the physical world. A robot needs to go from "get me a snack from the kitchen" to a sequence of motor actions — pick up the bottle, open the fridge, grasp the handle, etc. LLMs know what steps to take. They don't know which steps are physically possible in the current environment.`},
+      {h:'SayCan: LLMs + Affordance Functions',body:`SayCan (2022) combined two signals:
+<ul>
+<li><strong>LLM scores:</strong> How plausible is this action given the task? ("get a Coke" → "open fridge" scores high)</li>
+<li><strong>Affordance scores:</strong> How executable is this action right now? (robot checks if it can actually reach the fridge)</li>
+</ul>
+The combined score selects actions at each step. The robot asks the LLM what to do, filters by physical feasibility, and executes.
+
+Result: a real robot in a real kitchen completing 101 tasks ("I spilled my drink, can you bring me something to clean it up?") with 84% success.`,callout:`SayCan showed that an LLM trained purely on text can guide a physical robot — by treating robot actions as tokens in a language, and leveraging the LLM's world knowledge about what action sequences make sense.`},
+      {h:'RT-1 and RT-2: End-to-End',body:`SayCan used a separate affordance model. RT-1 (2022) went further: train one model on 130,000 robot demonstration episodes across 700+ tasks. Input: language instruction + camera image. Output: robot arm movements.
+
+RT-2 (2023) used a vision-language model (trained on internet text + images) and fine-tuned it to output robot actions. The robot can understand novel objects ("move the extinct animal to the green cube") because its representations encode internet knowledge about dinosaurs.`,callout_green:`RT-2 is the moment the transformer's world knowledge transferred to physical robots. Physical Intelligence (pi-zero) is the direct commercialization of this research.`},
+      {h:'Physical Intelligence and What\'s Next',body:`Former Google Brain robotics researchers Karol Hausman, Chelsea Finn, and Brian Ichter co-founded Physical Intelligence in 2024. Their pi-zero model folds laundry, assembles products, and sorts objects. $1.1B raised.
+
+The trajectory: AlexNet (2012) proved CNNs work on images → Transformer (2017) proved attention works on language → SayCan/RT-2 (2022-23) proved transformers work on physical actions → Physical Intelligence (2024) productizes this. 12 years from computer vision to robot manipulation.`}
+    ],
+    questions:[
+      {q:'What is the "affordance" problem that SayCan solved by combining LLMs with physical feasibility scores?',
+       opts:['LLMs don\'t know English — affordance provides language grounding','LLMs have world knowledge about what actions make sense, but don\'t know what\'s currently executable in the environment — affordance scores filter for physical feasibility','Affordance means the robot can afford to buy items it\'s asked to fetch','LLMs are too slow for real-time robot control — affordance scores pre-compute fast decisions'],
+       correct:1,
+       explain:['LLMs are trained on text and understand English naturally. The gap is not language but physical grounding.',null,'An LLM might suggest "open the blue cabinet" when no blue cabinet exists in the room. The affordance model evaluates each candidate action against the current sensor state — only actions that are physically possible in THIS environment right now receive high affordance scores. SayCan multiplies LLM likelihood × affordance probability, grounding abstract plans in current physical reality.','Affordance in robotics refers to "what actions can be performed with what objects in what environments" — a technical term, not a financial one.','SayCan uses the LLM for planning (not real-time control). Affordance models score physical feasibility, not speed. Low-level motor control runs at high frequency separately from the LLM planning loop.']},
+      {q:'RT-2 fine-tuned a vision-language model to output robot actions. What is the key advantage of this approach over training a robot model from scratch?',
+       opts:['It requires less computational power to train','The model inherits internet-scale world knowledge — it can manipulate novel objects it has never seen in robot training but has seen described online','Training from scratch gives more accurate motor control','Robot-specific training data is easier to collect than internet data'],
+       correct:1,
+       explain:['Fine-tuning large pre-trained models typically requires significant compute. The advantage is what the model knows, not how cheap it is to train.',null,'A robot trained only on robot demonstration data has no concept of "dinosaur" or "extinct animal." RT-2, trained on internet-scale vision-language data before robot fine-tuning, already has rich representations of millions of object categories. When asked to move "the extinct animal," it correctly identifies a dinosaur toy even if no dinosaur appeared in robot training — because it saw dinosaurs described and depicted online.','High-frequency motor control is handled by separate low-level controllers. The vision-language model outputs high-level action tokens (gripper position, arm trajectory), which are converted by low-level controllers. Neither approach gives more inherently accurate motor control at the hardware level.','Robot demonstration data is extremely expensive and time-consuming to collect — teleoperators must manually perform each task. Internet text+image data is abundant and cheap. This is precisely why leveraging pre-training is so valuable.']},
+    ]
+  },
+
+  {
+    id:'constitutional', title:'Constitutional AI / RLHF', shortTitle:'RLHF + CAI', year:2022,
+    authors:'Bai et al. (Anthropic) · Christiano et al. (OpenAI/Google Brain)',
+    venue:'arXiv 2022', category:'Applications', prereqs:['gpt'],
+    icon:'🛡️', tagline:'Teaching AI to be helpful, harmless, honest',
+    lesson:[
+      {h:'The Alignment Problem',body:`By 2020, GPT-3 was generating coherent text on any topic — including harmful, false, and dangerous content. A raw language model optimizes for "predict the next token from internet text." The internet contains instructions for harm. An assistant trained purely on language modeling is not safe to deploy.
+
+The challenge: make a model helpful to users while refusing harmful requests, without making it so cautious it becomes useless.`},
+      {h:'RLHF: Reinforcement Learning from Human Feedback',body:`The key technique (pioneered by Christiano et al. at OpenAI, with Google Brain roots):
+<ol>
+<li><strong>Supervised fine-tuning:</strong> Train the base LLM to follow instructions using human-written demonstrations.</li>
+<li><strong>Reward model:</strong> Have humans rank model outputs. Train a neural network to predict human preference scores.</li>
+<li><strong>RL optimization:</strong> Use PPO (Proximal Policy Optimization) to fine-tune the LLM to maximize the reward model's scores.</li>
+</ol>
+InstructGPT (2022, OpenAI) and ChatGPT are built on RLHF. The model learns to produce outputs humans prefer — generally more helpful, less harmful.`,callout:`Problem: RLHF requires massive human labeling. For every training step, humans must rank pairs of model outputs. At scale, this is expensive and slow.`},
+      {h:'Constitutional AI: AI Feedback Replacing Human Feedback',body:`Anthropic's Constitutional AI (2022) replaced much of the human feedback loop with AI feedback:
+<ol>
+<li>Write a "constitution" — a set of principles ("don't produce content that harms children," "prefer answers that are honest")</li>
+<li>Have the AI critique its own outputs against the constitution</li>
+<li>Have the AI revise based on the critique</li>
+<li>Use the revised outputs as training data</li>
+</ol>
+This is "RLAIF" — Reinforcement Learning from AI Feedback. Much cheaper and more scalable than human feedback. Claude is trained with Constitutional AI.`},
+      {h:'Why This Research Matters Beyond Safety',body:`RLHF and CAI are general-purpose techniques for steering model behavior. The same approach is used for:
+<ul>
+<li>Code generation (reward model = does the code pass unit tests?)</li>
+<li>Math reasoning (reward model = is the answer correct?)</li>
+<li>Medical advice (reward model = does a doctor approve?)</li>
+</ul>
+The insight that you can train AI to optimize for a learned reward signal — rather than just predicting text — is what enabled models that are genuinely useful vs. just statistically plausible.`}
+    ],
+    questions:[
+      {q:'Why can\'t you simply train a language model on instruction-following data without RLHF and get a safe, helpful assistant?',
+       opts:['Instruction data is always too small for language models to learn from','A model trained on next-token prediction from internet data may generate harmful, false, or unhelpful content even when given instructions, because its training objective was statistical text prediction, not helpfulness','RLHF is required for a model to understand language','Instruction training data is illegal to collect'],
+       correct:1,
+       explain:['Instruction datasets can be large (100k+ examples). Size is not the fundamental problem.',null,'The training objective mismatch is the core issue. A raw LLM is excellent at producing statistically plausible text — which includes plausible-sounding harmful content, confident-sounding misinformation, and unhelpful evasiveness. RLHF adds a second optimization target: human preference. The model learns to optimize for what humans actually want, not just what text the internet contains.','Language understanding comes from pre-training. RLHF doesn\'t teach language — it steers behavior.','Instruction data is collected from human contractors, researchers, or synthetically generated. Collection is legal in most contexts.']},
+      {q:'In Constitutional AI, what replaces the human labelers who rank model outputs in RLHF?',
+       opts:['Automated unit tests that check model outputs for correctness','The AI model itself, critiquing and revising its own outputs guided by a set of written principles (a constitution)','A separate smaller model trained only on harmful examples','Random selection — outputs are randomly ranked during training'],
+       correct:1,
+       explain:['Unit tests work for verifiable outputs like code or math, but can\'t evaluate whether a conversational response is harmful or helpful in general.', null,'The key innovation: write principles in natural language (e.g., "choose the response that is least likely to contain harmful content"). Have the large model generate a response, then ask the SAME model to critique it against the constitution, then revise it. Use these self-critique/revision cycles as training signal. This reduces the human labeling burden significantly while maintaining alignment quality.','Constitutional AI uses the model\'s own intelligence (guided by the constitution) to improve itself. A separate "harmful examples" classifier would be a different approach (safety filtering), not Constitutional AI.','Random ranking would produce noise, not a useful training signal. Constitutional AI produces principled, consistent feedback based on the written principles.']},
+    ]
+  },
+
+  {
+    id:'gnome', title:'GNoME — AI for Scientific Discovery', shortTitle:'GNoME', year:2023,
+    authors:'Merchant, Batzner, Schoenholz, Aykol, Cubuk et al. · Google DeepMind',
+    venue:'Nature 2023', category:'Applications', prereqs:['alphafold','transformer'],
+    icon:'🔬', tagline:'2.2 million new materials discovered in one paper',
+    lesson:[
+      {h:'The Problem: Materials Discovery is Slow',body:`New materials enable new technology. Lithium iron phosphate enabled modern batteries. Gallium nitride enabled LEDs. But discovering a stable new material the conventional way takes years: propose a candidate, synthesize it, test stability, characterize properties. Millions of candidate materials exist; only thousands have been tested experimentally.
+
+GNoME (Graph Networks for Materials Exploration) asked: can an AI discover and filter stable new crystal structures orders of magnitude faster?`},
+      {h:'The Result: 2.2 Million New Stable Structures',body:`GNoME used graph neural networks (where atoms are nodes and bonds are edges) to predict the stability of crystal structures — their formation energy compared to competing phases.
+
+In one paper, DeepMind:
+<ul>
+<li>Discovered 2.2 million new stable crystal structures (previous total: 48,000)</li>
+<li>Predicted 381,000 to be stable enough for experimental synthesis</li>
+<li>Identified promising candidates for solid-state batteries, solar cells, and superconductors</li>
+</ul>`,callout:`45× expansion of known stable materials in one AI paper. This is what AI-for-science means at scale.`},
+      {h:'How the Same Ideas Apply Across Science',body:`GNoME demonstrates a general pattern:
+<ul>
+<li>Scientific knowledge is a graph (atoms→bonds→crystal structure, amino acids→contacts→protein, nodes→edges→chemical network)</li>
+<li>Graph Neural Networks can process this structured data natively</li>
+<li>Trained on known experimental data, they can predict properties of unseen candidates</li>
+<li>Generation + filtering allows exploring exponentially large candidate spaces</li>
+</ul>
+This pattern works for proteins (AlphaFold), molecules (AlphaFold3), materials (GNoME), chemical reactions, drug targets. AI as a universal scientific discovery engine.`},
+      {h:'The Startup It Created: Periodic Labs',body:`Former Google Brain researchers including Ekin Cubuk (who led the GNoME project) co-founded Periodic Labs — building "AI scientists" for materials discovery. They raised $605M at a massive valuation, with backing from Eric Schmidt and Jeff Dean.
+
+The thesis: AI can run the scientific method autonomously — hypothesize, simulate, evaluate, iterate — across millions of candidates simultaneously, rather than one at a time. This is the industrialization of scientific discovery.`}
+    ],
+    questions:[
+      {q:'GNoME used Graph Neural Networks rather than standard transformers. Why are graphs the right representation for crystal structures?',
+       opts:['Graph neural networks are faster than transformers','Crystal structures are inherently graph-structured: atoms are nodes, bonds are edges, and geometry describes the graph — GNNs process this structure natively','Graphs allow GNoME to run on mobile devices','Transformers cannot process numbers, only text'],
+       correct:1,
+       explain:['Speed was not the motivation for the architectural choice. GNNs process graph data naturally; transformers can also be made to work with positional encodings for 3D structure.',null,'A crystal is defined by how atoms connect and their geometric arrangement — this IS a graph. GNNs aggregate information from each atom\'s neighborhood (the atoms bonded to it) in a way that respects the physical structure. Standard grids or sequences impose an inappropriate structure on atomic data.','Graphs don\'t inherently change hardware requirements.','Transformers can and do process numbers — including 3D coordinates, chemical properties, etc. AlphaFold\'s Evoformer is a type of transformer that processes protein structure data.']},
+      {q:'GNoME expanded known stable materials from 48,000 to 2.2 million. What does this say about AI\'s role in scientific discovery?',
+       opts:['AI can replace all experimental scientists since it predicts everything correctly','AI can explore candidate spaces exponentially larger than what experimental methods can test, filtering candidates computationally before expensive experiments','AI predictions are always correct and experimental validation is no longer needed','This only works for materials — AI cannot help with biological or chemical discovery'],
+       correct:1,
+       explain:['GNoME predicts stability with high accuracy, but not perfectly. Experimental validation is still required — GNoME identifies which 381,000 of 2.2 million candidates are worth testing. It filters, it doesn\'t eliminate experimental science.',null,'The key word is "filtering." Synthesizing and testing 2.2 million materials experimentally would take centuries. GNoME narrows this to 381,000 high-confidence predictions, and experimental labs can focus resources on the most promising ones. AI as a filter/navigator for large candidate spaces — not a replacement for experiments.','GNoME predictions are not perfectly reliable. New materials require experimental synthesis and characterization. But the predictions are good enough to dramatically accelerate the discovery pipeline.','AlphaFold (proteins), GNoME (materials), and dozens of other applications demonstrate that the AI-for-science pattern works across domains. It\'s a general approach, not materials-specific.']},
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let state = {
+  completed: JSON.parse(localStorage.getItem('pa_completed') || '{}'),
+  currentPaper: null,
+  currentTab: 'learn',
+  quizState: null
+};
+
+function saveState() {
+  localStorage.setItem('pa_completed', JSON.stringify(state.completed));
+}
+
+function resetProgress() {
+  if (!confirm('Reset all progress?')) return;
+  state.completed = {};
+  state.currentPaper = null;
+  saveState();
+  renderTree();
+  showHome();
+  updateProgressBar();
+}
+
+function isPaperUnlocked(paper) {
+  return paper.prereqs.every(pid => state.completed[pid]);
+}
+
+// ═══════════════════════════════════════════════════════
+// TREE RENDER
+// ═══════════════════════════════════════════════════════
+const TRACKS = [
+  {label:'Infrastructure', ids:['gfs','mapreduce','bigtable']},
+  {label:'Deep Learning', ids:['alexnet','distbelief','word2vec','seq2seq']},
+  {label:'Transformer Era', ids:['transformer','bert','gpt']},
+  {label:'Reinforcement Learning', ids:['alphago','alphafold']},
+  {label:'Applications', ids:['saycan','constitutional','gnome']},
+];
+
+function renderTree() {
+  const tree = document.getElementById('tree');
+  tree.innerHTML = '';
+  const paperMap = {};
+  PAPERS.forEach(p => paperMap[p.id] = p);
+
+  TRACKS.forEach(track => {
+    const label = document.createElement('div');
+    label.className = 'track-label';
+    label.textContent = track.label;
+    tree.appendChild(label);
+
+    track.ids.forEach(pid => {
+      const paper = paperMap[pid];
+      if (!paper) return;
+      const unlocked = isPaperUnlocked(paper);
+      const completed = !!state.completed[pid];
+      const active = state.currentPaper?.id === pid;
+
+      const node = document.createElement('div');
+      node.className = 'paper-node' + (completed?' completed':'') + (active?' active':'') + (!unlocked?' locked':'');
+      node.innerHTML = `
+        <div class="node-icon">${completed ? '✓' : paper.icon}</div>
+        <div class="node-text">
+          <div class="node-title">${paper.shortTitle}</div>
+          <div class="node-year">${paper.year} · ${paper.category}</div>
+        </div>`;
+      if (unlocked) node.onclick = () => openPaper(paper);
+      tree.appendChild(node);
+    });
+  });
+}
+
+function updateProgressBar() {
+  const total = PAPERS.length;
+  const done = Object.keys(state.completed).length;
+  document.getElementById('progress-label').textContent = `${done} of ${total} papers completed`;
+  document.getElementById('progress-fill').style.width = `${(done/total)*100}%`;
+}
+
+// ═══════════════════════════════════════════════════════
+// PAPER OPEN
+// ═══════════════════════════════════════════════════════
+function openPaper(paper) {
+  state.currentPaper = paper;
+  state.currentTab = 'learn';
+  state.quizState = null;
+  document.getElementById('paper-tag').textContent = paper.category;
+  document.getElementById('paper-title-main').textContent = paper.title;
+  document.getElementById('paper-meta').textContent = `${paper.authors} · ${paper.venue}`;
+  renderTree();
+  showTab('learn');
+}
+
+function showHome() {
+  state.currentPaper = null;
+  document.getElementById('paper-tag').textContent = 'Select a paper';
+  document.getElementById('paper-title-main').textContent = 'Welcome to Paper Academy';
+  document.getElementById('paper-meta').textContent = '';
+  document.getElementById('tab-learn').classList.add('active');
+  document.getElementById('tab-quiz').classList.remove('active');
+  const content = document.getElementById('content');
+  const unlockedPapers = PAPERS.filter(p => isPaperUnlocked(p) && !state.completed[p.id]);
+  const completedCount = Object.keys(state.completed).length;
+  content.innerHTML = `<div id="home-screen" class="fade-in">
+    <h2>Google Research → Modern AI</h2>
+    <p>Learn the papers that built the AI industry — from MapReduce in 2004 to Constitutional AI in 2022. Each paper builds on the ones before it. Pass the quiz to unlock the next paper in the tree.</p>
+    <p style="color:#555; margin-top:8px;">Progress: ${completedCount}/${PAPERS.length} papers completed.</p>
+    ${unlockedPapers.length > 0 ? `<h3 style="color:#7C4DFF; font-size:0.82rem; margin-top:24px; margin-bottom:12px;">READY TO LEARN</h3>
+    <div class="start-grid">${unlockedPapers.map(p=>`
+      <div class="start-card" onclick="openPaper(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+        <div class="sc-year">${p.year} · ${p.category}</div>
+        <div class="sc-title">${p.icon} ${p.shortTitle}</div>
+        <div class="sc-desc">${p.tagline}</div>
+      </div>`).join('')}
+    </div>` : completedCount === 0 ? `<div class="start-grid">
+      <div class="start-card" onclick="openPaper(PAPERS[0])">
+        <div class="sc-year">2003 · Infrastructure</div>
+        <div class="sc-title">🗄️ Start here: GFS</div>
+        <div class="sc-desc">Where Google's data lives</div>
+      </div>
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='alexnet'))">
+        <div class="sc-year">2012 · Deep Learning</div>
+        <div class="sc-title">🧠 Or start here: AlexNet</div>
+        <div class="sc-desc">The paper that started deep learning</div>
+      </div>
+    </div>` : '<p style="color:#00C853; margin-top:20px;">All available papers completed! More coming soon.</p>'}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function showTab(tab) {
+  state.currentTab = tab;
+  document.getElementById('tab-learn').classList.toggle('active', tab==='learn');
+  document.getElementById('tab-quiz').classList.toggle('active', tab==='quiz');
+  if (!state.currentPaper) { showHome(); return; }
+  if (tab === 'learn') renderLesson();
+  else renderQuiz();
+}
+
+// ═══════════════════════════════════════════════════════
+// LESSON
+// ═══════════════════════════════════════════════════════
+function renderLesson() {
+  const p = state.currentPaper;
+  const content = document.getElementById('content');
+  let html = `<div class="fade-in">`;
+  p.lesson.forEach(sec => {
+    html += `<div class="lesson-section"><h3>${sec.h}</h3><p>${sec.body}</p>`;
+    if (sec.callout) html += `<div class="callout">${sec.callout}</div>`;
+    if (sec.callout_green) html += `<div class="callout green">${sec.callout_green}</div>`;
+    html += `</div>`;
+  });
+  const done = !!state.completed[p.id];
+  html += `<div style="margin-top:24px; padding:16px; background:#16213E; border-radius:10px; border:1px solid #2a2a4a; display:flex; align-items:center; justify-content:space-between;">
+    <span style="font-size:0.82rem; color:#888;">${done ? '✓ Paper completed — quiz passed' : 'Ready to test your understanding?'}</span>
+    <button onclick="showTab('quiz')" style="padding:9px 20px; background:${done?'#00C85322':'#7C4DFF'}; color:${done?'#00C853':'#fff'}; border:${done?'1px solid #00C85344':'none'}; border-radius:7px; font-size:0.8rem; font-weight:700; cursor:pointer;">
+      ${done ? 'Retake Quiz' : 'Take Quiz →'}
+    </button>
+  </div></div>`;
+  content.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+// QUIZ
+// ═══════════════════════════════════════════════════════
+function renderQuiz() {
+  const p = state.currentPaper;
+  if (!state.quizState) {
+    state.quizState = { current: 0, passed: [], total: p.questions.length };
+  }
+  const qs = state.quizState;
+  if (qs.current >= qs.total) { renderCompletion(); return; }
+  const q = p.questions[qs.current];
+  const content = document.getElementById('content');
+  const letters = ['A','B','C','D','E'];
+  let dots = '';
+  for (let i=0; i<qs.total; i++) {
+    const cls = i < qs.current ? 'done' : i === qs.current ? 'current' : '';
+    dots += `<div class="qp-dot ${cls}"></div>`;
+  }
+  let opts = '';
+  q.opts.forEach((opt, i) => {
+    opts += `<div class="option" id="opt-${i}" onclick="selectOption(${i})">
+      <div class="option-letter">${letters[i]}</div>
+      <div class="option-text">${opt}</div>
+    </div>`;
+  });
+  content.innerHTML = `<div id="quiz-wrap" class="fade-in">
+    <div class="quiz-progress">${dots}</div>
+    <div class="question-card">
+      <div class="question-num">Question ${qs.current+1} of ${qs.total}</div>
+      <div class="question-text">${q.q}</div>
+      <div class="options" id="options-wrap">${opts}</div>
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">
+        ${qs.current+1 < qs.total ? 'Next Question →' : 'See Results →'}
+      </button>
+    </div>
+  </div>`;
+}
+
+function selectOption(idx) {
+  const p = state.currentPaper;
+  const q = p.questions[state.quizState.current];
+  const opts = document.querySelectorAll('.option');
+  const feedback = document.getElementById('feedback');
+  const nextBtn = document.getElementById('next-btn');
+
+  // Disable all options
+  opts.forEach(o => o.classList.add('disabled'));
+  opts.forEach(o => o.onclick = null);
+
+  if (idx === q.correct) {
+    opts[idx].classList.add('selected-right');
+    feedback.className = 'feedback right';
+    feedback.innerHTML = `<strong>Correct.</strong> ${q.explain[idx] || 'That\'s the key insight.'}`;
+    state.quizState.passed.push(true);
+    nextBtn.style.display = 'block';
+  } else {
+    opts[idx].classList.add('selected-wrong');
+    opts[q.correct].classList.add('revealed-right');
+    feedback.className = 'feedback wrong';
+    feedback.innerHTML = `<strong>Not quite.</strong> ${q.explain[idx]}`;
+    state.quizState.passed.push(false);
+    nextBtn.style.display = 'block';
+    nextBtn.textContent = state.quizState.current+1 < state.quizState.total ? 'Next Question →' : 'See Results →';
+  }
+}
+
+function nextQuestion() {
+  state.quizState.current++;
+  renderQuiz();
+}
+
+function renderCompletion() {
+  const p = state.currentPaper;
+  const qs = state.quizState;
+  const correct = qs.passed.filter(Boolean).length;
+  const total = qs.total;
+  const passed = correct === total;
+
+  if (passed && !state.completed[p.id]) {
+    state.completed[p.id] = true;
+    saveState();
+    renderTree();
+    updateProgressBar();
+  }
+
+  // Find newly unlocked papers
+  const newlyUnlocked = PAPERS.filter(np =>
+    np.prereqs.includes(p.id) && np.prereqs.every(pid => state.completed[pid]) && !state.completed[np.id]
+  );
+
+  const content = document.getElementById('content');
+  const scoreColor = passed ? '#00C853' : correct >= total*0.6 ? '#FFB300' : '#FF5252';
+
+  let html = `<div class="fade-in" style="max-width:600px">
+    <div style="background:#16213E; border:1px solid ${scoreColor}44; border-radius:12px; padding:32px; text-align:center; margin-bottom:24px;">
+      <div style="font-size:3rem; font-weight:900; color:${scoreColor};">${correct}/${total}</div>
+      <div style="font-size:1.1rem; font-weight:700; color:#fff; margin:8px 0;">${passed ? 'Paper completed!' : correct >= 2 ? 'Good effort — review and retry' : 'Keep studying and retry'}</div>
+      <div style="font-size:0.82rem; color:#888; margin-bottom:20px;">${passed ? p.title + ' is now marked complete.' : 'You need to get all questions correct to unlock the next papers.'}</div>`;
+
+  if (passed && newlyUnlocked.length > 0) {
+    html += `<div style="margin-bottom:16px;"><div style="font-size:0.72rem; color:#00C853; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Unlocked</div>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
+    ${newlyUnlocked.map(np => `<span style="background:#00C85311; border:1px solid #00C85344; color:#00C853; padding:5px 14px; border-radius:20px; font-size:0.8rem; cursor:pointer;" onclick="openPaper(PAPERS.find(p=>p.id==='${np.id}'))">${np.icon} ${np.shortTitle}</span>`).join('')}
+    </div></div>`;
+  }
+
+  html += `<div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+    <button onclick="state.quizState=null; renderQuiz();" style="padding:9px 18px; background:#16213E; color:#ccc; border:1px solid #2a2a4a; border-radius:7px; font-size:0.8rem; cursor:pointer;">Retry Quiz</button>
+    <button onclick="showTab('learn')" style="padding:9px 18px; background:#7C4DFF; color:#fff; border:none; border-radius:7px; font-size:0.8rem; font-weight:700; cursor:pointer;">Back to Lesson</button>
+    ${passed && newlyUnlocked.length > 0 ? `<button onclick="openPaper(PAPERS.find(p=>p.id==='${newlyUnlocked[0].id}'))" style="padding:9px 18px; background:#00C853; color:#000; border:none; border-radius:7px; font-size:0.8rem; font-weight:700; cursor:pointer;">Next Paper →</button>` : ''}
+  </div></div>`;
+
+  // Show per-question breakdown
+  html += `<div style="margin-top:20px;"><div style="font-size:0.75rem; color:#555; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">Question Review</div>`;
+  p.questions.forEach((q, i) => {
+    const ok = qs.passed[i];
+    html += `<div style="background:#16213E; border:1px solid ${ok?'#00C85322':'#FF525222'}; border-radius:8px; padding:12px 16px; margin-bottom:8px; display:flex; align-items:flex-start; gap:10px;">
+      <span style="color:${ok?'#00C853':'#FF5252'}; font-size:1rem; flex-shrink:0;">${ok?'✓':'✗'}</span>
+      <span style="font-size:0.8rem; color:#aaa; line-height:1.5;">${q.q}</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+  content.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+// Make PAPERS globally accessible
+window.PAPERS = PAPERS;
+renderTree();
+updateProgressBar();
+showHome();
+</script>
+<!-- Cross-device progress sync -->
+<script>
+(function(){
+  var SU='https://gbkhkbfbarsnpbdkxzii.supabase.co';
+  var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+  var MOD='pa1';
+  var LSK='pa_completed';
+  var FMT='object';
+
+  function getIds(){
+    var raw=localStorage.getItem(LSK);
+    if(!raw) return [];
+    try{
+      var p=JSON.parse(raw);
+      if(Array.isArray(p)) return p;
+      return Object.keys(p).filter(function(k){return p[k];});
+    }catch(e){return [];}
+  }
+
+  function push(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    var ids=getIds();
+    if(!ids.length) return;
+    fetch(SU+'/rest/v1/academy_progress',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({email:email,module:MOD,completed:ids,updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }
+
+  var _orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    _orig.call(this,k,v);
+    if(k===LSK) push();
+  };
+
+  window.addEventListener('load',function(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    fetch(SU+'/rest/v1/academy_progress?email=eq.'+encodeURIComponent(email)+'&module=eq.'+MOD+'&select=completed',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(!rows||!rows[0]||!rows[0].completed||!rows[0].completed.length) return;
+      var remote=rows[0].completed;
+      var raw=localStorage.getItem(LSK);
+      var merged;
+      if(FMT==='object'){
+        merged=raw?JSON.parse(raw):{};
+        remote.forEach(function(id){merged[id]=true;});
+        _orig.call(localStorage,LSK,JSON.stringify(merged));
+      } else {
+        var local=raw?JSON.parse(raw):[];
+        var s=new Set(local);
+        remote.forEach(function(id){s.add(id);});
+        _orig.call(localStorage,LSK,JSON.stringify(Array.from(s)));
+      }
+      if(typeof renderTree==='function') renderTree();
+      if(typeof updateProgressBar==='function') updateProgressBar();
+      if(typeof render==='function') render();
+    }).catch(function(){});
+  });
+
+  var btn=document.createElement('a');
+  btn.href='index.html';
+  btn.innerHTML='&#8592; Menu';
+  btn.style.cssText='position:fixed;top:10px;left:10px;z-index:9999;background:#16213E;color:#7C4DFF;border:1px solid #7C4DFF44;padding:5px 12px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;opacity:0.8;transition:opacity 0.2s';
+  btn.onmouseover=function(){this.style.opacity='1';};
+  btn.onmouseout=function(){this.style.opacity='0.8';};
+  document.body.appendChild(btn);
+})();
+</script>
+</body>
+</html>

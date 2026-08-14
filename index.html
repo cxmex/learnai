@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Academy — AI Foundations</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0F0F23;color:#E0E0E0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px}
+
+/* HEADER */
+.header{text-align:center;padding:40px 0 32px}
+.header h1{font-size:2rem;font-weight:900;background:linear-gradient(90deg,#7C4DFF,#00C853);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.header p{color:#666;font-size:0.9rem}
+.stat-row{display:flex;justify-content:center;gap:32px;margin-top:16px}
+.stat{text-align:center}
+.stat-n{font-size:1.6rem;font-weight:800;color:#7C4DFF}
+.stat-l{font-size:0.7rem;color:#555;text-transform:uppercase;letter-spacing:1px}
+
+/* EMAIL BAR */
+.email-bar{background:#16213E;border:1px solid #2a2a4a;border-radius:14px;padding:18px 24px;margin-bottom:36px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.email-bar .icon{font-size:1.4rem}
+.email-bar label{font-size:0.8rem;color:#7C4DFF;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.email-bar input{flex:1;min-width:220px;background:#0F0F23;border:1px solid #2a2a4a;color:#fff;padding:10px 14px;border-radius:9px;font-size:0.9rem;outline:none}
+.email-bar input:focus{border-color:#7C4DFF}
+.email-bar button{background:#7C4DFF;color:#fff;border:none;padding:10px 22px;border-radius:9px;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.email-bar button:hover{background:#6a3de8}
+.email-status{font-size:0.78rem;color:#00C853;margin-left:auto;white-space:nowrap}
+.email-status.loading{color:#FFB300}
+
+/* SECTION TITLE */
+.section-title{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#444;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #1e1e3a}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:18px;margin-bottom:36px}
+
+/* CARD */
+.card{background:#16213E;border:1px solid #2a2a4a;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:12px;transition:border-color 0.2s,transform 0.15s;position:relative;overflow:hidden}
+.card:hover{border-color:#7C4DFF55;transform:translateY(-2px)}
+.card.has-progress{border-color:#7C4DFF33}
+.card.completed{border-color:#00C85344}
+.card-top{display:flex;align-items:flex-start;gap:12px}
+.card-icon{font-size:1.8rem;flex-shrink:0;line-height:1}
+.card-meta{flex:1;min-width:0}
+.card-tag{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7C4DFF;margin-bottom:4px}
+.card-title{font-size:0.95rem;font-weight:700;color:#fff;line-height:1.3}
+.card-sub{font-size:0.75rem;color:#555;margin-top:3px}
+.card-desc{font-size:0.8rem;color:#888;line-height:1.6}
+
+/* PROGRESS */
+.progress-wrap{display:flex;flex-direction:column;gap:5px}
+.progress-top{display:flex;justify-content:space-between;align-items:center}
+.progress-label{font-size:0.72rem;color:#555}
+.progress-pct{font-size:0.72rem;font-weight:700;color:#7C4DFF}
+.progress-pct.done{color:#00C853}
+.progress-bar{height:5px;background:#0F0F23;border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#7C4DFF,#00C853);border-radius:3px;transition:width 0.5s}
+
+/* BUTTON */
+.card-btn{display:block;text-align:center;padding:10px 16px;border-radius:9px;font-size:0.82rem;font-weight:700;text-decoration:none;cursor:pointer;border:none;margin-top:auto}
+.btn-start{background:#7C4DFF22;color:#7C4DFF;border:1px solid #7C4DFF44}
+.btn-start:hover{background:#7C4DFF;color:#fff}
+.btn-resume{background:#00C85322;color:#00C853;border:1px solid #00C85344}
+.btn-resume:hover{background:#00C853;color:#000}
+.btn-done{background:#00C85311;color:#00C853;border:1px solid #00C85322;cursor:default}
+
+/* COMPLETE BADGE */
+.badge-done{position:absolute;top:14px;right:14px;background:#00C85322;border:1px solid #00C85344;color:#00C853;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px}
+
+/* OVERALL PROGRESS */
+.overall-card{background:#16213E;border:1px solid #2a2a4a;border-radius:14px;padding:24px;margin-bottom:36px;display:none}
+.overall-card.visible{display:block}
+.overall-title{font-size:0.85rem;font-weight:700;color:#fff;margin-bottom:14px}
+.overall-bar{height:8px;background:#0F0F23;border-radius:4px;overflow:hidden;margin-bottom:8px}
+.overall-fill{height:100%;background:linear-gradient(90deg,#7C4DFF,#00C853);border-radius:4px;transition:width 0.8s}
+.overall-stats{display:flex;gap:24px;margin-top:12px}
+.overall-stat{font-size:0.78rem;color:#555}
+.overall-stat span{color:#fff;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <h1>Paper Academy</h1>
+    <p>The papers that built modern AI — from MapReduce to Constitutional AI</p>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">11</div><div class="stat-l">Modules</div></div>
+      <div class="stat"><div class="stat-n">171</div><div class="stat-l">Papers</div></div>
+      <div class="stat"><div class="stat-n">2</div><div class="stat-l">Math tracks</div></div>
+    </div>
+  </div>
+
+  <!-- EMAIL BAR -->
+  <div class="email-bar">
+    <span class="icon">📧</span>
+    <div>
+      <label>Track your progress</label>
+      <div style="font-size:0.75rem;color:#555;margin-top:2px">Enter email to save progress across devices — no password needed</div>
+    </div>
+    <input type="email" id="email-input" placeholder="your@email.com" />
+    <button onclick="setEmail()">Save</button>
+    <span class="email-status" id="email-status"></span>
+  </div>
+
+  <!-- OVERALL PROGRESS -->
+  <div class="overall-card" id="overall-card">
+    <div class="overall-title">Overall Progress</div>
+    <div class="overall-bar"><div class="overall-fill" id="overall-fill" style="width:0%"></div></div>
+    <div class="overall-stats">
+      <div class="overall-stat">Papers completed: <span id="ov-done">0</span> / 171</div>
+      <div class="overall-stat">Modules finished: <span id="ov-modules">0</span> / 11</div>
+    </div>
+  </div>
+
+  <!-- PAPER ACADEMY MODULES -->
+  <div class="section-title">Paper Academy — Research & Architecture</div>
+  <div class="grid" id="grid-papers"></div>
+
+  <div class="section-title">Math Academy — Foundations</div>
+  <div class="grid" id="grid-math"></div>
+
+</div>
+
+<script>
+const SUPA_URL = 'https://gbkhkbfbarsnpbdkxzii.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+
+const MODULES = [
+  { id:'pa1',  file:'paper_academy.html',          title:'Paper Academy I',          sub:'Google Research → Modern AI',   icon:'🗄️',  total:15, tag:'Foundations',  desc:'GFS, MapReduce, BigTable, AlexNet, Word2Vec, Attention, and the papers that started it all.' },
+  { id:'pa2',  file:'paper_academy_2.html',         title:'Paper Academy II',         sub:'Beyond Google',                 icon:'🤖',  total:16, tag:'Models',       desc:'BERT, GPT, scaling laws, RLHF, and the papers that defined the LLM era.' },
+  { id:'pa3',  file:'paper_academy_3_infra.html',   title:'Paper Academy III',        sub:'Docker, Kubernetes & MLOps',    icon:'⚙️',  total:11, tag:'Infra',        desc:'Containers, orchestration, and the infrastructure that runs modern AI at scale.' },
+  { id:'pa4',  file:'paper_academy_4_inference.html',title:'Paper Academy IV',        sub:'LLM Inference Optimization',    icon:'⚡',  total:14, tag:'Performance',  desc:'Flash Attention, quantization, KV caching, speculative decoding — making LLMs fast.' },
+  { id:'pa5',  file:'paper_academy_5_agents.html',  title:'Paper Academy V',          sub:'Agentic AI Architecture',       icon:'🧠',  total:22, tag:'Agents',       desc:'ReAct, tool use, multi-agent systems, memory, and the architecture of autonomous AI.' },
+  { id:'pa6',  file:'paper_academy_6_finops.html',  title:'Paper Academy VI',         sub:'FinOps & AI Cost Engineering',  icon:'💰',  total:14, tag:'Cost',         desc:'Token economics, batching strategies, and how to run AI infrastructure profitably.' },
+  { id:'pa7',  file:'paper_academy_7_bpm.html',     title:'Paper Academy VII',        sub:'BPM + Agents',                  icon:'🔄',  total:17, tag:'Process',      desc:'Business process automation, workflow orchestration, and AI-driven operations.' },
+  { id:'pa8',  file:'paper_academy_8_security.html',title:'Paper Academy VIII',       sub:'Agent Security & Identity',     icon:'🔐',  total:15, tag:'Security',     desc:'OAuth, RBAC, prompt injection, sandboxing — securing AI agents in production.' },
+  { id:'pa9',  file:'paper_academy_9_alignment.html',title:'Paper Academy IX',        sub:'LLM Alignment & Fine-tuning',   icon:'🎯',  total:16, tag:'Alignment',    desc:'RLHF, Constitutional AI, DPO, and the science of making AI do what we want.' },
+];
+
+const MATH_MODULES = [
+  { id:'math1', file:'math_academy_1_ml.html',  title:'Math Academy I',  sub:'ML Mathematics',  icon:'∑', total:16, tag:'Math', desc:'Linear algebra, calculus, probability, and optimization — the math behind every ML model.' },
+  { id:'math2', file:'math_academy_2_nlp.html', title:'Math Academy II', sub:'NLP Mathematics', icon:'∂', total:15, tag:'Math', desc:'Entropy, attention math, embeddings geometry, and the equations behind language models.' },
+];
+
+const ALL_MODULES = [...MODULES, ...MATH_MODULES];
+
+// Progress state loaded from Supabase (keyed by module id)
+let supaProgress = {}; // { pa1: ['gfs','mapreduce',...], ... }
+
+// ── EMAIL ──
+function getEmail() { return localStorage.getItem('academy_email') || ''; }
+
+function setEmail() {
+  const v = document.getElementById('email-input').value.trim().toLowerCase();
+  if (!v || !v.includes('@')) { showStatus('Enter a valid email', 'error'); return; }
+  localStorage.setItem('academy_email', v);
+  showStatus('Saved — loading progress…', 'loading');
+  loadProgress(v);
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('email-status');
+  el.textContent = msg;
+  el.className = 'email-status' + (type === 'loading' ? ' loading' : '');
+}
+
+// ── SUPABASE ──
+async function loadProgress(email) {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/academy_progress?email=eq.${encodeURIComponent(email)}&select=module,completed`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const rows = await r.json();
+    supaProgress = {};
+    if (Array.isArray(rows)) {
+      rows.forEach(row => { supaProgress[row.module] = row.completed || []; });
+    }
+    showStatus('✓ Progress loaded', '');
+    renderAll();
+    updateOverall();
+  } catch(e) {
+    showStatus('Could not load — offline?', '');
+    renderAll();
+  }
+}
+
+// ── RENDER ──
+function countDone(moduleId) {
+  return (supaProgress[moduleId] || []).length;
+}
+
+function makeCard(m) {
+  const done = countDone(m.id);
+  const pct = Math.round(done / m.total * 100);
+  const isComplete = done >= m.total;
+  const hasProgress = done > 0;
+
+  let btnClass, btnText;
+  if (isComplete)       { btnClass = 'btn-done';   btnText = '✓ Completed'; }
+  else if (hasProgress) { btnClass = 'btn-resume';  btnText = `Resume — ${m.total - done} left`; }
+  else                  { btnClass = 'btn-start';   btnText = 'Start module →'; }
+
+  return `
+  <div class="card ${hasProgress ? 'has-progress' : ''} ${isComplete ? 'completed' : ''}">
+    ${isComplete ? '<span class="badge-done">Done</span>' : ''}
+    <div class="card-top">
+      <div class="card-icon">${m.icon}</div>
+      <div class="card-meta">
+        <div class="card-tag">${m.tag} · ${m.total} papers</div>
+        <div class="card-title">${m.title}</div>
+        <div class="card-sub">${m.sub}</div>
+      </div>
+    </div>
+    <div class="card-desc">${m.desc}</div>
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span class="progress-label">${done} / ${m.total} papers</span>
+        <span class="progress-pct ${isComplete ? 'done' : ''}">${pct}%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>
+    <a class="card-btn ${btnClass}" href="${m.file}">${btnText}</a>
+  </div>`;
+}
+
+function renderAll() {
+  document.getElementById('grid-papers').innerHTML = MODULES.map(makeCard).join('');
+  document.getElementById('grid-math').innerHTML = MATH_MODULES.map(makeCard).join('');
+}
+
+function updateOverall() {
+  const totalDone = ALL_MODULES.reduce((s,m) => s + countDone(m.id), 0);
+  const totalPapers = 171;
+  const modulesDone = ALL_MODULES.filter(m => countDone(m.id) >= m.total).length;
+  const pct = Math.round(totalDone / totalPapers * 100);
+
+  document.getElementById('overall-fill').style.width = pct + '%';
+  document.getElementById('ov-done').textContent = totalDone;
+  document.getElementById('ov-modules').textContent = modulesDone;
+  document.getElementById('overall-card').className = 'overall-card visible';
+}
+
+// ── INIT ──
+renderAll();
+
+const savedEmail = getEmail();
+if (savedEmail) {
+  document.getElementById('email-input').value = savedEmail;
+  showStatus('Loading…', 'loading');
+  loadProgress(savedEmail);
+}
+
+// Allow Enter key on email input
+document.getElementById('email-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') setEmail();
+});
+</script>
+</body>
+</html>

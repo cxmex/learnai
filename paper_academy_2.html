@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Academy II — Beyond Google</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0F0F23;color:#E0E0E0;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;height:100vh;overflow:hidden}
+#sidebar{width:280px;min-width:280px;background:#0a0a1a;border-right:1px solid #1e1e3a;display:flex;flex-direction:column;overflow:hidden}
+#sidebar-header{padding:18px 16px 12px;border-bottom:1px solid #1e1e3a}
+#sidebar-header h1{font-size:1rem;font-weight:800;background:linear-gradient(90deg,#FF6D00,#FFAB00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+#sidebar-header p{font-size:0.68rem;color:#555;margin-top:3px}
+#progress-bar-wrap{padding:10px 16px;border-bottom:1px solid #1e1e3a}
+#progress-label{font-size:0.68rem;color:#555;margin-bottom:5px}
+#progress-bar{height:4px;background:#1e1e3a;border-radius:2px}
+#progress-fill{height:4px;background:linear-gradient(90deg,#FF6D00,#FFAB00);border-radius:2px;transition:width 0.4s}
+#tree{flex:1;overflow-y:auto;padding:12px 8px}
+#tree::-webkit-scrollbar{width:4px}
+#tree::-webkit-scrollbar-thumb{background:#2a2a4a;border-radius:2px}
+.track-label{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#444;padding:12px 8px 4px}
+.paper-node{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;border:1px solid transparent;transition:all 0.15s}
+.paper-node:hover:not(.locked){background:#16213E;border-color:#2a2a4a}
+.paper-node.active{background:#16213E;border-color:#FF6D0055}
+.paper-node.locked{opacity:0.4;cursor:not-allowed}
+.paper-node.completed .node-icon{background:#FFAB00;color:#000}
+.paper-node.active .node-icon{background:#FF6D00;color:#fff}
+.paper-node.locked .node-icon{background:#1e1e3a;color:#444}
+.node-icon{width:28px;height:28px;border-radius:50%;background:#1e1e3a;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0}
+.node-text{flex:1;min-width:0}
+.node-title{font-size:0.8rem;font-weight:600;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node-year{font-size:0.65rem;color:#555}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{padding:14px 28px;border-bottom:1px solid #1e1e3a;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#paper-tag{font-size:0.7rem;color:#FF6D00;font-weight:600;background:#FF6D0011;border:1px solid #FF6D0033;padding:3px 10px;border-radius:10px;white-space:nowrap}
+#paper-title-main{font-size:1rem;font-weight:700;color:#fff}
+#paper-meta{font-size:0.72rem;color:#555;margin-left:auto}
+#tabs{display:flex;border-bottom:1px solid #1e1e3a;padding:0 28px}
+.tab{padding:10px 20px;font-size:0.8rem;font-weight:600;color:#555;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s}
+.tab.active{color:#FF6D00;border-bottom-color:#FF6D00}
+.tab:hover:not(.active){color:#aaa}
+#content{flex:1;overflow-y:auto;padding:28px}
+#content::-webkit-scrollbar{width:6px}
+#content::-webkit-scrollbar-thumb{background:#2a2a4a;border-radius:3px}
+.lesson-section{margin-bottom:28px}
+.lesson-section h3{font-size:0.9rem;font-weight:700;color:#FF6D00;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.lesson-section h3::before{content:'';display:block;width:3px;height:16px;background:#FF6D00;border-radius:2px}
+.lesson-section p{color:#bbb;line-height:1.8;font-size:0.85rem;margin-bottom:10px}
+.lesson-section ul,ol{margin-left:20px;color:#bbb;font-size:0.85rem;line-height:2}
+.callout{background:#16213E;border-left:3px solid #FF6D00;border-radius:0 8px 8px 0;padding:14px 16px;margin:16px 0;font-size:0.83rem;color:#ccc;line-height:1.7}
+.callout.amber{border-color:#FFAB00}
+.callout.green{border-color:#00C853}
+.quiz-progress{display:flex;gap:6px;margin-bottom:24px}
+.qp-dot{width:8px;height:8px;border-radius:50%;background:#1e1e3a;transition:background 0.3s}
+.qp-dot.done{background:#FFAB00}
+.qp-dot.current{background:#FF6D00}
+.question-card{background:#16213E;border:1px solid #2a2a4a;border-radius:12px;padding:24px;margin-bottom:20px}
+.question-num{font-size:0.7rem;color:#555;margin-bottom:8px}
+.question-text{font-size:0.95rem;color:#fff;line-height:1.6;margin-bottom:20px;font-weight:500}
+.options{display:flex;flex-direction:column;gap:10px}
+.option{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#0F0F23;border:1px solid #2a2a4a;border-radius:8px;cursor:pointer;transition:all 0.15s;text-align:left;width:100%}
+.option:hover:not(.disabled){border-color:#FF6D0055;background:#16213E}
+.option.selected-wrong{border-color:#FF5252;background:#FF525211;animation:shake 0.3s}
+.option.selected-right{border-color:#FFAB00;background:#FFAB0011}
+.option.revealed-right{border-color:#FFAB00;background:#FFAB0008}
+.option.disabled{cursor:not-allowed;opacity:0.5}
+.option-letter{width:22px;height:22px;border-radius:50%;background:#1e1e3a;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0;margin-top:1px}
+.option-text{font-size:0.83rem;color:#ccc;line-height:1.5;flex:1}
+.feedback{margin-top:14px;padding:14px;border-radius:8px;font-size:0.82rem;line-height:1.6;display:none}
+.feedback.wrong{display:block;background:#FF525211;border:1px solid #FF525244;color:#FF8A80}
+.feedback.right{display:block;background:#FFAB0011;border:1px solid #FFAB0044;color:#FFD740}
+.feedback strong{color:#fff}
+.next-btn{margin-top:16px;padding:10px 24px;background:#FF6D00;color:#fff;border:none;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;display:none}
+.next-btn:hover{background:#e65100}
+.start-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:16px}
+.start-card{background:#16213E;border:1px solid #2a2a4a;border-radius:10px;padding:16px;cursor:pointer;transition:all 0.15s}
+.start-card:hover{border-color:#FF6D0055;transform:translateY(-2px)}
+.start-card .sc-year{font-size:0.68rem;color:#FF6D00;margin-bottom:4px}
+.start-card .sc-title{font-size:0.85rem;font-weight:700;color:#fff;margin-bottom:4px}
+.start-card .sc-desc{font-size:0.72rem;color:#555}
+#reset-btn{margin:8px 16px;padding:6px;font-size:0.68rem;color:#333;background:none;border:1px solid #1e1e3a;border-radius:6px;cursor:pointer;width:calc(100% - 32px)}
+#reset-btn:hover{color:#666;border-color:#2a2a4a}
+.origin-badge{display:inline-block;background:#FFAB0011;border:1px solid #FFAB0033;color:#FFAB00;padding:2px 8px;border-radius:4px;font-size:0.7rem;margin-bottom:12px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.25s ease forwards}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>Paper Academy II</h1>
+    <p>Beyond Google — The Rest of AI</p>
+  </div>
+  <div id="progress-bar-wrap">
+    <div id="progress-label">0 of 17 papers completed</div>
+    <div id="progress-bar"><div id="progress-fill" style="width:0%"></div></div>
+  </div>
+  <div id="tree"></div>
+  <button id="reset-btn" onclick="resetProgress()">Reset progress</button>
+</div>
+<div id="main">
+  <div id="topbar">
+    <span id="paper-tag">Select a paper</span>
+    <span id="paper-title-main">Welcome to Paper Academy II</span>
+    <span id="paper-meta"></span>
+  </div>
+  <div id="tabs">
+    <div class="tab active" onclick="showTab('learn')" id="tab-learn">Learn</div>
+    <div class="tab" onclick="showTab('quiz')" id="tab-quiz">Quiz</div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+const PAPERS = [
+
+// ─── FOUNDATIONS TRACK ───────────────────────────────────────────────────────
+{
+  id:'resnet', title:'Deep Residual Learning (ResNet)', shortTitle:'ResNet', year:2015,
+  authors:'He, Zhang, Ren, Sun · Microsoft Research',
+  venue:'CVPR 2016 (Best Paper)', category:'Foundations', prereqs:[],
+  icon:'🏗️', tagline:'How to train a 1,000-layer network',
+  lesson:[
+    {h:'The Depth Problem',body:`By 2015, researchers knew deeper networks were more powerful — but training them was a disaster. Stacking more layers made the model WORSE. Counterintuitively, a 56-layer plain network performed worse on training data than a 20-layer one. This is the "degradation problem": deeper networks became harder to optimize, not harder to generalize.
+
+The symptoms: gradients vanished or exploded as they backpropagated through many layers. By the time the gradient signal reached early layers, it was effectively zero. Early layers stopped learning.`},
+    {h:'The Fix: Skip Connections',body:`He et al. at Microsoft Research proposed a radical simple fix: let layers learn the <em>residual</em> — the difference from the input — instead of the full mapping.
+
+Instead of learning H(x), learn F(x) = H(x) - x, so H(x) = F(x) + x.
+
+Implemented as a "skip connection": the input x is added directly to the layer's output. If the layer learns nothing (F(x) = 0), the output is just the identity — the input passes through unchanged. It's now impossible for adding a layer to make things worse.`,callout:`This is why it's called "residual": each block learns the residual correction on top of the identity shortcut. If the optimal function is close to identity (a common case in deep networks), F(x) ≈ 0 is easy to learn.`},
+    {h:'What It Enabled',body:`ResNet-152 (152 layers) won the 2015 ImageNet competition with 3.57% top-5 error — surpassing human-level performance (5.1%) for the first time.
+
+More importantly, skip connections became a universal component:
+<ul>
+<li>Every transformer uses residual connections (the "Add & Norm" step)</li>
+<li>UNet (medical imaging, Stable Diffusion) uses skip connections between encoder and decoder</li>
+<li>DenseNet, EfficientNet, ViT — all use residuals</li>
+</ul>
+You cannot understand any modern neural network architecture without understanding ResNet.`,callout_green:`Skip connections appear in every transformer block in BERT, GPT, Claude, Gemini. ResNet didn't just win a competition — it provided a fundamental component used by every architecture that followed.`}
+  ],
+  questions:[
+    {q:'What is the "degradation problem" that ResNet solved?',
+     opts:['Models with more parameters are harder to deploy','Deeper networks performed WORSE on training data than shallower ones — more layers made optimization harder, not better','Deeper networks overfit training data too quickly','ResNets degraded in accuracy over multiple retraining cycles'],
+     correct:1,
+     explain:['Deployment difficulty is an engineering problem, not the degradation problem. ResNet was a training-time breakthrough.',null,'If deeper networks overfitted, they would perform BETTER on training data but worse on test data. The degradation problem was the opposite: 56-layer networks performed worse on training data itself, proving it was an optimization problem, not a generalization problem.','ResNet does not refer to repeated retraining. Degradation here means deeper plain networks achieve higher training error than shallower ones.']},
+    {q:'Why does a skip connection (residual connection) solve the vanishing gradient problem?',
+     opts:['Skip connections bypass certain layers entirely, reducing the effective depth','Gradients can flow directly through the skip connection (addition operation has gradient=1), providing a "highway" through which gradient can reach early layers','Skip connections double the number of parameters, making gradients stronger','They reduce the learning rate automatically for deeper layers'],
+     correct:1,
+     explain:['Skip connections don\'t bypass layers — all layers still run. The skip adds the input to the layer\'s output; both the layer AND the shortcut contribute to the final representation.',null,'The derivative of addition is 1. So when backpropagating through an addition node, the gradient passes through unchanged. Even if the convolutional layers in a block have near-zero gradients, the gradient signal can travel through the shortcut path with magnitude 1, ensuring early layers receive a usable gradient.','Skip connections don\'t add parameters — they\'re just element-wise addition with no learned weights (when dimensions match).','Skip connections have no effect on learning rate. They solve the gradient flow problem structurally.']},
+    {q:'Skip connections appear in transformer blocks. In that context, what do they connect?',
+     opts:['They connect the encoder to the decoder directly','They add the input of a sublayer (attention or feedforward) to its output before layer normalization','They connect the first layer to the last layer, skipping everything in between','They connect different transformer models together in an ensemble'],
+     correct:1,
+     explain:['Encoder-decoder connections exist in the full transformer, but they\'re cross-attention, not skip connections. Skip connections in transformers are within each sublayer.',null,'In each transformer block: output = LayerNorm(x + Sublayer(x)). The x + is the skip connection. This means every block has a residual path — if attention learns nothing useful, the identity still flows through. This is what makes transformers stable to train with many layers (e.g., 96 layers in GPT-3).','Each block has its own skip connection within that block. There is no single connection from layer 1 to the last layer.','Ensembles are multiple separate models. Skip connections are within a single model.']},
+  ]
+},
+
+{
+  id:'pytorch', title:'PyTorch', shortTitle:'PyTorch', year:2016,
+  authors:'Paszke, Gross, Massa et al. · Meta FAIR',
+  venue:'NeurIPS 2019 (paper); released 2016', category:'Foundations', prereqs:[],
+  icon:'🔥', tagline:'The framework that beat TensorFlow',
+  lesson:[
+    {h:'The Framework Wars',body:`By 2015, Google\'s TensorFlow was the dominant deep learning framework. But researchers hated it. TensorFlow used a "define-and-run" approach: you first declare a static computation graph, then feed data through it. Debugging was painful — you couldn\'t inspect values mid-computation with standard Python tools. Error messages were cryptic. Iteration was slow.
+
+Meta AI Research built PyTorch on a different philosophy: "define-by-run" (dynamic computation graphs).`},
+    {h:'Dynamic Graphs: Why It Won',body:`PyTorch builds the computation graph on-the-fly as you run code. This means:
+<ul>
+<li>You can use standard Python control flow (if/else, for loops) in your model</li>
+<li>You can inspect any tensor at any point with a print statement</li>
+<li>Errors look like normal Python errors, not cryptic graph errors</li>
+<li>Changing model architecture is as simple as changing Python code</li>
+</ul>
+For researchers who change model architecture dozens of times per day, this was transformative.`,callout:`The research community switched to PyTorch rapidly. By 2019, the majority of NeurIPS and ICML papers used PyTorch. By 2022, virtually every AI startup's training code was PyTorch. Google responded with JAX, which adopts a functional approach to dynamic computation.`},
+    {h:'The Ecosystem It Built',body:`PyTorch enabled Hugging Face — a startup that built a library of pre-trained transformer models on top of PyTorch. Hugging Face's <code>transformers</code> library became the npm of AI: every model, every architecture, freely available. Hugging Face is now valued at $4.5B.
+
+PyTorch also enabled PyTorch Lightning, fast.ai, and eventually became the foundation of torchaudio, torchvision, and torchtext — domain-specific extension libraries that made audio, vision, and NLP research accessible.`,callout_green:`Today: almost every LLM (LLaMA, Mistral, Falcon), every diffusion model, and every robotics model is trained and served in PyTorch. TensorFlow is largely relegated to production serving at Google.`}
+  ],
+  questions:[
+    {q:'What is the key architectural difference between PyTorch\'s "define-by-run" and TensorFlow 1.x\'s "define-and-run"?',
+     opts:['PyTorch uses GPUs; TensorFlow runs on CPUs only','PyTorch builds the computation graph dynamically as code executes, enabling standard Python debugging; TensorFlow required declaring a static graph before running it','PyTorch is written in Python; TensorFlow is written in C++','PyTorch can only train small models; TensorFlow scales to large ones'],
+     correct:1,
+     explain:['Both frameworks support GPUs. GPU support was present in TensorFlow 1.x from the start.',null,'With a static graph, you declare all operations first, compile the graph, then run data through it. Bugs in the graph don\'t appear until execution, and you can\'t inspect intermediate values easily. Dynamic graphs mean the graph is constructed as Python runs — if you add a print() inside a loop, you see actual tensor values, just like regular Python debugging.','Both are primarily Python APIs with C++/CUDA backends for performance. The language of the API wasn\'t the differentiation.','PyTorch trains the largest models in existence (GPT-4-scale). Scale is not the distinction.']},
+    {q:'Why did the research community adopt PyTorch over TensorFlow despite TensorFlow having a 2-year head start?',
+     opts:['PyTorch was cheaper to license','Researcher iteration speed — debugging and modifying experimental models was dramatically faster with dynamic graphs, which mattered more than production efficiency','PyTorch produced more accurate models','Meta forced researchers to use it'],
+     correct:1,
+     explain:['Both are open-source and free.',null,'In research, the bottleneck is the researcher\'s iteration cycle — hypothesis → implementation → debug → result → next hypothesis. TensorFlow\'s static graphs made debugging slow and model modification painful. PyTorch reduced iteration time from hours to minutes for many experiment types. Researchers optimize for their own productivity, not for production deployment efficiency.','Same model, same architecture, same accuracy. PyTorch doesn\'t change what\'s mathematically possible.','Meta contributed PyTorch but couldn\'t force adoption. The research community chose it because it was better for research workflows.']},
+  ]
+},
+
+{
+  id:'qlearning', title:'Q-Learning & Policy Gradient Methods', shortTitle:'RL Foundations', year:1992,
+  authors:'Watkins (Q-Learning) · Williams (REINFORCE) · Various',
+  venue:'Machine Learning 1992 / 1992', category:'Foundations', prereqs:[],
+  icon:'🎮', tagline:'Teaching agents to maximize reward through experience',
+  lesson:[
+    {h:'What Reinforcement Learning Is',body:`Reinforcement Learning (RL) is the third paradigm of machine learning — alongside supervised learning (labeled examples) and unsupervised learning (structure in unlabeled data). In RL:
+<ul>
+<li>An <strong>agent</strong> takes actions in an <strong>environment</strong></li>
+<li>The environment returns a <strong>reward</strong> (positive or negative) and a new <strong>state</strong></li>
+<li>The agent's goal: learn a <strong>policy</strong> (mapping from state to action) that maximizes cumulative reward</li>
+</ul>
+No labeled "correct action" is given. The agent must discover good actions through trial and error.`},
+    {h:'Q-Learning: Learning Action Values',body:`Q-Learning (Watkins, 1992) learns a Q-function: Q(state, action) = expected cumulative reward of taking this action in this state and acting optimally afterward.
+
+The Bellman equation makes this tractable:
+<br><br>Q(s,a) ← Q(s,a) + α[r + γ·max Q(s',a') - Q(s,a)]<br><br>
+Update Q toward the observed reward plus the discounted best Q of the next state. Over many episodes, Q converges to the optimal policy.`,callout:`Key property: Q-Learning is "off-policy" — you can learn from experiences of ANY policy, including a random one. This is why replay buffers work: store old experiences, learn from them later.`},
+    {h:'Policy Gradient: Directly Optimize the Policy',body:`Q-Learning learns values, then derives actions. Policy Gradient methods (Williams 1992, REINFORCE) directly parameterize a policy π(a|s) as a neural network and use gradient ascent to maximize expected reward.
+
+The gradient: ∇J(θ) = E[∇log π(action|state) · reward]
+
+Intuition: actions that led to high reward → increase their probability. Actions that led to low reward → decrease their probability. This is the algorithm used in ChatGPT's RLHF training (specifically PPO, a variant).`,callout_green:`Q-Learning → DQN (DeepMind, 2013, Atari) → PPO (OpenAI, 2017) → RLHF (OpenAI, 2022) → ChatGPT. The entire "alignment" stack for LLMs runs on RL foundations from the early 1990s.`}
+  ],
+  questions:[
+    {q:'What makes Reinforcement Learning fundamentally different from supervised learning?',
+     opts:['RL requires more data than supervised learning','RL agents receive no labeled "correct action" — they must discover good actions through trial and error, guided only by reward signals from the environment','RL can only be applied to games, not real-world problems','RL does not use neural networks'],
+     correct:1,
+     explain:['Data requirements vary by problem — RL can be extremely sample-efficient or very sample-hungry depending on the algorithm and environment.', null,'In supervised learning, every training example has a label telling the model the correct output. In RL, the agent only knows whether its sequence of actions led to a high or low reward — often only at the end of an episode. No one tells it which specific action was the mistake. This credit assignment problem is the central challenge of RL.','RL is used in robotics, drug discovery, chip design (Google used RL to optimize chip floorplanning), recommendation systems, and LLM alignment. Games were early testbeds but not the only application.','DQN (2013) and policy gradient methods explicitly use deep neural networks. RL + deep learning = Deep RL.']},
+    {q:'The Bellman equation underpins Q-Learning. What is its core insight?',
+     opts:['The optimal Q-value of a state-action pair can be recursively defined: it equals the immediate reward plus the discounted optimal Q-value of the best next state-action','The Bellman equation computes the gradient of the reward function directly','Bellman equations require knowing the transition dynamics of the environment','The Q-value equals the average reward over all possible next actions'],
+     correct:0,
+     explain:[null,'This is the key insight — it makes the problem tractable. Instead of estimating the total future reward by simulating the entire future (impossible), you can bootstrap: the Q-value of this step is the immediate reward + how good the best next step is (which you already have an estimate of). Apply this update repeatedly and Q converges to the optimal policy.','Policy gradient methods compute gradients of the reward function. Q-Learning does not use direct gradient computation on rewards.','Q-Learning can work model-free — you don\'t need to know transition dynamics. You learn Q from experience, not from a known model of the world.','Q-Learning takes the MAX over next actions, not the average. This "greedy" bootstrap toward the best possible next action is what makes it off-policy and convergent to the optimal Q.']},
+    {q:'PPO (Proximal Policy Optimization) is used in RLHF to train ChatGPT. What problem does PPO solve compared to basic policy gradient?',
+     opts:['PPO is faster because it uses fewer samples','Basic policy gradient updates can be too large, destabilizing training — PPO clips the update size to stay "proximal" (close) to the previous policy','PPO eliminates the need for a reward model','PPO allows training without any human feedback'],
+     correct:1,
+     explain:['PPO often requires MORE samples than simpler methods — it\'s valued for stability, not sample efficiency.',null,'In basic policy gradient (REINFORCE), if a batch of episodes happened to produce very high rewards, the policy update can be enormous — overshooting and destroying the policy. PPO clips the probability ratio between new and old policy to a range (e.g., [0.8, 1.2]). If the update would move the policy too far, it\'s clipped. This makes training stable even with noisy reward signals — critical for RLHF where reward model scores are noisy.','PPO still requires a reward signal (from a reward model in RLHF or from the environment in games). It doesn\'t replace the reward model.','RLHF requires human feedback to train the reward model. PPO is the optimization algorithm applied after the reward model is built.']},
+  ]
+},
+
+// ─── GENERATIVE MODELS TRACK ─────────────────────────────────────────────────
+{
+  id:'vae', title:'Variational Autoencoder (VAE)', shortTitle:'VAE', year:2013,
+  authors:'Kingma & Welling · University of Amsterdam',
+  venue:'ICLR 2014', category:'Generative Models', prereqs:['resnet'],
+  icon:'🎲', tagline:'Learning a compressed, navigable space of data',
+  lesson:[
+    {h:'The Autoencoder Idea',body:`An autoencoder compresses data into a low-dimensional "latent" vector (encoder), then reconstructs it back (decoder). Train on many images of faces, and the latent space captures face features. Problem: the standard autoencoder's latent space has holes and discontinuities — interpolating between two points in latent space produces garbage.
+
+VAE fixes this by making the latent space a smooth probability distribution.`},
+    {h:'The Key Innovation: Latent as Distribution',body:`Instead of encoding an input to a single point z, the VAE encoder outputs a mean μ and variance σ² — defining a Gaussian distribution. The decoder samples from this distribution.
+
+Training objective (ELBO — Evidence Lower Bound):
+<ul>
+<li><strong>Reconstruction loss:</strong> The decoded sample should look like the original input</li>
+<li><strong>KL divergence:</strong> The distribution q(z|x) should stay close to a standard normal N(0,1)</li>
+</ul>`,callout:`The KL term forces all latent representations to cluster around the origin. This is what creates a smooth, navigable latent space — every point in the space (not just training examples) decodes to something meaningful.`},
+    {h:'Why the Latent Space Matters',body:`A smooth latent space enables:
+<ul>
+<li><strong>Interpolation:</strong> Mix two face images by averaging their latent vectors. The result is a smooth blend.</li>
+<li><strong>Generation:</strong> Sample a random point from N(0,1) and decode it — a new face that never existed.</li>
+<li><strong>Editing:</strong> If one dimension controls "smiling," add a vector in that direction to make any face smile.</li>
+</ul>
+This concept of a learned latent space underlies Stable Diffusion (which operates in latent space to be faster), DALL-E's image generation, and the "latent" in Latent Labs (protein design startup).`,callout_green:`VAE latent space concept → Stable Diffusion's latent diffusion architecture → every image/video generation model. The company Stability AI's core insight was to run diffusion in VAE latent space, making image generation 8× faster.`}
+  ],
+  questions:[
+    {q:'What problem with standard autoencoders does the VAE solve?',
+     opts:['Autoencoders are too slow to train','Standard autoencoder latent spaces have holes — points between training examples don\'t decode to meaningful outputs. VAE forces a smooth, continuous distribution.','Autoencoders cannot work on images, only text','VAE uses less memory than a standard autoencoder'],
+     correct:1,
+     explain:['Training speed is not the problem VAE addresses. Standard autoencoders and VAEs have comparable training speeds.',null,'The standard autoencoder can place different classes in completely disconnected regions of latent space with arbitrary structure. If you sample between two known points, you land in an unstructured region that decodes to noise. VAE\'s KL divergence regularization forces all encodings to cluster near the origin in a Gaussian — guaranteeing that any sampled point decodes to something coherent.','Autoencoders work on any data modality — images, text, tabular data, protein sequences. Modality is not the distinction.','VAE actually adds parameters (the variance head on the encoder) compared to a standard autoencoder. It uses slightly more memory, not less.']},
+    {q:'What is the "reparameterization trick" and why is it necessary for training VAEs?',
+     opts:['It renames variable names to make code cleaner','Sampling is not differentiable — the trick moves the randomness outside the computation graph (z = μ + σ·ε, ε~N(0,1)), allowing gradients to flow through μ and σ','It prevents the KL divergence from becoming too large during training','It converts discrete samples to continuous ones'],
+     correct:1,
+     explain:['This is a software engineering term, not a machine learning one.',null,'If z is sampled from q(z|x) directly, the sampling operation has no gradient — backpropagation cannot flow through a stochastic node. The trick: instead of sampling z ~ N(μ, σ²), sample ε ~ N(0,1) and compute z = μ + σ·ε. Now z is a deterministic function of μ and σ (with ε as external noise), so gradients can flow through to train the encoder.','Gradient clipping handles exploding gradients. The reparameterization trick is about differentiability, not gradient magnitude.','VAEs operate on continuous latent spaces. Handling discrete samples requires different techniques (Gumbel-Softmax, etc.).']},
+    {q:'Stable Diffusion uses a VAE as part of its architecture. What specific role does it play?',
+     opts:['The VAE generates the final image directly, and diffusion only refines text prompts','The VAE compresses images into a smaller latent space; diffusion runs in this latent space (not pixel space), making generation 8× faster','The VAE handles text encoding while diffusion handles image generation','VAE is used only during training, not at inference time'],
+     correct:1,
+     explain:['In Stable Diffusion, diffusion does the heavy lifting of generation. The VAE compresses and decompresses images but does not generate them independently.',null,'Running diffusion in pixel space (512×512×3 ≈ 786K dimensions) requires hundreds of denoising steps — too slow. The VAE encodes images into a 64×64×4 latent (16K dimensions — 48× smaller). Diffusion runs in this compressed space: same number of denoising steps but on a much smaller tensor. The VAE decoder then converts the denoised latent back to pixels. This is the "latent" in "Latent Diffusion Models."','Text encoding is handled by a CLIP text encoder (a transformer), not the VAE. The VAE is specifically for image compression.','The VAE decoder runs at inference time to convert the diffusion output latent back into a pixel image. Without it, you get a latent vector, not an image.']},
+  ]
+},
+
+{
+  id:'gan', title:'Generative Adversarial Networks (GANs)', shortTitle:'GANs', year:2014,
+  authors:'Goodfellow, Pouget-Abadie, Mirza, Xu, Warde-Farley, Ozair, Courville, Bengio · Université de Montréal',
+  venue:'NeurIPS 2014', category:'Generative Models', prereqs:['vae'],
+  icon:'🎭', tagline:'Two networks competing to generate reality',
+  lesson:[
+    {h:'The Adversarial Idea',body:`Ian Goodfellow invented GANs over a single night in 2014, reportedly after arguing about generative models at a bar. The idea is a two-player game:
+
+<ul>
+<li><strong>Generator (G):</strong> Takes random noise, produces fake data (images, audio, text). Goal: fool the discriminator.</li>
+<li><strong>Discriminator (D):</strong> Takes real or generated data, outputs probability it's real. Goal: correctly distinguish real from fake.</li>
+</ul>
+
+Train both simultaneously: G gets better at fooling D; D gets better at detecting fakes; repeat. At convergence, G produces data indistinguishable from real.`},
+    {h:'The Training Objective',body:`Minimax game — the value function V(G, D):
+
+min_G max_D V(D,G) = E[log D(x)] + E[log(1 - D(G(z)))]
+
+D tries to maximize: assign high probability to real x, low probability to generated G(z).
+G tries to minimize: make D assign high probability to its fake outputs.
+
+In practice: train D for k steps, then train G for 1 step, alternating. The generator never directly sees real data — it only receives gradients from the discriminator.`,callout:`The elegant part: no explicit likelihood estimation. Traditional generative models tried to explicitly model the data distribution p(x) — a hard problem. GANs sidestep this entirely. The discriminator implicitly estimates how close G's distribution is to real data.`},
+    {h:'What GANs Produced',body:`GANs went from generating blurry 28×28 digit images (2014) to photorealistic human faces (StyleGAN2, NVIDIA, 2020) with zero artifacts. Deepfakes are GAN outputs.
+
+Applications: face generation (Thispersondoesnotexist.com), image-to-image translation (pix2pix), super-resolution (SRGAN), drug molecule generation, data augmentation for rare diseases.`,callout:`GANs are notoriously hard to train: mode collapse (G only generates a few types of outputs), vanishing gradients when D becomes too good, and instability requiring careful hyperparameter tuning. These training difficulties motivated diffusion models, which are more stable.`},
+    {h:'GANs vs. Diffusion: Why GANs Lost',body:`By 2022, diffusion models surpassed GANs for image quality and diversity. Reasons:
+<ul>
+<li>Diffusion training is more stable — no adversarial game, no mode collapse</li>
+<li>Diffusion generates more diverse outputs</li>
+<li>Diffusion scales better with compute</li>
+</ul>
+GANs still win on speed (one forward pass vs. hundreds of diffusion steps) and find use in video generation and real-time applications. StyleGAN3 is still used in film and game production.`,callout_green:`GANs → deepfakes → synthetic data for ML training → face generation APIs → early image generation. Diffusion models replaced GANs for quality/diversity in 2022, but GANs pioneered the generative AI industry.`}
+  ],
+  questions:[
+    {q:'In a GAN, the Generator never directly sees real training data. How does it learn to produce realistic outputs?',
+     opts:['The Generator reads the real data but in encrypted form','The Generator receives gradient signals from the Discriminator — backpropagation through D tells G which changes to its outputs made D more likely to be fooled','The Generator copies real data with small random modifications','The Generator and Discriminator share weights, so G learns by observing D'],
+     correct:1,
+     explain:['GANs don\'t use encryption. The Generator sees only its own output and the gradient signal.',null,'The Discriminator scores G\'s output. If D says "80% real" for a generated image, D\'s training loss is low (it was fooled). G\'s goal is to maximize this confusion. The gradient of D\'s classification loss with respect to G\'s output tells G exactly what to change to become more convincing. G learns the gradient of "how real does D think this is" with respect to its own generated pixels.',  'Copying with modifications is data augmentation, not generation. G starts from random Gaussian noise — it has no access to real images.','Generator and Discriminator are separate networks with separate weights. They have opposing objectives and cannot share weights.']},
+    {q:'What is "mode collapse" in GAN training, and why does it happen?',
+     opts:['The GAN\'s discriminator collapses to always outputting 0.5','The generator learns to produce only a small subset of the data distribution — e.g., generating only one type of face regardless of noise input — because this fools the discriminator without covering the full distribution','Mode collapse means the model runs out of GPU memory','It occurs when the training data has too few examples'],
+     correct:1,
+     explain:['When D outputs 0.5 on real and fake equally, it means it cannot distinguish them — this is actually training success (discriminator is fooled), not collapse.',null,'If generating one particular face consistently fools D, G has no incentive to explore other face types. It found one "mode" (one region of the data distribution) that works and collapsed there. The minimax objective doesn\'t directly penalize this. Diffusion models don\'t have this problem because generation is not adversarial — the denoising process naturally covers all modes of the distribution.','Memory issues are hardware problems, not mode collapse. Mode collapse is a training dynamics issue visible even with unlimited memory.','Mode collapse is a training failure mode even with millions of training examples. Dataset size is not the cause.']},
+    {q:'Why did diffusion models largely replace GANs for image generation by 2022?',
+     opts:['Diffusion models are faster at inference time','GANs produce lower resolution images than diffusion models','Diffusion training is more stable (no adversarial game, no mode collapse), generates more diverse outputs, and scales better with compute — at the cost of slower inference','Diffusion models require less training data than GANs'],
+     correct:2,
+     explain:['The opposite is true — GANs are FASTER at inference (one forward pass). Diffusion requires 20-1000 iterative denoising steps. Speed is GANs\' remaining advantage.',null,'GANs produced 1024×1024 images (StyleGAN) before diffusion models existed. Resolution is not the distinction.','This captures the key trade-off. Stable Diffusion and DALL-E 2 produce higher diversity (no mode collapse) and better semantic consistency (better at following text prompts). The training stability difference is particularly important at scale — it\'s what allowed diffusion models to be trained on internet-scale datasets without the instability problems that plagued large GANs.','Both require large datasets. Diffusion models were trained on LAION-5B (5 billion image-text pairs) — if anything requiring MORE data than GAN experiments.']},
+  ]
+},
+
+{
+  id:'diffusion', title:'Denoising Diffusion Probabilistic Models', shortTitle:'Diffusion', year:2020,
+  authors:'Ho, Jain, Abbeel · UC Berkeley',
+  venue:'NeurIPS 2020', category:'Generative Models', prereqs:['vae','gan'],
+  icon:'✨', tagline:'Generate images by learning to reverse noise',
+  lesson:[
+    {h:'The Physics Intuition',body:`Diffusion borrows from non-equilibrium thermodynamics. Imagine dropping ink into water: the ink diffuses from a structured pattern into pure noise. Diffusion models ask: can a neural network learn to reverse this process — to "un-diffuse" noise back into structure?
+
+Forward process: gradually add Gaussian noise to an image over T steps (T=1000 typically) until it's pure noise.
+Backward process: train a neural network to predict and remove a small amount of noise at each step.
+Generation: start from pure random noise, apply the learned denoising backward process 1000 times.`},
+    {h:'The Training Objective',body:`Training is surprisingly simple: at each step t, take a real image, add exactly t steps worth of noise (directly computable in one step using a closed-form formula), and train the network to predict the noise that was added.
+
+L = ||ε - ε_θ(√ᾱ_t x₀ + √(1-ᾱ_t)ε, t)||²
+
+The model ε_θ learns "given a noisy image at step t, what noise was added?" Equivalently: it learns to denoise. No adversarial game. No mode collapse. Stable training.`,callout:`The neural network used is typically a U-Net with attention blocks — combining ResNet skip connections (for detail preservation) with transformer attention (for global coherence). Cross-attention to text embeddings is how text conditioning works.`},
+    {h:'Text-to-Image: DDPM + CLIP',body:`DDPM alone generates images unconditionally. To condition on text ("a cat astronaut on the moon"), inject text embeddings via cross-attention at each denoising step. The U-Net's attention layers learn to make each denoising step consistent with the text.
+
+Classifier-free guidance (Ho & Salimans, 2021): train with and without text conditioning. At inference, amplify the difference — push the generation further toward text-consistent outputs. Higher guidance scale = images more faithful to text but less diverse.`},
+    {h:'The Industry It Created',body:`DDPM → Stable Diffusion (Rombach et al., CompVis/Stability AI, 2022) — open-sourced. This single release created an entire industry:
+<ul>
+<li>Midjourney: $200M+/year revenue, no VC funding, 15-person team</li>
+<li>Runway: $50M ARR, $1.5B valuation, video generation</li>
+<li>ElevenLabs: audio diffusion, $80M Series B at $1.1B</li>
+<li>Stability AI: $101M raised, valuation collapsed due to governance issues</li>
+</ul>`,callout_green:`DDPM (Berkeley, 2020) → Latent Diffusion (Heidelberg/CompVis, 2022) → Stable Diffusion (open-source) → Midjourney, Runway, Adobe Firefly, DALL-E 3. The entire generative image industry.`}
+  ],
+  questions:[
+    {q:'What is the forward process in a diffusion model and what is its mathematical purpose?',
+     opts:['The model generates images from text prompts — this is the forward direction','The forward process adds Gaussian noise to real images over many steps until the image becomes indistinguishable from pure noise — creating training examples of (noisy image, noise amount, original) tuples','The forward process is inference — running the model on new inputs','The forward process trains the discriminator in the adversarial game'],
+     correct:1,
+     explain:['Generation (text-to-image) is the REVERSE process — denoising from noise back to an image.',null,'The forward process is the data preparation step. Critically, it\'s analytically tractable — you can directly compute what an image looks like after exactly t steps of noise addition using a closed-form formula, without simulating each step. This means you can train the neural network on (image at step t, noise that was added) pairs directly, at any noise level, which makes training efficient and stable.','Inference is the reverse process — the denoising direction. The forward process only runs during training data preparation.','Diffusion models have no discriminator. The training objective is a simple noise prediction regression loss, not an adversarial game.']},
+    {q:'Why did running diffusion in latent space (Stable Diffusion) make image generation practical?',
+     opts:['Latent space diffusion uses a different type of noise that is easier to remove','Images have ~786K pixel dimensions; a VAE latent has ~16K dimensions — running 1000 denoising steps in latent space is 48× faster than in pixel space, making real-time generation feasible','Latent space allows the model to understand text better','Stable Diffusion uses latent space only for training, not for inference'],
+     correct:1,
+     explain:['The noise type (Gaussian) is the same in both pixel and latent space. The benefit is computational, not about noise properties.',null,'This is the key engineering insight from Rombach et al. A 512×512 RGB image has 786,432 dimensions. The VAE latent is 64×64×4 = 16,384 dimensions. Each denoising step involves a full U-Net forward pass. 1000 steps × 49× speedup = the difference between "requires a server farm" and "runs on a consumer GPU in 30 seconds." This made consumer-grade image generation possible.','Text understanding comes from the text encoder (CLIP). The latent space is about image compression, not text.','The VAE decoder must run at inference to convert the final denoised latent back to pixels. Latent space is used for both training and inference.']},
+  ]
+},
+
+{
+  id:'clip', title:'CLIP + DALL-E', shortTitle:'CLIP & DALL-E', year:2021,
+  authors:'Radford, Kim, Hallacy et al. · OpenAI',
+  venue:'ICML 2021 / arXiv 2021', category:'Generative Models', prereqs:['diffusion','resnet'],
+  icon:'🖼️', tagline:'Teaching machines to connect images and language',
+  lesson:[
+    {h:'The Problem: How Does a Model Know "Cat"?',body:`To generate an image from text, the model needs a shared representation space for images and language. Before CLIP, image models learned features from labeled image datasets (ImageNet: 1.2M labeled images, 1000 classes). But "cat" in ImageNet is different from "fluffy orange tabby cat in a space suit" — the rigid category doesn't capture the richness of language.
+
+CLIP (Contrastive Language-Image Pre-Training) learns image-text alignment from 400 million image-text pairs scraped from the internet.`},
+    {h:'Contrastive Training: Matching Pairs',body:`Training objective: given a batch of N (image, text) pairs, maximize similarity between matched pairs and minimize similarity between mismatched pairs.
+
+For a batch of 32 pairs:
+<ul>
+<li>32 matched pairs (image of cat → text "a photo of a cat") → high cosine similarity</li>
+<li>32×31 = 992 mismatched pairs → low cosine similarity</li>
+</ul>
+Two encoders trained jointly: an image encoder (ViT or ResNet) and a text encoder (transformer). Their outputs are projected into a shared 512-dimensional space.`,callout:`The result: an image of a cat and the text "a photo of a cat" map to nearly the same vector. This shared embedding space enables zero-shot image classification — no task-specific training needed.`},
+    {h:'Zero-Shot Classification',body:`CLIP enables zero-shot image classification. To classify an image into 1000 ImageNet classes:
+<ol>
+<li>Encode the image</li>
+<li>Encode 1000 text descriptions ("a photo of a {class}")</li>
+<li>Find the text with highest cosine similarity to the image</li>
+</ol>
+CLIP achieves ~76% on ImageNet with zero training on ImageNet — matching a ResNet-50 trained specifically on 1.2M ImageNet images. The model "knows" ImageNet classes because they appeared in its internet training data.`},
+    {h:'DALL-E and What CLIP Unlocked',body:`CLIP's shared embedding space is the "bridge" that makes text-to-image work. DALL-E 1 (2021) used a discrete VAE for images and a transformer trained to predict image tokens from text tokens. DALL-E 2 (2022) used CLIP embeddings as the conditioning signal for a diffusion model — first generate a CLIP image embedding from text (using a "prior" model), then decode that embedding to pixels using diffusion.
+
+Every major image generation system uses CLIP or a CLIP-like model: Stable Diffusion, Midjourney, Adobe Firefly, Google Imagen.`,callout_green:`CLIP → zero-shot vision understanding → text-to-image conditioning → Stable Diffusion, DALL-E 2, Midjourney. Also: CLIP similarity is the metric used to evaluate image-text alignment in generation systems.`}
+  ],
+  questions:[
+    {q:'What is "contrastive learning" as used in CLIP training?',
+     opts:['Training on contrasting image styles (e.g., realistic vs. cartoon)','Maximizing cosine similarity between matched (image, text) pairs while minimizing similarity between all mismatched pairs in the same batch','A method that contrasts training and validation performance to detect overfitting','Training two separate models and comparing their outputs'],
+     correct:1,
+     explain:['Style contrast is an image editing concept. Contrastive learning in ML is specifically about learning embedding spaces through matched/unmatched pairs.',null,'For each batch, CLIP sees N matched pairs. It creates an N×N similarity matrix. The diagonal (matched pairs) should have high similarity; off-diagonal (any image with the wrong text) should have low similarity. The loss pushes matched pairs together and mismatched pairs apart in embedding space. After training on 400M pairs, the embedding space captures rich semantic relationships between images and text.',  'Contrastive learning has nothing to do with overfitting detection. It\'s a training objective for representation learning.','CLIP has two encoders (image + text), but contrastive learning is not about comparing two separate models. It\'s about learning a shared embedding space by comparing pairs.']},
+    {q:'CLIP achieves ~76% zero-shot accuracy on ImageNet. Why is "zero-shot" significant here?',
+     opts:['CLIP was trained on zero images — it\'s a language-only model','Zero-shot means no ImageNet training examples were seen during CLIP\'s training, yet it matches models specifically trained on ImageNet — demonstrating that internet-scale vision-language pre-training transfers to classification tasks','Zero-shot means CLIP uses zero GPU memory during classification','Zero-shot means CLIP makes zero mistakes on easy examples'],
+     correct:1,
+     explain:['CLIP trained on 400 million image-text pairs. It is an image+text model, not language-only.',null,'This is the key result. A ResNet-50 requires 1.2M labeled ImageNet images and specific ImageNet training to achieve ~76% accuracy. CLIP never saw a single ImageNet label — it only saw (image, alt-text) pairs from the internet. Yet it matches this performance by simply finding the most similar text description. This proves that web-scale multimodal pre-training produces transferable representations without task-specific labeled data.','GPU memory is not related to zero-shot. Zero-shot refers to zero task-specific training examples.','"Zero-shot" is a specific technical term meaning no training examples from the target task. It has nothing to do with error rates.']},
+  ]
+},
+
+// ─── DATA SYSTEMS TRACK ──────────────────────────────────────────────────────
+{
+  id:'spark', title:'Apache Spark', shortTitle:'Spark', year:2012,
+  authors:'Zaharia, Chowdhury, Das et al. · UC Berkeley AMP Lab',
+  venue:'NSDI 2012 / OSDI 2012', category:'Data Systems', prereqs:[],
+  icon:'⚡', tagline:'In-memory computing that replaced MapReduce',
+  lesson:[
+    {h:'Why MapReduce Was Slow',body:`Google\'s MapReduce (2004) writes intermediate results to disk between every stage. For a multi-step algorithm — say, 100 iterations of machine learning gradient descent — that means 200 disk reads and writes (one read + one write per iteration). Disk I/O is 100-1000× slower than RAM. Iterative ML on MapReduce was agonizingly slow.
+
+Spark (2012, UC Berkeley) solved this with Resilient Distributed Datasets (RDDs) — distributed datasets that live in RAM across a cluster.`},
+    {h:'RDDs and Lazy Evaluation',body:`An RDD is an immutable, partitioned collection of records distributed across a cluster. Operations on RDDs are:
+<ul>
+<li><strong>Transformations:</strong> map, filter, groupBy — lazy (not computed immediately, just recorded)</li>
+<li><strong>Actions:</strong> count, collect, save — trigger actual computation</li>
+</ul>
+When you call .count(), Spark analyzes the full chain of transformations and creates an optimized execution plan. Intermediate results stay in memory between stages.`,callout:`Spark is 10-100× faster than MapReduce for iterative workloads (ML training, graph algorithms). On ML benchmarks in 2014, Spark sorted 100TB of data 3× faster than Hadoop MapReduce.`},
+    {h:'The Databricks Story',body:`Matei Zaharia (Spark\'s creator) co-founded Databricks in 2013 to commercialize Spark. Databricks added:
+<ul>
+<li><strong>Delta Lake (2019):</strong> ACID transactions on top of data lakes (think: reliable Parquet files with versioning)</li>
+<li><strong>MLflow (2018):</strong> Open-source ML lifecycle management (experiment tracking, model registry)</li>
+<li><strong>Databricks SQL:</strong> Analytics SQL on the lakehouse</li>
+<li><strong>Unity Catalog:</strong> Data governance layer</li>
+</ul>`,callout_green:`Spark (2012, Berkeley) → Databricks ($62B valuation, 2024). One PhD student's PhD project became the largest data+AI company in the world. The "lakehouse" architecture Databricks invented is now the dominant data architecture.`}
+  ],
+  questions:[
+    {q:'What is the fundamental performance advantage of Spark over MapReduce for iterative algorithms?',
+     opts:['Spark uses more CPU cores than Hadoop MapReduce','Spark keeps intermediate results in memory (RAM) across iterations instead of writing to disk between every stage — eliminating the disk I/O bottleneck for iterative workloads','Spark uses a more efficient sorting algorithm','Spark requires less network bandwidth between machines'],
+     correct:1,
+     explain:['Both Spark and MapReduce use the same underlying cluster resources. Core count is determined by cluster configuration, not the framework.',null,'For an ML training loop of 100 iterations: MapReduce writes to disk after each map and reduce phase — 200+ disk operations. Disk access is 100-1000× slower than RAM access. Spark\'s RDDs persist in memory, so iteration 2 reads from RAM where iteration 1\'s results are cached. This 100-1000× speed difference is the entire reason Spark replaced MapReduce for ML workloads.','Both frameworks use similar sorting (external merge sort). The algorithm difference is not the performance bottleneck.','Network I/O (shuffle) is the same fundamental operation in both. The savings come from eliminating disk I/O between stages.']},
+    {q:'What does "lazy evaluation" mean in Spark, and why is it beneficial?',
+     opts:['Spark waits until you have collected enough data before starting a cluster','Transformations are recorded but not executed until an action is called — allowing Spark to optimize the entire computation plan before running','Lazy evaluation means Spark uses fewer CPU cycles by skipping unnecessary computations','It means Spark delays error messages to avoid interrupting workflows'],
+     correct:1,
+     explain:['Lazy evaluation has nothing to do with data collection thresholds. It\'s about when computation actually executes.',null,'When you chain df.filter(...).groupBy(...).agg(...), Spark doesn\'t execute each step immediately. It builds a directed acyclic graph (DAG) of the computation. When you call .show() or .write(), Spark analyzes the full DAG and applies optimizations: pushing filters before joins, combining operations, selecting efficient join strategies. This query optimization is what makes Spark SQL competitive with specialized query engines.','Lazy evaluation doesn\'t skip computations — it delays them to enable optimization. All necessary computations still run.','Errors are still raised when they occur during execution, not delayed intentionally. Lazy evaluation is about optimization, not error handling.']},
+  ]
+},
+
+{
+  id:'kafka', title:'Apache Kafka', shortTitle:'Kafka', year:2011,
+  authors:'Kreps, Narkhede, Rao · LinkedIn',
+  venue:'ACM SIGOPS 2011', category:'Data Systems', prereqs:[],
+  icon:'📨', tagline:'Real-time data streaming at massive scale',
+  lesson:[
+    {h:'The Problem: Real-Time Data at LinkedIn',body:`LinkedIn in 2011 needed to move hundreds of millions of events per day between systems: page views, clicks, messages, connection requests — all in real-time. Traditional queuing systems (RabbitMQ, ActiveMQ) were slow and couldn\'t retain data for replay. Databases couldn\'t handle the write throughput.
+
+Kafka was built as a distributed commit log — a data structure optimized for sequential writes and reads.`},
+    {h:'The Log Abstraction',body:`Kafka\'s core abstraction is a log: an append-only, ordered sequence of records. Records are organized into topics and partitions. Producers append to the end. Consumers read from any offset.
+
+Key properties:
+<ul>
+<li><strong>Retention:</strong> Data is stored for days/weeks, not deleted after consumption. Multiple consumers can read independently.</li>
+<li><strong>Sequential I/O:</strong> Appending to a log is the fastest disk operation. Kafka achieves millions of writes/second.</li>
+<li><strong>Distributed:</strong> Topics are partitioned across many brokers for horizontal scalability.</li>
+</ul>`,callout:`The key insight: treating real-time event streams as a log (like a database write-ahead log) enables consumers to replay from any point — enabling exactly-once semantics, event replay for debugging, and decoupled producer-consumer architectures.`},
+    {h:'Why Every AI System Needs Kafka',body:`Modern AI systems are event-driven:
+<ul>
+<li>User actions → feature store (Kafka ingests clicks, purchases in real-time)</li>
+<li>Model predictions → downstream systems (Kafka distributes predictions)</li>
+<li>Training data pipelines (Kafka streams new labeled examples to training jobs)</li>
+</ul>
+Kafka is in every major tech company\'s infrastructure stack — Netflix, Uber, Airbnb, LinkedIn, Twitter. Confluent (the commercial Kafka company) is valued at $9B. Apache Flink and Spark Streaming both consume from Kafka.`,callout_green:`Kafka → Confluent ($9B). The "real-time layer" of the modern data stack. Every ML feature store, online learning system, and recommendation engine runs on Kafka streams.`}
+  ],
+  questions:[
+    {q:'What makes Kafka\'s log abstraction different from a traditional message queue?',
+     opts:['Kafka is faster because it uses SSDs instead of spinning disks','In a traditional queue, messages are deleted after consumption. Kafka retains messages for days/weeks and allows multiple independent consumers to read from any offset — enabling replay, multiple consumers, and decoupled systems','Kafka only supports one producer per topic','Traditional queues support SQL; Kafka uses a proprietary query language'],
+     correct:1,
+     explain:['Both Kafka and traditional queues can use either SSDs or HDDs. The fundamental difference is the data model, not storage hardware.',null,'This is the architectural shift. In RabbitMQ-style queues, once a consumer reads a message, it\'s gone. In Kafka, the "consumer group offset" is just a pointer into an immutable log. You can reset it to the beginning, run multiple independent consumers at different offsets, and replay all events from any point. This makes Kafka suitable for stream processing, data pipeline fanout, and event sourcing in ways traditional queues are not.','Kafka supports arbitrarily many producers per topic. Producers just append records to partitions.',  'Kafka has a custom binary protocol for producers and consumers. SQL is not directly used in Kafka (though KSQL is a streaming SQL layer built on top).']},
+    {q:'In an ML system, what role does Kafka typically play in the feature pipeline?',
+     opts:['Kafka trains the ML model using streaming gradient descent','Kafka ingests real-time user events (clicks, purchases, searches) and makes them available to feature computation services, which update the feature store that the ML model reads from at serving time','Kafka stores the ML model weights for deployment','Kafka is only used for batch training, not real-time serving'],
+     correct:1,
+     explain:['Kafka is a data transport layer, not a compute layer. Model training happens in separate systems (PyTorch, TensorFlow) on data pulled from Kafka topics or derived feature stores.',null,'A user clicks on a product → the click event is published to Kafka → a stream processing job (Flink/Spark Streaming) consumes it → updates the user\'s real-time features (last 10 clicks, session duration) → writes to the feature store → the recommendation model reads these fresh features at serving time. Without Kafka, the feature pipeline would use polling or batch updates with minutes-old data.','Kafka transports model artifacts in some architectures, but this is not its primary role in ML systems. Model deployment typically uses dedicated systems (Seldon, BentoML, SageMaker endpoints).','Kafka is specifically designed for real-time streaming. Batch data is often loaded separately (from S3/GCS) into training pipelines. Kafka\'s value in ML is specifically the real-time, low-latency event stream.']},
+  ]
+},
+
+{
+  id:'ray', title:'Ray', shortTitle:'Ray', year:2018,
+  authors:'Moritz, Nishihara, Wang, Tumanov, Liaw, Liang et al. · UC Berkeley',
+  venue:'OSDI 2018', category:'Data Systems', prereqs:['spark'],
+  icon:'☀️', tagline:'Distributed Python for AI workloads',
+  lesson:[
+    {h:'The Gap Spark Left',body:`Spark is excellent for data processing — SQL, ETL, batch ML. But it\'s not Python-native, struggles with arbitrary distributed tasks, and doesn\'t support heterogeneous compute (some workers need GPUs, some need CPUs, some need to hold state in memory for RL rollouts).
+
+Ray (UC Berkeley, 2018) fills this gap: a general-purpose distributed computing framework that makes distributing arbitrary Python functions trivial.`},
+    {h:'The Programming Model: Tasks and Actors',body:`Two primitives:
+<ul>
+<li><strong>@ray.remote function:</strong> A stateless task. Call it with .remote() and it runs on any worker in the cluster. ray.get() retrieves the result. Completely parallel with zero boilerplate.</li>
+<li><strong>@ray.remote class (Actor):</strong> A stateful worker that persists state between calls. Used for parameter servers, RL environments, model replicas.</li>
+</ul>`,callout:`The key: ray.remote turns any Python function into a distributed task with one decorator. No need to write serialization, network code, or job scheduling. This dramatically lowers the barrier to distributed ML.`},
+    {h:'The Ray Ecosystem',body:`Ray is the base layer for a rich ecosystem:
+<ul>
+<li><strong>Ray Train:</strong> Distributed model training (PyTorch DDP on Ray)</li>
+<li><strong>Ray Tune:</strong> Hyperparameter search across a cluster</li>
+<li><strong>Ray Serve:</strong> Production model serving with autoscaling</li>
+<li><strong>RLlib:</strong> Distributed reinforcement learning (the framework Waymo uses)</li>
+<li><strong>Anyscale:</strong> The commercial Ray company, valued at $1B+</li>
+</ul>`,callout_green:`Ray is the distributed computing backbone of most large-scale ML pipelines today. OpenAI uses Ray for training. Hugging Face uses it. Spotify, LinkedIn, and Amazon use it. Anyscale commercializes it at $1B+.`}
+  ],
+  questions:[
+    {q:'What problem does Ray solve that Spark cannot?',
+     opts:['Ray processes larger datasets than Spark','Ray enables arbitrary Python functions (including GPU-based deep learning, stateful RL environments, and heterogeneous compute) to be distributed with minimal boilerplate — Spark\'s model is optimized for data transformations, not general computation','Ray is faster for SQL queries','Ray is open-source; Spark requires a commercial license'],
+     correct:1,
+     explain:['Dataset size is determined by cluster size, not the framework. Both Ray and Spark can process petabyte-scale data.',null,'Spark\'s execution model is built around data transformations (DataFrame operations, RDD transformations). It cannot easily express "run a RL environment simulation with 1000 parallel workers where each worker maintains its own state" or "run hyperparameter search across 100 GPU training jobs with early stopping." Ray\'s actor model and remote functions handle these naturally with @ray.remote.','Ray does have a SQL component (Ray Datasets) but SQL performance is not Ray\'s differentiator.','Both Ray and Spark are Apache-licensed open-source projects. Databricks commercializes Spark; Anyscale commercializes Ray.']},
+  ]
+},
+
+// ─── RETRIEVAL & MEMORY TRACK ─────────────────────────────────────────────────
+{
+  id:'faiss', title:'FAISS — Vector Search', shortTitle:'FAISS', year:2017,
+  authors:'Johnson, Douze, Jégou · Meta AI Research',
+  venue:'IEEE TPAMI 2021 (arXiv 2017)', category:'Retrieval & Memory', prereqs:[],
+  icon:'🔎', tagline:'Searching a billion vectors in milliseconds',
+  lesson:[
+    {h:'The Problem: Nearest Neighbor at Scale',body:`Given a query vector (e.g., the embedding of a user\'s question), find the k most similar vectors among a billion stored embeddings. This is the "nearest neighbor search" problem.
+
+Brute force: compute cosine similarity between the query and all 1B vectors. On a single CPU: 1B dot products ≈ 10-100 seconds. For a real-time search engine, unacceptable.
+
+FAISS (Facebook AI Similarity Search) solves this with approximate nearest neighbor (ANN) search — trading a tiny bit of recall for orders-of-magnitude speedup.`},
+    {h:'How FAISS Works: Indexing Strategies',body:`FAISS offers several index types:
+<ul>
+<li><strong>Flat Index:</strong> Exact brute force. Slow but perfect recall. Used for small datasets.</li>
+<li><strong>IVF (Inverted File):</strong> Cluster vectors into groups (k-means). Search only nearby clusters. 10-100× faster, ~95%+ recall.</li>
+<li><strong>PQ (Product Quantization):</strong> Compress vectors to 1/8th size by quantizing subspaces. 8× memory reduction.</li>
+<li><strong>HNSW (Hierarchical Navigable Small World):</strong> Graph-based index. Fastest queries, high recall.</li>
+</ul>`,callout:`FAISS can search 1 billion 128-dimensional vectors in under 1 second on a GPU. This is what makes vector databases possible.`},
+    {h:'The Vector Database Industry',body:`FAISS is the search engine inside every vector database:
+<ul>
+<li><strong>Pinecone:</strong> Managed vector DB, $750M raised</li>
+<li><strong>Weaviate:</strong> Open-source + cloud, $160M raised</li>
+<li><strong>Chroma:</strong> Open-source, the default for LangChain/LlamaIndex dev workflows</li>
+<li><strong>Qdrant:</strong> Rust-based, high performance</li>
+<li><strong>pgvector:</strong> Vector search inside PostgreSQL</li>
+</ul>
+The rise of RAG (Retrieval Augmented Generation) made vector search a first-class infrastructure component. Every LLM application that retrieves relevant context before generating a response depends on FAISS-style search.`}
+  ],
+  questions:[
+    {q:'Why is approximate nearest neighbor (ANN) search used instead of exact nearest neighbor for large-scale vector search?',
+     opts:['ANN is more accurate than exact search','Exact nearest neighbor requires computing similarity against every stored vector — at 1B+ scale this takes seconds per query. ANN methods trade a small recall reduction (finding 95%+ of true neighbors) for 100-1000× speedup','ANN uses less memory than exact search','Exact search requires special GPU hardware unavailable in commodity clouds'],
+     correct:1,
+     explain:['ANN is approximate by definition — it may miss some true nearest neighbors. Exact search finds all true neighbors but is too slow.',null,'A real-time search endpoint has a latency budget of 10-100ms. Exact search over 1B 768-dimensional embeddings requires 1B dot products ≈ several seconds on CPU. IVF-based ANN search touches only ~1% of vectors (the nearest clusters) and returns in milliseconds. For most applications, finding 95-99% of true nearest neighbors is indistinguishable from exact search in downstream quality.',  'ANN with Product Quantization uses LESS memory — that\'s a separate benefit. But the primary motivation for ANN is query speed.','Exact search runs on standard hardware. The issue is latency at scale, not hardware availability.']},
+    {q:'In a RAG (Retrieval-Augmented Generation) system, what is FAISS searching for?',
+     opts:['FAISS searches for the exact words from the user\'s query in a document database','FAISS finds document chunks whose embedding vectors are most similar (in cosine/dot product distance) to the query embedding — enabling semantic search beyond keyword matching','FAISS searches for the model weights that best match the current input','FAISS selects which LLM to use based on the query type'],
+     correct:1,
+     explain:['Exact keyword search is traditional full-text search (Elasticsearch/BM25). FAISS operates on dense embedding vectors, enabling semantic matches like "heart attack" matching "myocardial infarction."',null,'The user\'s question is embedded into a dense vector (e.g., 1536 dimensions using an embedding model). FAISS finds the k stored document chunks whose embeddings are most similar. These semantically relevant chunks are then injected into the LLM prompt as context. This enables the LLM to answer questions about proprietary data it was never trained on — because the relevant information is retrieved at query time.','FAISS searches a vector index, not model weights. Model selection is handled by routing logic, not similarity search.','FAISS doesn\'t select models. It\'s a search library that returns vectors, not model routing logic.']},
+  ]
+},
+
+{
+  id:'rag', title:'Retrieval-Augmented Generation (RAG)', shortTitle:'RAG', year:2020,
+  authors:'Lewis, Perez, Piktus, Peters, Rocktäschel, Stenetorp, Riedel · Meta FAIR + UCL',
+  venue:'NeurIPS 2020', category:'Retrieval & Memory', prereqs:['faiss'],
+  icon:'📚', tagline:'Give LLMs access to external knowledge at query time',
+  lesson:[
+    {h:'The LLM Knowledge Problem',body:`Large language models have a critical limitation: their knowledge is frozen at training time. GPT-4 knows nothing about events after its cutoff date. It cannot access your company\'s internal documents, your customer database, or yesterday\'s news. Fine-tuning to add new knowledge is expensive ($100K+) and must be repeated as data changes.
+
+RAG (Retrieval-Augmented Generation) solves this: retrieve relevant documents at query time, inject them into the prompt, and let the LLM generate answers grounded in retrieved content.`},
+    {h:'The RAG Architecture',body:`Three components:
+<ul>
+<li><strong>Indexing pipeline:</strong> Chunk documents → embed each chunk → store in vector database</li>
+<li><strong>Retrieval:</strong> Embed user query → vector search → retrieve top-k relevant chunks</li>
+<li><strong>Generation:</strong> Inject retrieved chunks into prompt as context → LLM generates answer citing retrieved content</li>
+</ul>`,callout:`RAG is not just about adding context. The LLM must be instructed to use the context (system prompt: "Answer only based on the provided documents"). Without this, the LLM ignores context and hallucinates from its parametric memory.`},
+    {h:'Why Every Enterprise AI App Uses RAG',body:`RAG solves all three major LLM deployment problems:
+<ul>
+<li><strong>Knowledge cutoff:</strong> Retrieval happens at query time — data is always fresh</li>
+<li><strong>Hallucination:</strong> LLM is grounded in retrieved documents — cites sources</li>
+<li><strong>Private data:</strong> Internal docs never go into training — stay in your vector DB</li>
+</ul>
+Glean (ex-Google, $7.2B) is essentially RAG at enterprise scale: embed all Slack messages, Confluence pages, and Google Docs, then retrieve relevant context for any query. That\'s the product.`,callout_green:`RAG → Glean ($7.2B), Perplexity ($21B), every enterprise LLM product. The entire "AI on your data" industry is RAG with a good UI.`}
+  ],
+  questions:[
+    {q:'What problem does RAG solve that fine-tuning cannot?',
+     opts:['RAG produces higher quality text than fine-tuned models','Fine-tuning bakes knowledge into model weights at training time — it\'s expensive, slow, and immediately stale. RAG retrieves knowledge at query time from an always-current external index — handling fresh information without retraining','RAG is faster at inference than fine-tuned models','Fine-tuning requires more data than RAG'],
+     correct:1,
+     explain:['Fine-tuned models can produce very high quality text for their domain. Quality is not the primary distinction.',null,'If your documentation updates daily, fine-tuning a model weekly costs tens of thousands of dollars and introduces a perpetual lag. RAG\'s retrieval index can be updated in minutes (re-embed new documents, add to vector DB). This makes RAG the right architecture for any application where data changes — which is most enterprise applications.','RAG actually adds latency (retrieval step + longer context → more tokens to process). Fine-tuned models can be faster at inference.','Both RAG and fine-tuning require curated datasets. Fine-tuning typically requires thousands of examples; RAG requires documents chunked for retrieval.']},
+    {q:'What is "chunking" in a RAG pipeline and why does chunk size matter?',
+     opts:['Chunking compresses documents to save storage','Documents are split into smaller pieces (chunks) for embedding and retrieval — too large a chunk dilutes the embedding signal; too small loses context that the LLM needs to answer correctly','Chunking encrypts document sections for access control','Chunks are the unit of billing in RAG API services'],
+     correct:1,
+     explain:['Chunking has nothing to do with compression. The original text is preserved; it\'s just split into pieces.',null,'An embedding model produces one vector per input. If you embed an entire 100-page PDF as one vector, that vector must capture everything — the embedding is diluted and retrieval becomes imprecise. Splitting into 200-word chunks means each embedding represents a focused concept. But chunks too small (one sentence) lose surrounding context the LLM needs to generate a coherent answer. Typical optimal chunk size is 256-512 tokens with 20% overlap between adjacent chunks.','Access control is a separate concern. Chunking is about retrieval granularity, not security.','Chunking is a pre-processing step you implement — it\'s not a billing unit in standard RAG APIs.']},
+  ]
+},
+
+// ─── EFFICIENCY TRACK ─────────────────────────────────────────────────────────
+{
+  id:'lora', title:'LoRA — Low-Rank Adaptation', shortTitle:'LoRA', year:2021,
+  authors:'Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Chen · Microsoft Research',
+  venue:'ICLR 2022', category:'Efficiency', prereqs:['resnet'],
+  icon:'🪶', tagline:'Fine-tune a 70B model for $20',
+  lesson:[
+    {h:'The Fine-Tuning Problem',body:`A pre-trained model like LLaMA-70B has 70 billion parameters. Full fine-tuning updates all 70B parameters — requiring 8× A100 GPUs, $50K+ in compute, and weeks of training. This makes customizing LLMs inaccessible to most organizations.
+
+LoRA (Low-Rank Adaptation) fine-tunes a fraction of the parameters by making a key observation: the weight updates during fine-tuning are low-rank — they can be approximated by small matrices.`},
+    {h:'The Math: Low-Rank Decomposition',body:`For a weight matrix W of size d×k (e.g., 4096×4096 = 16M parameters):
+
+Instead of updating W directly, add a low-rank update: W' = W + BA
+
+Where B is d×r and A is r×k, and r << d (rank, e.g., r=8).
+
+Parameters in update: r×d + r×k = r×(d+k) = 8×8192 = 65,536 — instead of 16,777,216. That\'s a 256× reduction.
+
+During training: W is frozen. Only A and B are updated. At inference: merge W + BA back into W — zero runtime overhead.`,callout:`Only 0.1-1% of parameters are trained. Yet fine-tuning quality approaches full fine-tuning for most tasks. A consumer GPU (RTX 4090, 24GB VRAM) can fine-tune a 7B model with LoRA.`},
+    {h:'QLoRA and Democratization',body:`QLoRA (Dettmers et al., 2023) combined LoRA with 4-bit quantization of the frozen base model — the base model weights are compressed to 4 bits (from 16), reducing memory by 4×. With QLoRA:
+<ul>
+<li>Fine-tune LLaMA-65B on a single 48GB GPU</li>
+<li>Fine-tune a 7B model on a consumer RTX 3090 (24GB)</li>
+<li>Full fine-tuning cost: ~$100K. QLoRA cost: ~$20</li>
+</ul>
+This democratized LLM fine-tuning. Hugging Face PEFT library made LoRA accessible with 5 lines of code.`,callout_green:`LoRA + QLoRA → every organization can fine-tune their own LLM on domain data. The fine-tuning API economy (Together AI, Replicate, Modal) is built on making this even easier. This is why open-source LLMs (LLaMA) became competitive with proprietary ones.`}
+  ],
+  questions:[
+    {q:'Why does LoRA work despite updating only 0.1% of model parameters?',
+     opts:['LoRA fine-tunes the most important 0.1% of parameters while skipping the rest','The hypothesis is that weight updates during fine-tuning have low intrinsic rank — the change in weights lives in a low-dimensional subspace, which LoRA\'s BA decomposition captures accurately','LoRA uses a smarter optimizer that achieves the same result with fewer gradient steps','0.1% of 70B parameters is still 70M — enough parameters to express any function'],
+     correct:1,
+     explain:['LoRA doesn\'t select which specific weights are most important — it adds a low-rank update alongside ALL attention weight matrices uniformly.',null,'The key empirical finding from the LoRA paper: the rank of weight update matrices (ΔW) during fine-tuning is very low — typically rank 1-8 is sufficient to capture the task-specific changes. This suggests that adapting a model to a new task requires changing a relatively small "direction" in weight space, not all 70B weights independently. LoRA explicitly parameterizes this low-rank structure.','LoRA uses the same optimizers (Adam) as full fine-tuning. The efficiency comes from the number of parameters, not optimizer improvement.',  '70M parameters is indeed large, but this answer misses the point. The question is WHY it works — the mathematical reason is the low-rank hypothesis, not just parameter count.']},
+    {q:'What is "rank" in the context of LoRA, and how does choosing a higher rank affect the trade-off?',
+     opts:['Rank refers to the model\'s position in a leaderboard — higher rank means better performance','Rank (r) determines the size of the LoRA matrices (B is d×r, A is r×k) — higher rank means more trainable parameters and more expressive updates, but more memory and compute; lower rank is more efficient but may underfit complex tasks','Rank is the number of training epochs used','Rank determines how quickly the model converges during training'],
+     correct:1,
+     explain:['This uses "rank" in a colloquial sense. In linear algebra, rank is the dimensionality of the matrix\'s column space.',null,'With r=1, you train the minimal possible update — a single "direction" of change. With r=64, you can express richer adaptations. In practice, r=4 to r=16 suffices for most fine-tuning tasks (instruction following, domain adaptation). r=64+ is used for complex style transfer or knowledge injection. The sweet spot balances expressiveness against compute/memory cost.','LoRA rank is a model architecture hyperparameter, not a training schedule parameter.','Convergence speed depends on learning rate and optimizer, not LoRA rank.']},
+  ]
+},
+
+{
+  id:'flashattn', title:'FlashAttention', shortTitle:'FlashAttention', year:2022,
+  authors:'Dao, Fu, Ermon, Rudra, Ré · Stanford / Together AI',
+  venue:'NeurIPS 2022', category:'Efficiency', prereqs:['lora'],
+  icon:'⚡', tagline:'The algorithmic breakthrough that made long contexts possible',
+  lesson:[
+    {h:'The Memory Bottleneck in Attention',body:`Standard attention computes a N×N matrix (N = sequence length) storing attention scores between all token pairs. For N=8192 tokens: 8192² = 67 million entries × 4 bytes = 256MB just for the attention matrix — just for one layer, one head, one example. With 96 layers and large batches, this exceeds GPU memory for long sequences.
+
+The GPU memory bottleneck (not compute) was limiting context window size. FlashAttention fixed this by rethinking HOW attention is computed.`},
+    {h:'IO-Aware Attention: Tiling',body:`FlashAttention\'s insight: standard attention writes the entire N×N attention matrix to GPU HBM (high-bandwidth memory), then reads it back for the softmax and value computation. This memory transfer is the bottleneck.
+
+Solution: compute attention in tiles that fit in the fast SRAM (on-chip memory, 100× faster than HBM). The full N×N matrix is never materialized.
+
+Algorithm: divide Q, K, V into blocks. For each block of Q, iterate over blocks of K and V, accumulating the softmax statistics incrementally. The result is mathematically identical to standard attention but without ever writing the full attention matrix to HBM.`,callout:`FlashAttention is 2-4× faster than standard attention and uses O(N) memory instead of O(N²). This enabled context windows to scale from 2K tokens to 128K+ tokens.`},
+    {h:'What This Enabled',body:`FlashAttention directly enabled:
+<ul>
+<li><strong>Long contexts:</strong> 128K tokens (Claude), 1M tokens (Gemini 1.5 Pro) became feasible</li>
+<li><strong>Faster training:</strong> Most LLM training today uses FlashAttention as default</li>
+<li><strong>Multi-head parallelism:</strong> FlashAttention-2 parallelizes across heads and sequence length</li>
+</ul>
+
+Tri Dao (FlashAttention author) co-founded Together AI (AI cloud for open-source models, ~$1B valuation). Every major LLM training framework (HuggingFace, Megatron-LM, NanoGPT) uses FlashAttention as default.`,callout_green:`FlashAttention is the reason you can have a 1-hour meeting transcript in one Claude context window. Before it, context was limited by GPU memory, not model capability.`}
+  ],
+  questions:[
+    {q:'FlashAttention achieves the same mathematical result as standard attention but is 2-4× faster. How?',
+     opts:['It approximates attention with a sparser matrix','It moves the attention computation to CPU to free GPU memory','It restructures the computation to avoid writing the full N×N attention matrix to GPU high-bandwidth memory — tiling operations to use fast on-chip SRAM instead','It reduces the number of attention heads'],
+     correct:2,
+     explain:['FlashAttention is exact — not an approximation. Sparse attention (Longformer, BigBird) is a different approach that changes the attention pattern. FlashAttention computes full attention.',null,'Moving computation to CPU would be dramatically slower, not faster. The bottleneck is GPU memory bandwidth, and the solution is staying on GPU but using faster on-chip memory.','The GPU has two memory types: fast on-chip SRAM (~10-20MB per streaming multiprocessor, very fast) and off-chip HBM (~40-80GB, 10-100× slower). Standard attention writes the N×N matrix to HBM, then reads it back. FlashAttention tiles the computation so intermediate results stay in SRAM. The final result is identical but the expensive HBM round-trips are eliminated.','Number of attention heads is a model architecture choice, not something FlashAttention changes. It works with any number of heads.']},
+    {q:'Why does the O(N²) memory complexity of standard attention limit context window size?',
+     opts:['O(N²) compute means longer sequences take exponentially more time','The N×N attention matrix must fit in GPU memory — at sequence length 8192, this is 256MB per layer per batch element. With 96 layers and large batches, total GPU memory is exceeded','O(N²) requires special hardware not available in consumer GPUs','Standard attention is limited by the vocabulary size, not sequence length'],
+     correct:1,
+     explain:['O(N²) compute (not just memory) does increase training time, but this is separate from the memory wall. The memory issue is what creates the hard limit on sequence length.',null,'At 8192 tokens, the attention score matrix for one head is 8192² = 67M fp16 values = 134MB. Multiply by 96 layers × number of heads × batch size = tens to hundreds of GB. An A100 has 80GB of HBM. The attention matrix alone can exhaust GPU memory, preventing training with longer sequences. FlashAttention\'s O(N) memory requirement removes this constraint — only tiles of the matrix exist in memory at any time.','Both standard attention and FlashAttention run on the same consumer and data center GPUs. Hardware type is not the constraint.','Vocabulary size affects embedding table size but not attention matrix size. Sequence length is the variable that creates the N×N bottleneck.']},
+  ]
+},
+
+// ─── OPEN SOURCE / ECOSYSTEM TRACK ───────────────────────────────────────────
+{
+  id:'ppo', title:'PPO — Proximal Policy Optimization', shortTitle:'PPO', year:2017,
+  authors:'Schulman, Wolski, Dhariwal, Radford, Klimov · OpenAI',
+  venue:'arXiv 2017', category:'RL & Alignment', prereqs:['qlearning'],
+  icon:'🎯', tagline:'The RL algorithm inside ChatGPT',
+  lesson:[
+    {h:'Why Policy Gradient Needed Improvement',body:`Basic policy gradient (REINFORCE) works but is unstable: the gradient can be huge when a batch of episodes happened to get high rewards, causing a catastrophic policy update that destroys months of training. This is like a student who had a lucky exam and decides to study nothing else — overreacting to one data point.
+
+Trust Region Policy Optimization (TRPO, 2015) added a constraint: don\'t move the policy too far from its current version. But TRPO required computing second-order derivatives — slow and complex to implement.
+
+PPO achieves the same stability guarantee as TRPO with first-order gradients — simple, fast, and the default RL algorithm for the past 7 years.`},
+    {h:'The Clipped Objective',body:`PPO\'s key innovation: clip the probability ratio between the new and old policy.
+
+r_t(θ) = π_θ(a|s) / π_θ_old(a|s)  (how much more/less likely is this action under the new policy?)
+
+L^CLIP = E[min(r_t · A_t, clip(r_t, 1-ε, 1+ε) · A_t)]
+
+If r_t > 1+ε: the action became too much more likely — clip it. Stop the update here.
+If r_t < 1-ε: the action became too much less likely — clip it.
+
+A_t = advantage (did this action lead to better-than-average reward?). Update only happens within the "trust region" defined by ε (typically 0.2).`,callout:`PPO is default because it\'s simple (no second-order derivatives, no complex constraint), stable (clipping prevents large updates), and general (same algorithm works for games, robotics, RLHF, and chip design).`},
+    {h:'PPO in RLHF: Training ChatGPT',body:`The RLHF pipeline:
+<ol>
+<li>Pre-train GPT on internet text</li>
+<li>Collect human preferences: show 2 model responses, human picks the better one</li>
+<li>Train a reward model to predict human preferences from response pairs</li>
+<li>Use PPO to fine-tune the LLM to maximize the reward model\'s score</li>
+</ol>
+
+In this context: the LLM is the "policy" (maps prompt → response). The reward model score is the "reward." PPO updates the LLM to produce responses that the reward model scores highly — i.e., responses humans prefer. A KL divergence penalty keeps the LLM from drifting too far from the original pre-trained model (prevents reward hacking).`,callout_green:`PPO → RLHF → InstructGPT → ChatGPT. The same RL algorithm that OpenAI used to train Dota 2 bots (OpenAI Five) is what makes ChatGPT follow instructions and refuse harmful requests.`}
+  ],
+  questions:[
+    {q:'What specific problem does PPO\'s clipping solve in RL training?',
+     opts:['Clipping prevents the reward from being too large','Clipping prevents the policy update from being too large — large updates can destroy the policy if the gradient happens to be in the wrong direction for that batch','Clipping is used to remove outlier experiences from the replay buffer','Clipping reduces GPU memory usage during training'],
+     correct:1,
+     explain:['Reward clipping (capping reward magnitude) is a separate technique used in some environments like Atari. PPO\'s clipping is on the policy probability ratio.',null,'If a batch of rollouts happened to get high rewards due to luck (not because the policy improved), the raw gradient can be enormous. Without clipping, the policy update can be so large it destroys the previously learned policy — the model forgets everything useful. PPO clips the probability ratio to [1-ε, 1+ε], ensuring no single update moves the policy too far regardless of the gradient magnitude.','Replay buffers are a separate concept used in Q-Learning, not standard PPO. PPO is on-policy and doesn\'t use a replay buffer.','Clipping is a gradient-level operation that doesn\'t affect memory allocation.']},
+    {q:'In RLHF, what is the "reward model" and what data is it trained on?',
+     opts:['The reward model is a simulator of the environment that generates synthetic training data','The reward model is trained on human preference data (human choices between pairs of model responses) to predict which responses humans prefer — it becomes a proxy for human judgment during PPO training','The reward model is a pre-trained LLM that scores responses on grammatical correctness','The reward model is the same as the language model but run in reverse'],
+     correct:1,
+     explain:['A simulator generates new states from actions. The reward model doesn\'t generate new text — it scores text that the policy (LLM) generates.',null,'Collecting human preferences at scale for every PPO gradient step is impossible — a human cannot label millions of rollouts per second. The reward model is trained offline on thousands of preference examples (response A is better than response B, as judged by humans). It then acts as a learned proxy: for every response the LLM generates during PPO, the reward model scores it in milliseconds — approximating what humans would prefer. This is the key scalability trick.','Grammar correction was not the training objective. The reward model is trained on holistic human preferences — helpfulness, harmlessness, and honesty — not any single linguistic property.','The reward model is a separate neural network from the language model. It takes a prompt+response pair as input and outputs a scalar score.']},
+  ]
+},
+
+{
+  id:'mamba', title:'Mamba / State Space Models', shortTitle:'Mamba/SSM', year:2023,
+  authors:'Gu, Dao · Carnegie Mellon + Stanford → Together AI',
+  venue:'arXiv 2023', category:'Efficiency', prereqs:['flashattn'],
+  icon:'🐍', tagline:'The first serious alternative to the Transformer',
+  lesson:[
+    {h:'The Transformer\'s Fundamental Scaling Problem',body:`Transformers have quadratic attention complexity: O(N²) in sequence length N. Even with FlashAttention making this tractable, the memory and compute still scale quadratically. A 1M token context window with standard attention requires computing a 1M×1M matrix — eventually hitting physical limits.
+
+State Space Models (SSMs) offer O(N) linear scaling. Each token is processed through a structured recurrence — like an RNN but with mathematical properties that allow parallel training.`},
+    {h:'How SSMs Work: Continuous-Time State Space',body:`SSMs come from control theory — a mathematical framework for modeling dynamical systems. A continuous-time SSM:
+
+h\'(t) = Ah(t) + Bx(t) (hidden state evolves based on itself and input)
+y(t) = Ch(t) + Dx(t) (output from hidden state)
+
+Discretized for sequences, this becomes a linear recurrence that can be computed as a convolution (parallel during training) or recurrently (fast inference, O(1) per token).
+
+Mamba adds "selective" SSMs: the matrices A, B, C are input-dependent (unlike standard SSMs where they\'re fixed). This lets the model selectively remember or forget information based on content.`,callout:`Mamba achieves: O(N) memory and compute, constant-time per-token inference (no key-value cache growing with context), and matches or exceeds transformer quality on language modeling benchmarks up to 3B parameters.`},
+    {h:'Where Mamba Stands in 2026',body:`Mamba is not yet a transformer replacement at frontier scale. Empirically:
+<ul>
+<li>Matches transformers on language modeling at 1-3B parameters</li>
+<li>Unclear if it maintains this at 70B+ parameter scale</li>
+<li>Struggles with in-context learning / few-shot tasks relative to transformers</li>
+<li>Better for very long sequences (genomics, audio, time series) where O(N²) is prohibitive</li>
+</ul>
+Hybrid models (Jamba: transformer + Mamba layers) emerged as a practical approach — using transformers for their expressiveness and Mamba for long-context efficiency.`,callout_green:`Mamba is the strongest signal that the transformer monopoly may end. The architecture question is open. Albert Gu and Tri Dao (FlashAttention) both at Together AI — the two people most likely to crack transformer-alternative architectures are at one company.`}
+  ],
+  questions:[
+    {q:'What is the computational advantage of SSMs/Mamba over Transformers, and in what setting is this advantage most relevant?',
+     opts:['SSMs are always faster than transformers for all tasks','SSMs scale linearly O(N) with sequence length vs. O(N²) for attention — making them dramatically more efficient for very long sequences (100K+ tokens) in genomics, audio, and video','SSMs require less training data than transformers','SSMs are better because they use convolutions which GPUs are optimized for'],
+     correct:1,
+     explain:['For short sequences (< 2K tokens), transformers with FlashAttention are faster. The SSM advantage only manifests at long sequence lengths.',null,'At 1M tokens, transformer attention requires 1M² = 10¹² operations per layer per head. An SSM processes each token in O(1) — 10¹² vs 10⁶ operations. For protein sequences (20K amino acids), long legal documents, audio at 44KHz, and genomic sequences, this difference is the boundary between feasible and infeasible.','Training data requirements are similar. Architecture doesn\'t change the data efficiency (though selective SSMs may require more data to match transformer quality).','Convolutions are indeed GPU-friendly, and SSMs can be trained as convolutions. But the key advantage over transformers is algorithmic complexity scaling, not convolution efficiency.']},
+    {q:'What makes "selective" SSMs (Mamba) more powerful than earlier fixed-parameter SSMs?',
+     opts:['Selective SSMs process tokens in random order for better generalization','The state transition matrices are input-dependent — the model can selectively remember or forget information based on content, not just position. Fixed SSMs treat all inputs identically.','Selective SSMs use a larger hidden state dimension','Selective means the model only processes tokens it selects as important'],
+     correct:1,
+     explain:['Token order matters in SSMs — changing the order changes the computation. Processing is sequential in the recurrent form.',null,'In a fixed SSM, the same transition matrix A is applied regardless of input content — it\'s a fixed dynamical system with no content-awareness. In Mamba, A, B, C are functions of the current input x_t. This means the model can decide "this is a key piece of information, update my hidden state strongly" vs. "this is punctuation, barely update my state." This content-aware selectivity is analogous to attention\'s ability to focus on relevant tokens.','Hidden state dimension is a hyperparameter separate from the selectivity property.','All tokens are processed — "selective" refers to selective state updates, not token filtering.']},
+  ]
+},
+
+];
+
+// ═══════════════════════════════════════════════════════
+const TRACKS = [
+  {label:'Foundations', ids:['resnet','pytorch','qlearning']},
+  {label:'Generative Models', ids:['vae','gan','diffusion','clip']},
+  {label:'Data Systems', ids:['spark','kafka','ray']},
+  {label:'Retrieval & Memory', ids:['faiss','rag']},
+  {label:'Efficiency & Scale', ids:['lora','flashattn','mamba']},
+  {label:'RL & Alignment', ids:['ppo']},
+];
+
+let state = {
+  completed: JSON.parse(localStorage.getItem('pa2_completed') || '{}'),
+  currentPaper: null, currentTab: 'learn', quizState: null
+};
+function saveState(){ localStorage.setItem('pa2_completed', JSON.stringify(state.completed)); }
+function resetProgress(){ if(!confirm('Reset all progress?')) return; state.completed={}; state.currentPaper=null; saveState(); renderTree(); showHome(); updateProgressBar(); }
+function isPaperUnlocked(p){ return p.prereqs.every(pid => state.completed[pid]); }
+
+function renderTree(){
+  const tree=document.getElementById('tree'); tree.innerHTML='';
+  const pm={}; PAPERS.forEach(p=>pm[p.id]=p);
+  TRACKS.forEach(track=>{
+    const lbl=document.createElement('div'); lbl.className='track-label'; lbl.textContent=track.label; tree.appendChild(lbl);
+    track.ids.forEach(pid=>{
+      const paper=pm[pid]; if(!paper) return;
+      const unlocked=isPaperUnlocked(paper), completed=!!state.completed[pid], active=state.currentPaper?.id===pid;
+      const node=document.createElement('div');
+      node.className='paper-node'+(completed?' completed':'')+(active?' active':'')+(!unlocked?' locked':'');
+      node.innerHTML=`<div class="node-icon">${completed?'✓':paper.icon}</div><div class="node-text"><div class="node-title">${paper.shortTitle}</div><div class="node-year">${paper.year} · ${paper.category}</div></div>`;
+      if(unlocked) node.onclick=()=>openPaper(paper);
+      tree.appendChild(node);
+    });
+  });
+}
+function updateProgressBar(){
+  const total=PAPERS.length, done=Object.keys(state.completed).length;
+  document.getElementById('progress-label').textContent=`${done} of ${total} papers completed`;
+  document.getElementById('progress-fill').style.width=`${(done/total)*100}%`;
+}
+function openPaper(paper){
+  state.currentPaper=paper; state.currentTab='learn'; state.quizState=null;
+  document.getElementById('paper-tag').textContent=paper.category;
+  document.getElementById('paper-title-main').textContent=paper.title;
+  document.getElementById('paper-meta').textContent=`${paper.authors} · ${paper.venue}`;
+  renderTree(); showTab('learn');
+}
+function showHome(){
+  state.currentPaper=null;
+  document.getElementById('paper-tag').textContent='Select a paper';
+  document.getElementById('paper-title-main').textContent='Welcome to Paper Academy II';
+  document.getElementById('paper-meta').textContent='';
+  document.getElementById('tab-learn').classList.add('active');
+  document.getElementById('tab-quiz').classList.remove('active');
+  const unlocked=PAPERS.filter(p=>isPaperUnlocked(p)&&!state.completed[p.id]);
+  const done=Object.keys(state.completed).length;
+  document.getElementById('content').innerHTML=`<div class="fade-in" style="max-width:700px">
+    <h2 style="font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:8px">Beyond Google: The Rest of AI</h2>
+    <p style="color:#888;font-size:0.85rem;line-height:1.7;margin-bottom:8px">The parallel universe of research that built Databricks, Midjourney, ChatGPT, Pinecone, and the open-source ML ecosystem — none of it from Google.</p>
+    <p style="color:#555;font-size:0.75rem;margin-bottom:20px">Progress: ${done}/${PAPERS.length} completed</p>
+    ${unlocked.length>0?`<div style="font-size:0.72rem;color:#FF6D00;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Ready to learn</div><div class="start-grid">${unlocked.map(p=>`<div class="start-card" onclick="openPaper(PAPERS.find(x=>x.id==='${p.id}'))"><div class="sc-year">${p.year} · ${p.category}</div><div class="sc-title">${p.icon} ${p.shortTitle}</div><div class="sc-desc">${p.tagline}</div></div>`).join('')}</div>`
+    :`<div class="start-grid">
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='resnet'))"><div class="sc-year">2015 · Foundations</div><div class="sc-title">🏗️ ResNet</div><div class="sc-desc">How to train a 1,000-layer network</div></div>
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='pytorch'))"><div class="sc-year">2016 · Foundations</div><div class="sc-title">🔥 PyTorch</div><div class="sc-desc">The framework that beat TensorFlow</div></div>
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='spark'))"><div class="sc-year">2012 · Data Systems</div><div class="sc-title">⚡ Spark</div><div class="sc-desc">In-memory computing → Databricks</div></div>
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='kafka'))"><div class="sc-year">2011 · Data Systems</div><div class="sc-title">📨 Kafka</div><div class="sc-desc">Real-time streaming at LinkedIn</div></div>
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='qlearning'))"><div class="sc-year">1992 · Foundations</div><div class="sc-title">🎮 RL Foundations</div><div class="sc-desc">Teaching agents to maximize reward</div></div>
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='faiss'))"><div class="sc-year">2017 · Retrieval</div><div class="sc-title">🔎 FAISS</div><div class="sc-desc">Billion-scale vector search</div></div>
+    </div>`}
+  </div>`;
+}
+function showTab(tab){
+  state.currentTab=tab;
+  document.getElementById('tab-learn').classList.toggle('active',tab==='learn');
+  document.getElementById('tab-quiz').classList.toggle('active',tab==='quiz');
+  if(!state.currentPaper){showHome();return;}
+  if(tab==='learn') renderLesson(); else renderQuiz();
+}
+function renderLesson(){
+  const p=state.currentPaper;
+  let html=`<div class="fade-in" style="max-width:700px">
+    <div class="origin-badge">Origin: ${p.authors.split('·').pop().trim()}</div>`;
+  p.lesson.forEach(sec=>{
+    html+=`<div class="lesson-section"><h3>${sec.h}</h3><p>${sec.body}</p>`;
+    if(sec.callout) html+=`<div class="callout">${sec.callout}</div>`;
+    if(sec.callout_green) html+=`<div class="callout green">${sec.callout_green}</div>`;
+    if(sec.callout_amber) html+=`<div class="callout amber">${sec.callout_amber}</div>`;
+    html+=`</div>`;
+  });
+  const done=!!state.completed[p.id];
+  html+=`<div style="margin-top:24px;padding:16px;background:#16213E;border-radius:10px;border:1px solid #2a2a4a;display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:0.82rem;color:#888;">${done?'✓ Completed — quiz passed':'Ready to test your understanding?'}</span>
+    <button onclick="showTab('quiz')" style="padding:9px 20px;background:${done?'#FFAB0022':'#FF6D00'};color:${done?'#FFAB00':'#fff'};border:${done?'1px solid #FFAB0044':'none'};border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer;">
+      ${done?'Retake Quiz':'Take Quiz →'}
+    </button>
+  </div></div>`;
+  document.getElementById('content').innerHTML=html;
+}
+function renderQuiz(){
+  const p=state.currentPaper;
+  if(!state.quizState) state.quizState={current:0,passed:[],total:p.questions.length};
+  const qs=state.quizState;
+  if(qs.current>=qs.total){renderCompletion();return;}
+  const q=p.questions[qs.current];
+  let dots='';
+  for(let i=0;i<qs.total;i++) dots+=`<div class="qp-dot ${i<qs.current?'done':i===qs.current?'current':''}"></div>`;
+  const letters=['A','B','C','D'];
+  let opts=q.opts.map((o,i)=>`<button class="option" id="opt-${i}" onclick="selectOption(${i})"><div class="option-letter">${letters[i]}</div><div class="option-text">${o}</div></button>`).join('');
+  document.getElementById('content').innerHTML=`<div id="quiz-wrap" class="fade-in" style="max-width:680px">
+    <div class="quiz-progress">${dots}</div>
+    <div class="question-card">
+      <div class="question-num">Question ${qs.current+1} of ${qs.total}</div>
+      <div class="question-text">${q.q}</div>
+      <div class="options" id="options-wrap">${opts}</div>
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">${qs.current+1<qs.total?'Next Question →':'See Results →'}</button>
+    </div>
+  </div>`;
+}
+function selectOption(idx){
+  const p=state.currentPaper, q=p.questions[state.quizState.current];
+  document.querySelectorAll('.option').forEach(o=>{o.classList.add('disabled');o.onclick=null;});
+  const fb=document.getElementById('feedback'), nb=document.getElementById('next-btn');
+  if(idx===q.correct){
+    document.getElementById(`opt-${idx}`).classList.add('selected-right');
+    fb.className='feedback right'; fb.innerHTML=`<strong>Correct.</strong> ${q.explain[idx]||'That\'s the key insight.'}`;
+    state.quizState.passed.push(true);
+  } else {
+    document.getElementById(`opt-${idx}`).classList.add('selected-wrong');
+    document.getElementById(`opt-${q.correct}`).classList.add('revealed-right');
+    fb.className='feedback wrong'; fb.innerHTML=`<strong>Not quite.</strong> ${q.explain[idx]}`;
+    state.quizState.passed.push(false);
+  }
+  nb.style.display='block';
+  nb.textContent=state.quizState.current+1<state.quizState.total?'Next Question →':'See Results →';
+}
+function nextQuestion(){ state.quizState.current++; renderQuiz(); }
+function renderCompletion(){
+  const p=state.currentPaper, qs=state.quizState;
+  const correct=qs.passed.filter(Boolean).length, total=qs.total, passed=correct===total;
+  if(passed&&!state.completed[p.id]){ state.completed[p.id]=true; saveState(); renderTree(); updateProgressBar(); }
+  const newlyUnlocked=PAPERS.filter(np=>np.prereqs.includes(p.id)&&np.prereqs.every(pid=>state.completed[pid])&&!state.completed[np.id]);
+  const sc=passed?'#FFAB00':correct>=total*0.6?'#FF6D00':'#FF5252';
+  let html=`<div class="fade-in" style="max-width:600px">
+    <div style="background:#16213E;border:1px solid ${sc}44;border-radius:12px;padding:32px;text-align:center;margin-bottom:24px;">
+      <div style="font-size:3rem;font-weight:900;color:${sc}">${correct}/${total}</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#fff;margin:8px 0">${passed?'Paper completed!':correct>=2?'Good effort — review and retry':'Keep studying and retry'}</div>
+      <div style="font-size:0.82rem;color:#888;margin-bottom:20px">${passed?p.title+' marked complete.':'Get all questions correct to unlock next papers.'}</div>`;
+  if(passed&&newlyUnlocked.length>0){
+    html+=`<div style="margin-bottom:16px"><div style="font-size:0.72rem;color:#FFAB00;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Unlocked</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+    ${newlyUnlocked.map(np=>`<span style="background:#FFAB0011;border:1px solid #FFAB0044;color:#FFAB00;padding:5px 14px;border-radius:20px;font-size:0.8rem;cursor:pointer" onclick="openPaper(PAPERS.find(p=>p.id==='${np.id}'))">${np.icon} ${np.shortTitle}</span>`).join('')}</div></div>`;
+  }
+  html+=`<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <button onclick="state.quizState=null;renderQuiz()" style="padding:9px 18px;background:#16213E;color:#ccc;border:1px solid #2a2a4a;border-radius:7px;font-size:0.8rem;cursor:pointer">Retry Quiz</button>
+    <button onclick="showTab('learn')" style="padding:9px 18px;background:#FF6D00;color:#fff;border:none;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer">Back to Lesson</button>
+    ${passed&&newlyUnlocked.length>0?`<button onclick="openPaper(PAPERS.find(p=>p.id==='${newlyUnlocked[0].id}'))" style="padding:9px 18px;background:#FFAB00;color:#000;border:none;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer">Next Paper →</button>`:''}
+  </div></div>`;
+  html+=`<div style="margin-top:20px"><div style="font-size:0.75rem;color:#555;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">Review</div>`;
+  p.questions.forEach((q,i)=>{
+    const ok=qs.passed[i];
+    html+=`<div style="background:#16213E;border:1px solid ${ok?'#FFAB0022':'#FF525222'};border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">
+      <span style="color:${ok?'#FFAB00':'#FF5252'};font-size:1rem;flex-shrink:0">${ok?'✓':'✗'}</span>
+      <span style="font-size:0.8rem;color:#aaa;line-height:1.5">${q.q}</span></div>`;
+  });
+  html+=`</div></div>`;
+  document.getElementById('content').innerHTML=html;
+}
+window.PAPERS=PAPERS;
+renderTree(); updateProgressBar(); showHome();
+</script>
+<!-- Cross-device progress sync -->
+<script>
+(function(){
+  var SU='https://gbkhkbfbarsnpbdkxzii.supabase.co';
+  var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+  var MOD='pa2';
+  var LSK='pa2_completed';
+  var FMT='object';
+
+  function getIds(){
+    var raw=localStorage.getItem(LSK);
+    if(!raw) return [];
+    try{
+      var p=JSON.parse(raw);
+      if(Array.isArray(p)) return p;
+      return Object.keys(p).filter(function(k){return p[k];});
+    }catch(e){return [];}
+  }
+
+  function push(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    var ids=getIds();
+    if(!ids.length) return;
+    fetch(SU+'/rest/v1/academy_progress',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({email:email,module:MOD,completed:ids,updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }
+
+  var _orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    _orig.call(this,k,v);
+    if(k===LSK) push();
+  };
+
+  window.addEventListener('load',function(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    fetch(SU+'/rest/v1/academy_progress?email=eq.'+encodeURIComponent(email)+'&module=eq.'+MOD+'&select=completed',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(!rows||!rows[0]||!rows[0].completed||!rows[0].completed.length) return;
+      var remote=rows[0].completed;
+      var raw=localStorage.getItem(LSK);
+      var merged;
+      if(FMT==='object'){
+        merged=raw?JSON.parse(raw):{};
+        remote.forEach(function(id){merged[id]=true;});
+        _orig.call(localStorage,LSK,JSON.stringify(merged));
+      } else {
+        var local=raw?JSON.parse(raw):[];
+        var s=new Set(local);
+        remote.forEach(function(id){s.add(id);});
+        _orig.call(localStorage,LSK,JSON.stringify(Array.from(s)));
+      }
+      if(typeof renderTree==='function') renderTree();
+      if(typeof updateProgressBar==='function') updateProgressBar();
+      if(typeof render==='function') render();
+    }).catch(function(){});
+  });
+
+  var btn=document.createElement('a');
+  btn.href='index.html';
+  btn.innerHTML='&#8592; Menu';
+  btn.style.cssText='position:fixed;top:10px;left:10px;z-index:9999;background:#16213E;color:#7C4DFF;border:1px solid #7C4DFF44;padding:5px 12px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;opacity:0.8;transition:opacity 0.2s';
+  btn.onmouseover=function(){this.style.opacity='1';};
+  btn.onmouseout=function(){this.style.opacity='0.8';};
+  document.body.appendChild(btn);
+})();
+</script>
+</body>
+</html>

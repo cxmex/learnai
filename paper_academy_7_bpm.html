@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Academy VII — BPM + Agents</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0F0F23; color: #E0E0E0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+  #sidebar { width: 300px; min-width: 300px; background: #0A0A1A; border-right: 1px solid #1A1A3A; display: flex; flex-direction: column; overflow: hidden; }
+  #sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid #1A1A3A; }
+  #sidebar-header h1 { font-size: 13px; font-weight: 700; color: #1E88E5; letter-spacing: 0.08em; text-transform: uppercase; }
+  #sidebar-header p { font-size: 11px; color: #666; margin-top: 4px; }
+  #badge { display: inline-block; margin-top: 8px; background: #0A0A1A; border: 1px solid #1E88E5; border-radius: 20px; padding: 3px 10px; font-size: 11px; color: #1E88E5; }
+  #sidebar-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .track-label { font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 16px 4px; }
+  .paper-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; cursor: pointer; transition: background 0.15s; border-left: 3px solid transparent; }
+  .paper-item:hover { background: #12122A; }
+  .paper-item.active { background: #16162E; border-left-color: #1E88E5; }
+  .paper-item.locked { opacity: 0.4; cursor: not-allowed; }
+  .paper-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .paper-icon.done { background: #1E88E5; color: white; }
+  .paper-icon.unlocked { background: #1A1A3A; color: #1E88E5; border: 1px solid #1E88E5; }
+  .paper-icon.locked-icon { background: #111; color: #444; border: 1px solid #333; }
+  .paper-meta { flex: 1; min-width: 0; }
+  .paper-title { font-size: 12px; font-weight: 600; color: #CCC; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .paper-sub { font-size: 10px; color: #555; margin-top: 2px; }
+
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #topbar { background: #0D0D20; border-bottom: 1px solid #1A1A3A; padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
+  #topbar h2 { font-size: 15px; font-weight: 700; color: #E0E0E0; flex: 1; }
+  .tag { font-size: 10px; background: #0A0A2A; color: #1E88E5; border: 1px solid #1E88E533; border-radius: 4px; padding: 2px 8px; }
+  #content { flex: 1; overflow-y: auto; padding: 32px; max-width: 860px; }
+
+  #welcome { text-align: center; padding: 60px 20px; }
+  #welcome h2 { font-size: 28px; font-weight: 800; color: #1E88E5; margin-bottom: 12px; }
+  #welcome p { color: #888; font-size: 14px; line-height: 1.7; max-width: 560px; margin: 0 auto 32px; }
+  .start-btn { display: inline-block; margin: 6px; background: #1E88E522; border: 1px solid #1E88E5; color: #1E88E5; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .start-btn:hover { background: #1E88E544; }
+  .welcome-stats { display: flex; gap: 32px; justify-content: center; margin-top: 48px; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 32px; font-weight: 800; color: #1E88E5; }
+  .stat-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  #tabs { display: flex; border-bottom: 1px solid #1A1A3A; background: #0D0D20; padding: 0 24px; }
+  .tab { padding: 10px 20px; font-size: 12px; font-weight: 600; color: #555; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab.active { color: #1E88E5; border-bottom-color: #1E88E5; }
+  .tab:hover:not(.active) { color: #999; }
+
+  .lesson-body { font-size: 14px; line-height: 1.8; color: #CCC; }
+  .lesson-body p { margin-bottom: 16px; }
+  .lesson-body ul, .lesson-body ol { margin: 0 0 16px 24px; }
+  .lesson-body li { margin-bottom: 8px; }
+  .lesson-body strong { color: #FFF; }
+  .lesson-body code { background: #1A1A3A; color: #00BCD4; padding: 2px 6px; border-radius: 3px; font-size: 12px; font-family: 'Courier New', monospace; }
+  .lesson-body table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .lesson-body th { background: #1A1A3A; color: #1E88E5; font-size: 12px; padding: 8px 12px; text-align: left; border: 1px solid #2A2A4A; }
+  .lesson-body td { font-size: 13px; padding: 8px 12px; border: 1px solid #2A2A4A; color: #CCC; }
+  .prereq-box { background: #0A0A1A; border: 1px solid #1A1A3A; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 12px; color: #666; }
+  .prereq-box span { color: #1E88E5; font-weight: 600; }
+
+  .quiz-wrap { max-width: 680px; }
+  .q-progress { font-size: 11px; color: #555; margin-bottom: 20px; }
+  .q-text { font-size: 15px; font-weight: 600; color: #EEE; line-height: 1.5; margin-bottom: 24px; }
+  .option { background: #12122A; border: 1px solid #1E1E3E; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.15s; display: flex; align-items: flex-start; gap: 12px; }
+  .option:hover:not(.answered) { border-color: #1E88E566; background: #101028; }
+  .option.correct { border-color: #00C853; background: #001A0D; }
+  .option.wrong { border-color: #FF5252; background: #1A0505; }
+  .option-letter { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .option.correct .option-letter { background: #00C853; border-color: #00C853; color: #000; }
+  .option.wrong .option-letter { background: #FF5252; border-color: #FF5252; color: #FFF; }
+  .option-text { font-size: 13px; line-height: 1.5; flex: 1; }
+  .option-explain { font-size: 12px; color: #888; margin-top: 6px; padding-top: 6px; border-top: 1px solid #1E1E3E; }
+  .option.correct .option-explain { color: #00C853; border-top-color: #00C85333; }
+  .option.wrong .option-explain { color: #FF6E40; border-top-color: #FF525233; }
+  .quiz-action { margin-top: 20px; }
+  .btn { background: #1E88E5; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn:hover { background: #1565C0; }
+  .btn-secondary { background: transparent; border: 1px solid #1E88E5; color: #1E88E5; }
+  .btn-secondary:hover { background: #1E88E522; }
+
+  .completion { text-align: center; padding: 40px 20px; }
+  .completion h3 { font-size: 22px; font-weight: 800; color: #1E88E5; margin-bottom: 12px; }
+  .completion p { color: #888; font-size: 14px; margin-bottom: 24px; }
+  .unlocked-list { text-align: left; max-width: 400px; margin: 0 auto 24px; }
+  .unlocked-item { background: #0A0A1A; border: 1px solid #1E88E533; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 13px; color: #00BCD4; cursor: pointer; }
+  .unlocked-item:hover { background: #0A0A2A; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>Paper Academy VII</h1>
+    <p>BPM + Agents</p>
+    <div id="badge">0 / 12 complete</div>
+  </div>
+  <div id="sidebar-scroll"></div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <h2 id="topbar-title">Business Process Management + Agents</h2>
+    <span class="tag">12 Topics</span>
+    <span class="tag">36 Questions</span>
+  </div>
+  <div id="tabs" style="display:none">
+    <div class="tab active" onclick="showTab('lesson')">Lesson</div>
+    <div class="tab" onclick="showTab('quiz')">Quiz</div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+const TRACKS = [
+  { id: 'bpmn', label: 'BPMN Foundations', papers: ['bpmn_basics','process_mining','dmn_decisions','case_management','event_driven_bpm'] },
+  { id: 'durable', label: 'Durable Execution', papers: ['temporal_durable','saga_pattern'] },
+  { id: 'automation', label: 'Agent Automation', papers: ['rpa_to_agents','hitl_design','agentic_patterns'] },
+  { id: 'integration', label: 'Integration', papers: ['orchestration_vs_choreography','process_metrics'] },
+];
+
+const PAPERS = [
+  {
+    id: 'bpmn_basics', title: 'BPMN 2.0 Fundamentals', track: 'bpmn',
+    authors: 'OMG Specification, Camunda, Flowable', prereqs: [],
+    lesson: `<div class="prereq-box">Starting point — no prerequisites</div>
+<div class="lesson-body">
+<p>BPMN 2.0 (Business Process Model and Notation) is the ISO/IEC 19510 standard for visually modeling business processes. It bridges the gap between process design by business analysts and technical implementation by developers — both can read the same diagram.</p>
+<p><strong>Core BPMN Elements:</strong></p>
+<ul>
+<li><strong>Events</strong>: Circles representing things that happen. Start events (thin border) trigger a process. End events (thick border) terminate it. Intermediate events (double border) occur mid-flow. Events can be typed: Timer (clock icon), Message (envelope), Error (lightning bolt), Signal (triangle), Escalation, Compensation.</li>
+<li><strong>Activities</strong>: Rounded rectangles representing work. Tasks are atomic — Script Task, Service Task, User Task, Send Task, Receive Task. Sub-processes are expandable containers for reusable logic. Markers indicate multi-instance (parallel ∥ or sequential ≡), loops, and compensation.</li>
+<li><strong>Gateways</strong>: Diamonds controlling flow. Exclusive Gateway (X) — only one path taken, first true condition wins. Parallel Gateway (+) — all paths taken simultaneously. Inclusive Gateway (O) — one or more paths based on conditions. Event-Based Gateway — waits for one of several events.</li>
+<li><strong>Sequence Flows</strong>: Solid arrows connecting elements within a pool.</li>
+<li><strong>Message Flows</strong>: Dashed arrows crossing pool boundaries (inter-process communication).</li>
+<li><strong>Pools and Lanes</strong>: Pools represent participants (organizations, systems). Lanes subdivide pools into roles or departments.</li>
+</ul>
+<p><strong>Executable vs. Descriptive BPMN:</strong> Descriptive BPMN captures intent — what business analysts draw. Executable BPMN adds technical attributes: service task implementation (Java class, expression, external worker), input/output variable mappings, timeout durations, error codes. Camunda 7/8 and Flowable execute BPMN XML directly — the diagram IS the code.</p>
+<p><strong>Token-Based Execution Semantics:</strong> BPMN execution follows token semantics. A token enters the start event and flows through the diagram. When a parallel gateway fires, it generates multiple tokens. When they reconverge at a joining parallel gateway, all tokens must arrive before continuing. This enables rigorous formal verification — you can prove a process has no deadlocks or unreachable states.</p>
+<p><strong>Correlation and Instance Management:</strong> Each process execution creates a process instance. The engine correlates incoming messages to the correct instance using correlation keys (e.g., orderId). This is how a "payment received" message finds the right "order fulfillment" process instance among thousands running concurrently.</p>
+<p><strong>BPMN and AI Agents:</strong> Modern BPM engines are adding AI-native task types. A Service Task can call an LLM API. A User Task can present AI suggestions for human review. The key insight: BPMN provides the durable orchestration skeleton while agents provide intelligent decision-making at specific steps. The process graph defines WHAT happens and in what ORDER; agents determine HOW to accomplish individual tasks.</p>
+</div>`,
+    questions: [
+      { text: 'An Exclusive Gateway in BPMN 2.0 routes flow to:', options: [
+        { letter: 'A', text: 'All outgoing paths simultaneously', correct: false, explain: "That's a Parallel Gateway (+). The Exclusive Gateway routes to exactly one path — the first whose condition evaluates to true." },
+        { letter: 'B', text: 'The first outgoing path whose condition evaluates to true', correct: true, explain: '' },
+        { letter: 'C', text: 'A randomly selected outgoing path', correct: false, explain: 'BPMN gateways are deterministic, not random. Conditions are evaluated in order and the first match wins.' },
+        { letter: 'D', text: 'All paths where conditions are true', correct: false, explain: 'That describes an Inclusive Gateway (O). Exclusive means at most one path is taken.' },
+      ]},
+      { text: 'In BPMN token semantics, what happens when a token reaches a Parallel Gateway split?', options: [
+        { letter: 'A', text: 'The process pauses until a condition is met', correct: false, explain: 'A parallel gateway immediately fires and creates tokens on ALL outgoing paths without waiting for any condition.' },
+        { letter: 'B', text: 'One token is consumed and the fastest path wins', correct: false, explain: 'No racing — all paths get a token simultaneously. To merge, ALL tokens must arrive at the joining gateway.' },
+        { letter: 'C', text: 'The token is duplicated — one token is created for each outgoing sequence flow', correct: true, explain: '' },
+        { letter: 'D', text: 'The engine randomly chooses one outgoing path', correct: false, explain: 'Parallel gateways fire all paths deterministically. Random routing is not standard BPMN behavior.' },
+      ]},
+      { text: 'What distinguishes Executable BPMN from Descriptive BPMN?', options: [
+        { letter: 'A', text: 'Executable BPMN uses different shapes and colors', correct: false, explain: 'The visual notation is identical. The difference is in the XML attributes — technical implementation details attached to tasks.' },
+        { letter: 'B', text: 'Descriptive BPMN cannot model gateways', correct: false, explain: 'Descriptive BPMN can use all BPMN elements including gateways. It just lacks the technical attributes needed for engine execution.' },
+        { letter: 'C', text: 'Executable BPMN adds technical attributes (class names, expressions, variable mappings) so a BPM engine can run it directly', correct: true, explain: '' },
+        { letter: 'D', text: 'Executable BPMN requires a different file format than .bpmn XML', correct: false, explain: 'Both use the same .bpmn XML format. Executable BPMN just has additional extension elements within that XML.' },
+      ]},
+    ]
+  },
+  {
+    id: 'process_mining', title: 'Process Mining: Discovering Reality', track: 'bpmn',
+    authors: 'Wil van der Aalst, Celonis, UiPath', prereqs: ['bpmn_basics'],
+    lesson: `<div class="prereq-box">Requires: <span>BPMN 2.0 Fundamentals</span></div>
+<div class="lesson-body">
+<p>Process mining extracts actual process behavior from event logs in information systems (ERP, CRM, BPM engines) and compares it to the designed process model. It answers: "What ACTUALLY happens vs. what we think happens?"</p>
+<p><strong>Three Process Mining Disciplines:</strong></p>
+<ul>
+<li><strong>Discovery</strong>: No prior model needed. Algorithms (Alpha Miner, Inductive Miner, Heuristics Miner) automatically generate a process model from event logs. Output: a BPMN or Petri net showing real behavior.</li>
+<li><strong>Conformance Checking</strong>: Given a designed model and an event log, compute fitness (how well do cases follow the model?), precision (does the model allow unobserved behavior?), and generalization (does the model handle unseen but valid cases?).</li>
+<li><strong>Enhancement</strong>: Use event log data to improve an existing model — add performance overlays (bottleneck heat maps), branch frequencies, rework loops.</li>
+</ul>
+<p><strong>Event Log Structure:</strong> Every event log needs: Case ID (which process instance), Activity Name (what happened), Timestamp (when). Optional: Resource (who), cost, outcome. A case is a sequence of events with the same Case ID. Process mining tools (Celonis, ProM, pm4py) ingest these logs and run mining algorithms.</p>
+<p><strong>Key Metrics from Process Mining:</strong></p>
+<ul>
+<li><strong>Cycle Time</strong>: End-to-end time for a case. Mining reveals the actual distribution (median, P90, P99) not the theoretical SLA.</li>
+<li><strong>Throughput</strong>: Cases completed per time unit.</li>
+<li><strong>Rework Rate</strong>: % of cases that revisit an activity (indicates errors or missing data).</li>
+<li><strong>Variant Analysis</strong>: How many distinct paths exist? Top 3 variants often account for 80% of cases. Long-tail variants are where exceptions hide.</li>
+</ul>
+<p><strong>Conformance Fitness Score:</strong> Range 0–1. Fitness = 1 means all events in the log can be replayed on the model without missing tokens. Common causes of low fitness: skipped mandatory steps, wrong activity order, missing activities not in the model.</p>
+<p><strong>AI/Agent Applications:</strong> Process mining feeds AI agents with ground truth. Instead of guessing where to automate, agents can be targeted at proven high-frequency, high-deviation paths. Celonis' Execution Management System uses process mining to recommend and trigger RPA bots and API calls at exact bottleneck moments. The mining layer provides continuous feedback to agents: "Your automation succeeded in 94% of cases; 6% required human takeover at step X."</p>
+</div>`,
+    questions: [
+      { text: 'What does a conformance fitness score of 0.72 mean?', options: [
+        { letter: 'A', text: '72% of activities were completed on time', correct: false, explain: 'Fitness measures log-to-model replay, not time compliance. SLA adherence is a separate metric.' },
+        { letter: 'B', text: '28% of event traces cannot be fully replayed on the reference model without missing or extra tokens', correct: true, explain: '' },
+        { letter: 'C', text: 'The process model covers 72% of all possible paths', correct: false, explain: 'That would relate to precision or generalization, not fitness. Fitness specifically measures how well observed cases fit the model.' },
+        { letter: 'D', text: '72% of cases were automated successfully', correct: false, explain: 'Automation success rate is a separate operational metric unrelated to conformance fitness.' },
+      ]},
+      { text: 'Process Discovery differs from Conformance Checking in that Discovery:', options: [
+        { letter: 'A', text: 'Requires a pre-existing reference process model', correct: false, explain: "That's the opposite — Conformance Checking requires a reference model. Discovery creates a model FROM the log with no prior model needed." },
+        { letter: 'B', text: 'Only works with ERP system logs, not BPM engine logs', correct: false, explain: 'Discovery works with any structured event log — ERP, CRM, BPM engines, or custom application logs.' },
+        { letter: 'C', text: 'Automatically generates a process model from the event log without requiring a pre-existing model', correct: true, explain: '' },
+        { letter: 'D', text: 'Measures fitness, precision, and generalization metrics', correct: false, explain: 'Those metrics belong to Conformance Checking. Discovery produces the model; Conformance Checking evaluates how well cases fit a model.' },
+      ]},
+      { text: 'Why is variant analysis important in process mining?', options: [
+        { letter: 'A', text: 'It identifies which BPMN gateway type to use in redesign', correct: false, explain: 'Variant analysis reveals actual execution paths, not prescriptive design patterns for gateways.' },
+        { letter: 'B', text: 'It reveals that top variants (often 3-5) cover ~80% of cases, while the long tail contains exceptions and compliance risks', correct: true, explain: '' },
+        { letter: 'C', text: 'It measures the total number of activities in the process', correct: false, explain: 'Activity count is visible in the process model itself. Variant analysis counts distinct execution paths across cases.' },
+        { letter: 'D', text: 'It calculates the average cycle time per resource', correct: false, explain: 'Per-resource cycle time is a performance enhancement metric. Variant analysis focuses on path diversity across cases.' },
+      ]},
+    ]
+  },
+  {
+    id: 'dmn_decisions', title: 'DMN: Decision Model and Notation', track: 'bpmn',
+    authors: 'OMG Specification, Red Hat, Trisotech', prereqs: ['bpmn_basics'],
+    lesson: `<div class="prereq-box">Requires: <span>BPMN 2.0 Fundamentals</span></div>
+<div class="lesson-body">
+<p>DMN (Decision Model and Notation) is the companion standard to BPMN. While BPMN models process flow, DMN models decision logic. Together they separate concerns: BPMN defines WHEN a decision is made; DMN defines HOW it's made.</p>
+<p><strong>Decision Requirements Diagram (DRD):</strong> The top-level DMN artifact. Shows decisions (rectangles), input data (ovals), and business knowledge models (rectangles with clipped corners) with dependency arrows. A complex decision can depend on sub-decisions and shared knowledge models.</p>
+<p><strong>Decision Table:</strong> The most common DMN element. A table with input columns (conditions: customer tier, order amount), output columns (results: discount %, approval required), and a Hit Policy that determines what happens when multiple rows match.</p>
+<p><strong>Hit Policies (critical):</strong></p>
+<ul>
+<li><strong>U (Unique)</strong>: Exactly one row matches. Most restrictive — good for well-defined rules.</li>
+<li><strong>A (Any)</strong>: Multiple rows may match but must return the same output.</li>
+<li><strong>F (First)</strong>: Returns the first matching row in order. Like switch/case.</li>
+<li><strong>C (Collect)</strong>: Returns ALL matching rows. Can apply aggregators: sum, min, max, count.</li>
+<li><strong>R (Rule Order)</strong>: Returns all matches in rule order.</li>
+</ul>
+<p><strong>FEEL (Friendly Enough Expression Language):</strong> DMN's expression language for conditions and outputs. Range syntax: <code>[100..500]</code> (inclusive), <code>(100..500)</code> (exclusive). List: <code>["Gold","Platinum"]</code>. Negation: <code>not("Bronze")</code>. Date arithmetic: <code>date("2026-01-01") + duration("P30D")</code>.</p>
+<p><strong>DMN and AI Agents:</strong> DMN externalizes business rules that would otherwise be buried in code or LLM prompts. An AI agent can call a DMN decision service via REST API to get deterministic, auditable rule outcomes. This is critical for regulated industries: loan approval, insurance underwriting, tax calculation. The agent handles natural language; DMN handles compliance logic. If the rules change, update the decision table — not the agent's prompt.</p>
+<p><strong>Decision Services:</strong> DMN 1.3 introduced Decision Services — named subsets of a DRD exposed as callable APIs. A BPMN Business Rule Task can call a Decision Service synchronously, receiving the output as process variables.</p>
+</div>`,
+    questions: [
+      { text: "The DMN Hit Policy 'F' (First) behaves like:", options: [
+        { letter: 'A', text: 'Evaluating all matching rules and summing their outputs', correct: false, explain: 'Summing outputs is the Collect + Sum aggregator (C+). First returns only the first matching row\'s output.' },
+        { letter: 'B', text: 'Returning the output of the first row whose conditions match, evaluated in table order', correct: true, explain: '' },
+        { letter: 'C', text: 'Requiring exactly one row to match (error if multiple match)', correct: false, explain: "That's the Unique (U) hit policy. First explicitly allows multiple matches and picks the first one." },
+        { letter: 'D', text: 'Returning the row with the highest priority score', correct: false, explain: "DMN doesn't have a built-in priority score. Priority is implicitly encoded by rule order when using the First hit policy." },
+      ]},
+      { text: 'In FEEL expression language, what does [18..65] mean as an input condition?', options: [
+        { letter: 'A', text: 'A list containing exactly the values 18 and 65', correct: false, explain: 'A list would be written as [18, 65]. Square brackets with .. denote an inclusive range covering all values between 18 and 65.' },
+        { letter: 'B', text: 'Age is greater than 18 and less than 65 (exclusive)', correct: false, explain: 'Square brackets in FEEL ranges are INCLUSIVE. The exclusive version uses parentheses: (18..65).' },
+        { letter: 'C', text: 'Age is between 18 and 65 inclusive — any value x where 18 ≤ x ≤ 65', correct: true, explain: '' },
+        { letter: 'D', text: 'An array index from position 18 to 65', correct: false, explain: 'FEEL ranges have no concept of array indexing. This syntax specifically evaluates numeric comparison for decision table conditions.' },
+      ]},
+      { text: 'Why is externalized DMN decision logic preferable to embedding rules in LLM prompts for regulated industries?', options: [
+        { letter: 'A', text: 'LLMs cannot understand rules written in natural language', correct: false, explain: 'LLMs excel at natural language — the issue is auditability, consistency, and governance, not comprehension.' },
+        { letter: 'B', text: 'DMN decision tables provide deterministic, auditable, version-controlled rule outcomes that regulators can inspect and that update without retraining', correct: true, explain: '' },
+        { letter: 'C', text: 'DMN is faster than LLM inference for all decision types', correct: false, explain: 'Speed is context-dependent. The primary advantage is auditability and governance, not raw speed.' },
+        { letter: 'D', text: "LLMs are prohibited by law from making financial decisions", correct: false, explain: "There's no blanket legal prohibition. The issue is that LLM decisions may be non-deterministic and hard to audit — DMN solves the auditability problem." },
+      ]},
+    ]
+  },
+  {
+    id: 'case_management', title: 'Case Management and CMMN', track: 'bpmn',
+    authors: 'OMG CMMN Spec, Camunda, Pega', prereqs: ['bpmn_basics'],
+    lesson: `<div class="prereq-box">Requires: <span>BPMN 2.0 Fundamentals</span></div>
+<div class="lesson-body">
+<p>Not all business work fits a predefined flow. Case Management models adaptive, knowledge-work processes where the path emerges based on data and judgment. Insurance claims, legal matters, complex customer complaints, and medical cases are quintessential examples.</p>
+<p><strong>CMMN (Case Management Model and Notation):</strong> The OMG standard for case management. Key elements:</p>
+<ul>
+<li><strong>Case File</strong>: The central data object. All tasks and milestones share access to the case file.</li>
+<li><strong>Task</strong>: Discretionary (worker chooses when to do it) or required. Human Tasks, Process Tasks (triggers BPMN), Case Tasks (triggers a sub-case).</li>
+<li><strong>Stage</strong>: A container grouping related tasks. Stages can be nested.</li>
+<li><strong>Milestone</strong>: A significant state the case has reached (not a task, no work done).</li>
+<li><strong>Sentry</strong>: Guards that control when tasks/stages become available. Entry Criteria and Exit Criteria.</li>
+</ul>
+<p><strong>BPMN vs. CMMN:</strong> BPMN is prescriptive — the flow is defined. CMMN is descriptive — tasks are available, workers decide. BPMN is good for high-volume, repeatable processes (invoice approval). CMMN is good for knowledge work requiring judgment (complex claim investigation).</p>
+<p><strong>Case States and Lifecycle:</strong> A CMMN case has states: Active, Completed, Terminated, Failed, Suspended. Case workers can manually suspend/resume cases. Completion conditions can be defined: all required tasks completed OR a specific milestone reached.</p>
+<p><strong>Adaptive Case Management (ACM):</strong> Beyond CMMN, ACM allows process participants to add new tasks and documents at runtime — not just choose from predefined options. This is increasingly relevant for AI agents: an agent investigating a fraud case might dynamically spawn new investigative tasks as evidence emerges.</p>
+<p><strong>AI Agents + Case Management:</strong> Case management is a natural fit for AI agents. An agent can: monitor the case file for new data, suggest which available tasks to prioritize, automatically execute routine sub-tasks (data retrieval, document classification), escalate when thresholds are breached, and generate case summaries. The human worker focuses on judgment calls; the agent handles data gathering and routine execution.</p>
+</div>`,
+    questions: [
+      { text: 'A CMMN Sentry with Entry Criteria controls:', options: [
+        { letter: 'A', text: 'When a case is permanently archived', correct: false, explain: 'Case archiving is a lifecycle/administrative function, not what CMMN Sentries control. Sentries govern task/stage availability.' },
+        { letter: 'B', text: 'When a task or stage becomes available for a case worker to act on', correct: true, explain: '' },
+        { letter: 'C', text: 'The order in which tasks must be completed', correct: false, explain: "CMMN doesn't enforce order — that's BPMN's domain. Sentries make tasks available; workers choose the order." },
+        { letter: 'D', text: 'The data schema of the case file', correct: false, explain: 'Case file schema is defined separately. Sentries are condition guards, not data structure definitions.' },
+      ]},
+      { text: 'What is the key difference between a CMMN Milestone and a Task?', options: [
+        { letter: 'A', text: 'Milestones are visible to customers; tasks are internal', correct: false, explain: 'Both milestones and tasks can be internal or customer-facing — that is a deployment decision, not a CMMN distinction.' },
+        { letter: 'B', text: 'A Milestone represents a significant case state that has been reached, with no work performed to achieve it directly', correct: true, explain: '' },
+        { letter: 'C', text: 'Milestones are automated; tasks always require human input', correct: false, explain: 'Tasks can be automated (Process Task calls BPMN). Milestones are not automated or manual — they are state markers triggered by Sentries.' },
+        { letter: 'D', text: 'Milestones can contain nested sub-milestones; tasks cannot be nested', correct: false, explain: 'Stages (not milestones) are CMMN\'s container element. Milestones don\'t contain anything — they are singular state indicators.' },
+      ]},
+      { text: 'Adaptive Case Management (ACM) extends CMMN by:', options: [
+        { letter: 'A', text: 'Enforcing strict sequential task ordering at runtime', correct: false, explain: 'Strict ordering is BPMN\'s domain. ACM goes the opposite direction — more flexibility, allowing new tasks to be added at runtime.' },
+        { letter: 'B', text: 'Allowing case participants to add entirely new tasks and documents that were not predefined in the case model', correct: true, explain: '' },
+        { letter: 'C', text: 'Removing the concept of a case file in favor of independent tasks', correct: false, explain: 'The case file is central to both CMMN and ACM. ACM adds runtime flexibility while retaining the shared case context.' },
+        { letter: 'D', text: 'Restricting case management to fully automated workflows only', correct: false, explain: 'ACM is specifically designed for knowledge workers making judgment calls — it is less automated than structured BPMN processes.' },
+      ]},
+    ]
+  },
+  {
+    id: 'event_driven_bpm', title: 'Event-Driven BPM and Streaming', track: 'bpmn',
+    authors: 'Camunda, Kafka, Zeebe', prereqs: ['bpmn_basics'],
+    lesson: `<div class="prereq-box">Requires: <span>BPMN 2.0 Fundamentals</span></div>
+<div class="lesson-body">
+<p>Traditional BPM engines poll databases or receive synchronous API calls. Event-Driven BPM (EDA + BPMN) treats process triggers, intermediate signals, and completion signals as stream events — enabling real-time, scalable process orchestration.</p>
+<p><strong>Event-Driven Architecture Basics:</strong> An <strong>event</strong> is an immutable record that something happened (OrderPlaced, PaymentReceived, InventoryReserved). An <strong>event broker</strong> (Kafka, Pulsar, or AWS EventBridge) routes events from producers to consumers. <strong>Event consumers</strong> are process engines, microservices, or functions that react to events.</p>
+<p><strong>BPMN Message Events in Event-Driven Context:</strong></p>
+<ul>
+<li><strong>Message Start Event</strong>: A process instance starts when a specific message arrives on a topic.</li>
+<li><strong>Message Intermediate Catch Event</strong>: A running process instance waits for a correlated message. The engine subscribes to the broker; when the message arrives with the correct correlation key, the token advances.</li>
+<li><strong>Message Throw Event / Send Task</strong>: Publishes a message to the broker.</li>
+<li><strong>Boundary Timer Events</strong>: Process instances that don't receive their expected message within N hours can trigger escalation flows.</li>
+</ul>
+<p><strong>Zeebe and Camunda 8:</strong> Zeebe is Camunda 8's cloud-native process engine built for event-driven, high-throughput orchestration. Zeebe stores process state in a distributed log (similar to Kafka). Exporters publish process events (task activated, job completed, process ended) to Elasticsearch or Kafka for monitoring. Workers poll Zeebe via gRPC for jobs to execute — decoupled, polyglot, scalable.</p>
+<p><strong>Correlation:</strong> The hard problem of event-driven BPM. When 10,000 order processes are running and a "PaymentReceived" event arrives, which instance does it belong to? Correlation keys solve this: the event carries <code>orderId: "ORD-12345"</code>, the engine finds the instance waiting on that orderId. Zeebe's subscription model handles correlation at engine level.</p>
+<p><strong>AI Agent Integration:</strong> Agents can be Zeebe job workers. When a process reaches an AI decision task (e.g., "Classify Document"), Zeebe publishes the job. The agent polls, processes using an LLM, and completes the job with output variables. The process continues. This is the "AI in the loop" pattern: the process defines orchestration; agents execute intelligent steps as jobs.</p>
+</div>`,
+    questions: [
+      { text: 'In Zeebe/Camunda 8, how do AI agents integrate with process execution?', options: [
+        { letter: 'A', text: 'Agents are hard-coded into the BPMN engine source code', correct: false, explain: 'Zeebe uses external workers (job workers) that poll via gRPC. No engine modification needed — agents are just workers.' },
+        { letter: 'B', text: 'Agents act as external job workers: they poll Zeebe for activated jobs, execute LLM logic, and complete the job with output variables', correct: true, explain: '' },
+        { letter: 'C', text: 'Each agent requires a dedicated Zeebe cluster', correct: false, explain: 'Multiple workers can connect to one Zeebe cluster. Workers are stateless and can scale independently.' },
+        { letter: 'D', text: 'Agents receive BPMN XML and self-modify the process at runtime', correct: false, explain: 'Workers execute specific job types, not modify process definitions. Process changes go through deployment, not runtime worker logic.' },
+      ]},
+      { text: 'Message correlation in event-driven BPM solves what problem?', options: [
+        { letter: 'A', text: 'Preventing duplicate messages from being processed', correct: false, explain: 'Deduplication is a separate concern handled by idempotency keys. Correlation maps messages to the correct running process instance.' },
+        { letter: 'B', text: 'Routing an incoming event message to the specific process instance that is waiting for it, using a shared key like orderId', correct: true, explain: '' },
+        { letter: 'C', text: 'Ensuring messages are delivered in the exact order they were sent', correct: false, explain: 'Message ordering is a broker-level concern (Kafka partition ordering). Correlation is about instance matching, not ordering.' },
+        { letter: 'D', text: 'Converting between different message formats (JSON vs. XML)', correct: false, explain: 'Format transformation is serialization/ETL work. Correlation is purely about identifying which waiting process instance a message belongs to.' },
+      ]},
+      { text: 'A BPMN Boundary Timer Event on a Message Catch Event is used to:', options: [
+        { letter: 'A', text: 'Speed up message delivery from the producer', correct: false, explain: 'Boundary timers are on the consumer side (waiting process instance) and do not affect producer throughput.' },
+        { letter: 'B', text: 'Limit how long the process instance waits for the expected message before triggering an escalation or compensation flow', correct: true, explain: '' },
+        { letter: 'C', text: 'Batch multiple messages together before processing', correct: false, explain: 'Batching is a message broker pattern. Boundary timers handle timeout/escalation for individual waiting instances.' },
+        { letter: 'D', text: 'Convert a synchronous API call into an asynchronous message', correct: false, explain: 'The async/sync conversion is handled by system integration layer design. Boundary timers add timeout behavior to already-async message waits.' },
+      ]},
+    ]
+  },
+  {
+    id: 'temporal_durable', title: 'Temporal.io: Durable Execution', track: 'durable',
+    authors: 'Temporal Technologies, Maxim Fateev', prereqs: [],
+    lesson: `<div class="prereq-box">Starting point — no prerequisites</div>
+<div class="lesson-body">
+<p>Temporal.io is an open-source durable execution platform. Its central promise: write code as if failures don't exist. Temporal handles retries, timeouts, and state persistence transparently — your workflow code survives crashes, deployments, and network failures.</p>
+<p><strong>The Core Problem:</strong> Long-running distributed operations fail mid-way. A 10-step order fulfillment that crashes at step 7 needs to resume at step 8, not restart from step 1. Traditional approaches use queues + databases + retry logic — complex, error-prone. Temporal abstracts this entirely.</p>
+<p><strong>Workflow and Activity:</strong></p>
+<ul>
+<li><strong>Workflow</strong>: Durable, deterministic orchestration code. Defines the flow logic. Must be deterministic (no <code>random()</code>, no <code>time.Now()</code> directly — use Temporal APIs). Survives failures — Temporal replays workflow history to restore state.</li>
+<li><strong>Activity</strong>: Non-deterministic work that can fail (API calls, database writes, file I/O). Temporal retries activities automatically with configurable policies (initial interval, backoff coefficient, max attempts, max interval).</li>
+</ul>
+<p><strong>Workflow History and Replay:</strong> Temporal persists every event: workflow started, activity scheduled, activity completed, timer fired. On failure, Temporal replays the history to restore exact in-memory state — no code change needed. This is why workflows must be deterministic: replaying must produce the same decisions.</p>
+<p><strong>Signals and Queries:</strong> A <strong>Signal</strong> sends an event to a running workflow. The workflow can wait for signals using <code>workflow.GetSignalChannel</code>. Enables human-in-the-loop: a workflow waits for an "approval" signal. A <strong>Query</strong> reads current state of a running workflow synchronously without affecting its execution.</p>
+<p><strong>Temporal vs. Kafka + Database:</strong> Kafka + DB approach: you manage consumer offsets, dead-letter queues, idempotency, and retry logic. Temporal: you write linear code; the platform handles all of it. Trade-off: Temporal adds an infrastructure dependency and requires deterministic workflow code discipline.</p>
+<p><strong>AI Agent Workflows:</strong> Temporal is a natural fit for multi-step AI agents. Each LLM call is an Activity with retries. Long-running research workflows (hours/days) survive model restarts. Human approval steps use Signals. Temporal's visibility UI shows exactly where an agent workflow is in its execution — invaluable for debugging. Companies like Replit and Stripe use Temporal for AI-driven operations.</p>
+</div>`,
+    questions: [
+      { text: 'Why must Temporal Workflow code be deterministic?', options: [
+        { letter: 'A', text: 'To enable parallel execution across multiple worker nodes', correct: false, explain: 'Parallelism does not require determinism. The determinism requirement is specifically for history replay to restore exact workflow state after failure.' },
+        { letter: 'B', text: 'Because Temporal restores workflow state by replaying history — non-determinism would cause different decisions during replay, corrupting state', correct: true, explain: '' },
+        { letter: 'C', text: "Because Temporal's gRPC protocol doesn't support floating-point numbers", correct: false, explain: 'This is about execution semantics, not protocol data types. The determinism requirement is for state restoration correctness.' },
+        { letter: 'D', text: 'To reduce memory usage in the Temporal server', correct: false, explain: 'Determinism has no direct memory impact on the server. It is purely about correct state restoration during replay.' },
+      ]},
+      { text: 'A Temporal Signal allows:', options: [
+        { letter: 'A', text: 'A worker to cancel all pending activities immediately', correct: false, explain: 'Cancellation uses a separate Cancellation API. Signals are for sending arbitrary events/data to a running workflow.' },
+        { letter: 'B', text: 'External code or humans to send an event to a running workflow, which the workflow can wait on — enabling human-in-the-loop patterns', correct: true, explain: '' },
+        { letter: 'C', text: 'The Temporal server to notify workers of new tasks', correct: false, explain: 'Worker task notification uses long-polling task queues, not Signals. Signals go FROM external systems TO running workflows.' },
+        { letter: 'D', text: 'Workflows to communicate their completion status to the Temporal UI', correct: false, explain: 'Workflow completion is tracked via workflow history. Signals are bidirectional communication mechanisms for running workflows.' },
+      ]},
+      { text: 'Temporal Activities differ from Workflow code in that Activities:', options: [
+        { letter: 'A', text: 'Cannot access external APIs or databases', correct: false, explain: 'Activities are specifically where external calls (APIs, databases, file I/O) should live — they are the impure execution layer.' },
+        { letter: 'B', text: 'Must be deterministic and cannot use random values', correct: false, explain: 'That is the requirement for Workflows. Activities can be non-deterministic — they can use time.Now(), random values, etc.' },
+        { letter: 'C', text: 'Are the non-deterministic execution units where real work (API calls, I/O) happens, automatically retried by Temporal on failure', correct: true, explain: '' },
+        { letter: 'D', text: 'Run on the Temporal server directly, not on workers', correct: false, explain: 'Both workflows and activities execute on workers. The Temporal server orchestrates but does not execute application code.' },
+      ]},
+    ]
+  },
+  {
+    id: 'saga_pattern', title: 'Saga Pattern and Distributed Transactions', track: 'durable',
+    authors: 'Hector Garcia-Molina, Camunda, Temporal', prereqs: ['temporal_durable'],
+    lesson: `<div class="prereq-box">Requires: <span>Temporal.io: Durable Execution</span></div>
+<div class="lesson-body">
+<p>Microservices cannot use traditional ACID database transactions across service boundaries. The Saga pattern provides distributed transaction management through a sequence of local transactions, each publishing events or messages to trigger the next step.</p>
+<p><strong>The Problem:</strong> Order service books inventory. Payment service charges card. Shipping service creates label. If shipping fails, the charge and inventory reservation must be rolled back. Two-Phase Commit (2PC) across microservices is impractical — it requires a distributed lock that blocks all participants.</p>
+<p><strong>Choreography vs. Orchestration:</strong></p>
+<ul>
+<li><strong>Choreography Saga</strong>: Each service publishes an event after its local transaction. Other services react. No central coordinator. Decoupled but hard to trace end-to-end.</li>
+<li><strong>Orchestration Saga</strong>: A central orchestrator (saga orchestrator, Temporal workflow, BPMN engine) directs each step. Explicitly knows the entire saga's state. Easier to debug, monitor, and evolve.</li>
+</ul>
+<p><strong>Compensating Transactions:</strong> Each Saga step must have a corresponding compensating transaction that undoes the step's effect. Compensating transactions are not rollbacks — they are forward-moving actions that logically undo previous work. "Cancel reservation" rather than "delete reservation record".</p>
+<p><strong>Temporal Saga Implementation:</strong> Temporal's Saga support stores compensation functions with the workflow state. On failure, it executes compensations reliably with retries:</p>
+<ul>
+<li>Activity: BookFlight → Compensation: CancelFlight</li>
+<li>Activity: BookHotel → Compensation: CancelHotel</li>
+<li>Activity: BookCar → Compensation: CancelCar</li>
+<li>If any activity fails: execute compensations in reverse order</li>
+</ul>
+<p><strong>Eventual Consistency:</strong> Sagas achieve eventual consistency, not immediate consistency. During execution, the system is in an intermediate state. "Dirty reads" can occur — another request might see the inventory as reserved while the saga has not fully committed. Techniques: semantic locks (mark records as "pending"), countermeasures (pivot transactions).</p>
+</div>`,
+    questions: [
+      { text: 'Why is Two-Phase Commit (2PC) unsuitable for microservices distributed transactions?', options: [
+        { letter: 'A', text: 'Two-Phase Commit requires all services to use the same programming language', correct: false, explain: '2PC is a protocol, not language-specific. The problem is the distributed lock — all participants block during the voting phase, causing availability issues.' },
+        { letter: 'B', text: '2PC requires a distributed lock that blocks all participants during the commit phase, creating availability bottlenecks and failure coupling', correct: true, explain: '' },
+        { letter: 'C', text: "2PC doesn't support rollbacks", correct: false, explain: 'Rollback support is exactly what 2PC provides. The problem is the blocking coordination overhead and the coordinator being a single point of failure.' },
+        { letter: 'D', text: '2PC only works with SQL databases, not NoSQL', correct: false, explain: 'The issues with 2PC in microservices are architectural (locking, availability), not storage-type dependent.' },
+      ]},
+      { text: 'A compensating transaction in a Saga is:', options: [
+        { letter: 'A', text: 'A rollback that reverts database changes to a previous snapshot', correct: false, explain: 'Database rollbacks require transactions. Compensating transactions are forward-moving business operations (e.g., "issue refund") that logically undo prior work.' },
+        { letter: 'B', text: 'A forward-moving business action that logically undoes a previous step\'s effect (e.g., "cancel reservation" rather than deleting the reservation record)', correct: true, explain: '' },
+        { letter: 'C', text: 'An idempotency check that prevents duplicate executions', correct: false, explain: 'Idempotency is a separate concern — ensuring operations can be safely retried. Compensating transactions undo prior committed work.' },
+        { letter: 'D', text: 'A database constraint that prevents invalid state transitions', correct: false, explain: 'Database constraints are schema-level validations. Compensating transactions are application-level recovery actions in distributed systems.' },
+      ]},
+      { text: 'Orchestration Saga vs. Choreography Saga: what is the main advantage of Orchestration?', options: [
+        { letter: 'A', text: 'Orchestration requires fewer network round-trips', correct: false, explain: 'Orchestration may actually require MORE network calls since all steps go through the orchestrator. The advantage is observability and explicit control.' },
+        { letter: 'B', text: 'The orchestrator has explicit knowledge of the entire saga state, making it easier to debug, monitor, and handle failures in a centralized way', correct: true, explain: '' },
+        { letter: 'C', text: 'Choreography Saga cannot handle failures at all', correct: false, explain: 'Choreography sagas can handle failures — each service publishes failure events that trigger compensating actions. It is harder to trace, not impossible.' },
+        { letter: 'D', text: 'Orchestration eliminates the need for compensating transactions', correct: false, explain: 'Both choreography and orchestration sagas require compensating transactions for rollback. Orchestration just makes compensation execution more centralized and traceable.' },
+      ]},
+    ]
+  },
+  {
+    id: 'rpa_to_agents', title: 'From RPA to Agentic Automation', track: 'automation',
+    authors: 'UiPath, Automation Anywhere, Langchain', prereqs: [],
+    lesson: `<div class="prereq-box">Starting point — no prerequisites</div>
+<div class="lesson-body">
+<p>Robotic Process Automation (RPA) automates repetitive UI-based tasks by recording and replaying user interactions. AI agents extend this with perception, planning, and adaptive decision-making. The evolution: scripted → supervised → autonomous.</p>
+<p><strong>RPA Fundamentals:</strong> RPA bots interact with UIs the way humans do: clicking, typing, reading screen text (OCR). They are fragile — UI changes break bots. They are deterministic — the same input always produces the same action. Best for: high-volume, stable UI processes with structured data (invoice extraction, form filling, legacy system integration).</p>
+<p><strong>RPA Limitations:</strong> Brittleness (UI changes require bot reconfiguration), no reasoning (cannot handle exceptions not explicitly programmed), no perception (cannot understand document context), scaling costs (each concurrent bot instance requires a separate VM/license).</p>
+<p><strong>AI Agents vs. RPA:</strong></p>
+<table>
+<tr><th>Dimension</th><th>RPA</th><th>AI Agent</th></tr>
+<tr><td>Decision-making</td><td>Rule-based</td><td>LLM reasoning</td></tr>
+<tr><td>Exception handling</td><td>Breaks or escalates</td><td>Attempts to resolve</td></tr>
+<tr><td>UI understanding</td><td>Coordinate/selector</td><td>Semantic understanding</td></tr>
+<tr><td>Adaptability</td><td>Brittle</td><td>Robust to variation</td></tr>
+<tr><td>Auditability</td><td>Deterministic log</td><td>Probabilistic reasoning</td></tr>
+</table>
+<p><strong>Hybrid: Attended RPA + AI:</strong> Current sweet spot. RPA handles structured, high-volume steps. AI handles unstructured perception and edge case reasoning. UiPath's Document Understanding uses LLMs to extract fields from messy invoices; the RPA bot then enters structured data into the ERP.</p>
+<p><strong>Agentic Automation Patterns:</strong> Computer Use (Anthropic) — LLMs that directly control browsers/desktops, eliminating the need for RPA tooling. Browser Automation — Playwright + LLM planning layer. Agent describes what to click; Playwright executes. API-first — prefer API calls over UI scraping when available.</p>
+<p><strong>Transition Strategy:</strong> Don't rip and replace. Identify high-value processes where AI reasoning adds most value (document processing, exception handling). Keep RPA for proven stable UI tasks. Agents augment bot workflows; eventual replacement is gradual.</p>
+</div>`,
+    questions: [
+      { text: "Why are RPA bots considered 'brittle'?", options: [
+        { letter: 'A', text: 'They consume excessive CPU resources during execution', correct: false, explain: 'Resource consumption is an operational concern. Brittleness refers to fragility when the target UI changes — selectors and coordinates break.' },
+        { letter: 'B', text: "They rely on specific UI element selectors and screen coordinates that break when the application's UI is updated", correct: true, explain: '' },
+        { letter: 'C', text: 'They cannot execute more than one task per hour', correct: false, explain: 'RPA bots can execute tasks very quickly. Brittleness is about UI change sensitivity, not speed.' },
+        { letter: 'D', text: 'They require an internet connection to function', correct: false, explain: 'Many RPA bots work on local applications without internet. Brittleness is about UI structure dependency, not connectivity.' },
+      ]},
+      { text: "Anthropic's Computer Use represents what advancement over traditional RPA?", options: [
+        { letter: 'A', text: 'It runs 10x faster than RPA bots', correct: false, explain: 'Speed is not the key distinction. Computer Use provides semantic understanding of what is on screen, not just coordinate-based clicking.' },
+        { letter: 'B', text: 'An LLM directly perceives and acts on UI screenshots, enabling adaptive automation without pre-programmed selectors', correct: true, explain: '' },
+        { letter: 'C', text: 'It eliminates the need for any human oversight in automated workflows', correct: false, explain: 'Computer Use still requires oversight for high-stakes actions. The advancement is adaptive perception, not elimination of human oversight.' },
+        { letter: 'D', text: 'It converts all legacy applications to modern REST APIs automatically', correct: false, explain: 'Computer Use automates UI interaction directly — it does not transform the underlying applications.' },
+      ]},
+      { text: 'What is the recommended transition strategy from RPA to AI agents?', options: [
+        { letter: 'A', text: 'Immediately replace all RPA bots with AI agents in a single migration project', correct: false, explain: 'A big-bang replacement is high-risk. The recommended approach is gradual — augment proven RPA with agents where reasoning adds value.' },
+        { letter: 'B', text: 'Identify high-value processes where AI reasoning adds most value, augment those with agents, and retain stable RPA for proven UI tasks', correct: true, explain: '' },
+        { letter: 'C', text: 'Keep RPA for all tasks indefinitely; AI agents are too unreliable for production', correct: false, explain: 'AI agents are production-ready for well-defined tasks. The strategy is thoughtful hybrid deployment, not avoidance.' },
+        { letter: 'D', text: 'Use AI agents only for development/testing, never production automation', correct: false, explain: 'AI agents are deployed in production at UiPath, Salesforce, and others. The strategy is thoughtful expansion, not production exclusion.' },
+      ]},
+    ]
+  },
+  {
+    id: 'hitl_design', title: 'Human-in-the-Loop Design Patterns', track: 'automation',
+    authors: 'Anthropic, LangGraph, Temporal', prereqs: ['rpa_to_agents'],
+    lesson: `<div class="prereq-box">Requires: <span>From RPA to Agentic Automation</span></div>
+<div class="lesson-body">
+<p>Human-in-the-Loop (HITL) systems insert human judgment at specific points in automated workflows. The key design challenge: when to interrupt, how to present context, and how to integrate human decisions back into the automated flow without losing state.</p>
+<p><strong>Why HITL:</strong> High-stakes decisions (loan approval, medical triage, legal filings), low-confidence situations (agent uncertainty score exceeds threshold), novel inputs (cases outside training distribution), compliance (regulations requiring human authorization), and trust building (new automations need an observed track record before full autonomy).</p>
+<p><strong>HITL Interruption Patterns:</strong></p>
+<ul>
+<li><strong>Pre-execution approval</strong>: Agent plans action → human approves/rejects before execution. Latency: blocking. Safety: highest.</li>
+<li><strong>Post-execution review</strong>: Agent acts → human reviews outcomes. Latency: non-blocking. Safety: medium (action already taken).</li>
+<li><strong>Exception routing</strong>: Agent handles routine cases autonomously; exceptions routed to humans. Latency: minimal for routine cases.</li>
+<li><strong>Confidence-gated</strong>: Agent acts when confidence > threshold; escalates when below. Threshold tuning is critical — too high = too many escalations; too low = too many errors.</li>
+</ul>
+<p><strong>Presenting Context to Humans:</strong> Show: what the agent decided, WHY (chain of thought or feature importance), what alternatives were considered, confidence score, relevant source data. Without context, human reviewers rubber-stamp — they cannot override meaningfully without understanding the decision.</p>
+<p><strong>State Continuity:</strong> When human approval arrives minutes or hours later, the system must resume execution with correct state. Temporal Signals: the workflow pauses at a Signal channel; approval sends the signal; workflow resumes. LangGraph human-in-the-loop: graph execution pauses at a human node; state is persisted; resumed with human input injected as a message.</p>
+<p><strong>Feedback Loop:</strong> Human corrections are training data. Track: cases escalated, human decision (approve/override/reject), agent original recommendation. This dataset enables: identifying systematic agent errors, improving the model/prompt, adjusting confidence thresholds. HITL is not just safety — it is continuous improvement infrastructure.</p>
+</div>`,
+    questions: [
+      { text: 'Confidence-gated HITL automation escalates cases to humans when:', options: [
+        { letter: 'A', text: 'The human review queue is empty', correct: false, explain: 'Queue capacity does not determine escalation. Confidence gating is purely based on the agent\'s uncertainty score for that specific case.' },
+        { letter: 'B', text: "The agent's confidence score falls below a configurable threshold, indicating the case is outside reliable automation bounds", correct: true, explain: '' },
+        { letter: 'C', text: 'The automation has been running for more than 24 hours', correct: false, explain: 'Time-based escalation is a separate SLA/timeout pattern. Confidence gating is decision-quality based, not time-based.' },
+        { letter: 'D', text: 'The user explicitly requests human review every time', correct: false, explain: 'User-requested escalation is a separate pattern. Confidence gating is automatic based on the agent\'s self-assessed uncertainty.' },
+      ]},
+      { text: "Why is displaying the agent's reasoning (chain-of-thought) in the human review interface important?", options: [
+        { letter: 'A', text: 'To allow humans to understand why the agent made its decision, enabling meaningful override rather than rubber-stamping', correct: true, explain: '' },
+        { letter: 'B', text: 'Because regulators require chain-of-thought logs to be visible', correct: false, explain: 'While some regulations require audit logs, the primary reason is reviewer effectiveness. Without context, humans cannot make informed overrides.' },
+        { letter: 'C', text: "To reduce the processing time of the agent's LLM calls", correct: false, explain: 'Displaying reasoning in the UI has no effect on LLM processing time. These are separate concerns.' },
+        { letter: 'D', text: 'To train the human reviewer to eventually replace the agent', correct: false, explain: 'The goal is effective human-agent collaboration, not replacement. Showing reasoning helps humans catch agent errors and improve the system.' },
+      ]},
+      { text: 'In Temporal.io, how does a HITL workflow resume after human approval?', options: [
+        { letter: 'A', text: "The entire workflow restarts from the beginning with the human's decision as input", correct: false, explain: 'Restarting from the beginning wastes all completed work. Temporal uses Signals to resume a paused workflow exactly where it left off.' },
+        { letter: 'B', text: "The workflow receives an external Signal carrying the human's decision, resuming execution from the exact pause point with full state preserved", correct: true, explain: '' },
+        { letter: 'C', text: 'A new workflow instance is created that picks up from a database checkpoint', correct: false, explain: 'Temporal does not use external database checkpoints — it uses its own event history for state. The original workflow instance resumes via Signal.' },
+        { letter: 'D', text: 'Human approval automatically deploys a new version of the workflow code', correct: false, explain: 'Human approval is runtime data, not a deployment trigger. The existing workflow code handles the Signal and continues execution.' },
+      ]},
+    ]
+  },
+  {
+    id: 'agentic_patterns', title: 'Agentic Workflow Patterns', track: 'automation',
+    authors: 'Anthropic, LangGraph, Andrew Ng', prereqs: ['temporal_durable','hitl_design'],
+    lesson: `<div class="prereq-box">Requires: <span>Temporal.io: Durable Execution</span>, <span>Human-in-the-Loop Design Patterns</span></div>
+<div class="lesson-body">
+<p>Anthropic's research identifies core patterns for building reliable multi-step AI workflows: augmented LLMs, prompt chaining, routing, parallelization, orchestrators/subagents, and evaluator-optimizer loops.</p>
+<p><strong>Pattern 1: Augmented LLM.</strong> The foundation. An LLM with tools (web search, code execution, database query), memory (conversation context, long-term vector store), and context (system prompts, RAG). All other patterns build on this.</p>
+<p><strong>Pattern 2: Prompt Chaining.</strong> Decompose a complex task into sequential LLM calls. Each call's output feeds the next. Gate with validation between steps. Example: Research → Outline → Draft → Edit → Format. Works when subtasks are clear and sequential. Failure at any step stops the chain or triggers retry/HITL.</p>
+<p><strong>Pattern 3: Routing.</strong> A classifier LLM decides which specialized agent handles a request. Example: customer support router → billing agent vs. technical support agent vs. returns agent. Requires a clear routing taxonomy, a reliable classifier, and fallback for uncertain cases.</p>
+<p><strong>Pattern 4: Parallelization.</strong> <em>Sectioning</em>: different agents work on different parts simultaneously (chapters of a report). <em>Voting</em>: multiple agents independently analyze the same input; majority vote for reliability on high-stakes decisions. LLM-as-orchestrator spawns parallel subtasks; aggregator LLM synthesizes results.</p>
+<p><strong>Pattern 5: Orchestrators and Subagents.</strong> An orchestrator LLM plans and delegates. Subagent LLMs execute specialized tasks (web research, code generation, data analysis). The orchestrator maintains task state and integrates results. This maps directly to Temporal workflows: orchestrator = workflow, subagents = activities.</p>
+<p><strong>Pattern 6: Evaluator-Optimizer.</strong> An evaluator LLM scores the output of a generator LLM against criteria. If score &lt; threshold, the generator tries again with evaluator feedback. Loops until quality threshold met or max iterations reached. Used in code generation (test-driven), document writing (rubric-driven), translation quality.</p>
+<p><strong>When NOT to Use Agents:</strong> Simple, single-step tasks don't benefit from agent patterns. Overhead of orchestration, tool calls, and state management only pays off for tasks requiring: multiple steps, conditional logic, external data, or iterative refinement.</p>
+</div>`,
+    questions: [
+      { text: 'The Evaluator-Optimizer pattern involves:', options: [
+        { letter: 'A', text: 'A human reviewer grading agent outputs and the agent learning from grades over time', correct: false, explain: 'This describes HITL + RLHF, not the Evaluator-Optimizer pattern. Evaluator-Optimizer uses an LLM evaluator (not human) in a tight automated loop.' },
+        { letter: 'B', text: "An evaluator LLM scoring a generator LLM's output and providing feedback for regeneration until a quality threshold is met", correct: true, explain: '' },
+        { letter: 'C', text: "Optimizing the agent's prompt for minimum token usage", correct: false, explain: 'Token optimization is a separate concern. Evaluator-Optimizer is about output quality iteration, not cost.' },
+        { letter: 'D', text: 'Running the same LLM call twice and comparing outputs for consistency', correct: false, explain: 'That describes a basic consistency check. Evaluator-Optimizer uses explicit scoring criteria and iterative feedback, not just comparison.' },
+      ]},
+      { text: 'Parallelization via "voting" is useful when:', options: [
+        { letter: 'A', text: 'Tasks can be decomposed into independent subtasks that are recombined', correct: false, explain: 'Independent subtask decomposition is "sectioning" parallelization. Voting runs the SAME task multiple times for reliability on uncertain outputs.' },
+        { letter: 'B', text: 'Multiple agents independently analyze the same input and a majority vote improves reliability on high-stakes or uncertain outputs', correct: true, explain: '' },
+        { letter: 'C', text: 'The orchestrator needs to process tasks faster than a single LLM can handle', correct: false, explain: 'Speed improvement is a benefit of sectioning parallelization. Voting trades latency for reliability — it is actually slower but more trustworthy.' },
+        { letter: 'D', text: 'The user wants to compare different AI model families', correct: false, explain: 'Model comparison is evaluation/benchmarking, not the voting pattern. Voting uses multiple calls for a single reliable answer.' },
+      ]},
+      { text: 'Prompt chaining is best suited for tasks that are:', options: [
+        { letter: 'A', text: 'Single-turn conversations requiring no memory', correct: false, explain: 'Single-turn tasks do not need chaining — just one LLM call. Chaining adds value for multi-step sequential work.' },
+        { letter: 'B', text: "Decomposable into sequential subtasks where each step's output is the next step's input, with validation gates between steps", correct: true, explain: '' },
+        { letter: 'C', text: 'Highly parallel with no dependencies between subtasks', correct: false, explain: 'Parallelization (not chaining) handles independent subtasks. Chaining is specifically for SEQUENTIAL dependencies.' },
+        { letter: 'D', text: 'Requiring real-time streaming output with no post-processing', correct: false, explain: 'Streaming is an API delivery concern. Chaining is about task decomposition and can use streaming at each step independently.' },
+      ]},
+    ]
+  },
+  {
+    id: 'orchestration_vs_choreography', title: 'Orchestration vs. Choreography', track: 'integration',
+    authors: 'Martin Fowler, Sam Newman, Camunda', prereqs: ['saga_pattern','event_driven_bpm'],
+    lesson: `<div class="prereq-box">Requires: <span>Saga Pattern and Distributed Transactions</span>, <span>Event-Driven BPM and Streaming</span></div>
+<div class="lesson-body">
+<p>Two fundamental approaches to coordinating microservices: one central coordinator (orchestration) vs. each service knowing its own role and reacting to events (choreography). Neither is universally better — the choice depends on the system's complexity, change rate, and observability requirements.</p>
+<p><strong>Orchestration:</strong> A central orchestrator (saga orchestrator, workflow engine, process engine) explicitly directs each service. It knows the complete sequence, handles failures, and maintains end-to-end state.</p>
+<ul>
+<li><strong>Benefits</strong>: Single source of truth for the business process; centralized error handling and compensation; easy to trace, monitor, and visualize; changes to the flow only require updating the orchestrator.</li>
+<li><strong>Costs</strong>: Orchestrator is a dependency (single point of failure if not HA); services must expose APIs for the orchestrator to call; can become a monolith if the orchestrator does too much business logic.</li>
+</ul>
+<p><strong>Choreography:</strong> Services react to events. OrderService publishes OrderPlaced → InventoryService reserves stock → PaymentService charges → ShippingService creates label. No central coordinator; each service knows what events to emit and which to consume.</p>
+<ul>
+<li><strong>Benefits</strong>: Highly decoupled; easy to add new participants (subscribe to existing events); natural fit for event-driven architectures.</li>
+<li><strong>Costs</strong>: End-to-end process understanding requires reading ALL service code; failure tracking is distributed and hard to trace; adding cross-cutting concerns (timeout, compensation) is complex.</li>
+</ul>
+<p><strong>Choosing:</strong> Use orchestration when: the process has complex conditional logic, compensation is needed, observability is critical, process ownership is centralized. Use choreography when: services are truly independent, events are natural domain artifacts, teams prefer maximum decoupling.</p>
+<p><strong>Hybrid Reality:</strong> Most real systems combine both. Orchestration within a bounded context (one team's services); choreography across contexts (inter-team, inter-system). A Temporal workflow orchestrates steps within the "order fulfillment" domain; it publishes events consumed by downstream "accounting" and "analytics" choreography consumers.</p>
+</div>`,
+    questions: [
+      { text: 'Which characteristic BEST distinguishes choreography from orchestration in microservices?', options: [
+        { letter: 'A', text: 'Choreography always uses REST APIs; orchestration uses message queues', correct: false, explain: 'Both can use REST or messaging. The distinction is the presence (orchestration) or absence (choreography) of a central coordinator directing flow.' },
+        { letter: 'B', text: 'In choreography, services react to events without a central coordinator; each service knows its own role and emits events for others to react to', correct: true, explain: '' },
+        { letter: 'C', text: 'Orchestration cannot handle failures; choreography has built-in fault tolerance', correct: false, explain: 'Orchestration (via saga orchestrators or Temporal) excels at failure handling with explicit compensation. The trade-off is coupling vs. observability, not failure capability.' },
+        { letter: 'D', text: 'Choreography requires more services than orchestration', correct: false, explain: 'The number of services is the same. The coordination pattern differs, not the service count.' },
+      ]},
+      { text: 'What is the primary cost of pure choreography at scale?', options: [
+        { letter: 'A', text: 'Higher latency due to event broker overhead', correct: false, explain: 'Event broker latency is typically milliseconds and often comparable to synchronous RPC. The real cost is observability and cognitive overhead.' },
+        { letter: 'B', text: "End-to-end process understanding requires reading all services' code; failures are distributed and hard to trace without dedicated observability tooling", correct: true, explain: '' },
+        { letter: 'C', text: 'Choreography prevents horizontal scaling of individual services', correct: false, explain: 'Choreography is actually favorable for scaling — each service scales independently based on its event consumption rate.' },
+        { letter: 'D', text: 'Choreography requires all services to be deployed simultaneously', correct: false, explain: "Choreography's decoupling means services can be deployed independently. This is one of its key advantages." },
+      ]},
+      { text: "The 'hybrid reality' pattern in production systems typically means:", options: [
+        { letter: 'A', text: 'Running two separate systems with identical logic for redundancy', correct: false, explain: 'Redundancy is an availability pattern. Hybrid orchestration/choreography refers to using each approach where it fits best in the same system.' },
+        { letter: 'B', text: 'Orchestration within a bounded context (intra-team) combined with choreography across context boundaries (inter-team events)', correct: true, explain: '' },
+        { letter: 'C', text: 'Using orchestration for reads and choreography for writes', correct: false, explain: 'The hybrid pattern is organized by domain ownership boundaries, not read/write operation type.' },
+        { letter: 'D', text: 'Alternating between orchestration and choreography for each deployment', correct: false, explain: 'The pattern is a deliberate architectural choice based on domain boundaries, not alternation by deployment cycle.' },
+      ]},
+    ]
+  },
+  {
+    id: 'process_metrics', title: 'Process Metrics and KPIs for AI Workflows', track: 'integration',
+    authors: 'Gartner, Celonis, APQC', prereqs: ['process_mining','orchestration_vs_choreography'],
+    lesson: `<div class="prereq-box">Requires: <span>Process Mining: Discovering Reality</span>, <span>Orchestration vs. Choreography</span></div>
+<div class="lesson-body">
+<p>Measuring process performance is prerequisite to improving it. For AI-augmented workflows, traditional process KPIs extend with AI-specific metrics: model accuracy, automation rate, escalation rate, and cost per case.</p>
+<p><strong>Core Process KPIs:</strong></p>
+<ul>
+<li><strong>Cycle Time</strong>: Time from case start to completion. Decompose into: processing time (active work), waiting time (queued), transport time (handoffs).</li>
+<li><strong>Throughput</strong>: Cases completed per unit time. Constrained by the bottleneck resource (Theory of Constraints).</li>
+<li><strong>First-Pass Yield (FPY)</strong>: % of cases completed without rework, errors, or rejection. High FPY = high quality inputs and clear process.</li>
+<li><strong>Error Rate</strong>: % of cases with defects detected post-process.</li>
+<li><strong>Cost Per Case</strong>: Total cost (labor + infrastructure + licensing) divided by volume. AI automation should reduce this metric.</li>
+</ul>
+<p><strong>AI-Specific Metrics:</strong></p>
+<ul>
+<li><strong>Automation Rate</strong>: % of cases fully automated (no human touch). Target 70–90% for mature AI workflows.</li>
+<li><strong>Containment Rate</strong>: % of cases resolved by AI without escalation. Inverse of escalation rate.</li>
+<li><strong>Escalation Rate</strong>: % of cases requiring human intervention. High escalation = poor confidence calibration or out-of-distribution inputs.</li>
+<li><strong>Confidence Calibration</strong>: Does the model's stated confidence correlate with actual accuracy? A well-calibrated model at 80% confidence should be right ~80% of the time.</li>
+</ul>
+<p><strong>SLA and SLO Monitoring:</strong> <strong>SLA (Service Level Agreement)</strong>: Customer-facing commitment (95% of cases resolved in &lt; 4 hours). <strong>SLO (Service Level Objective)</strong>: Internal target (99% of cases resolved in &lt; 3 hours — tighter than SLA as buffer). <strong>SLI (Service Level Indicator)</strong>: The measurement (actual resolution time distribution). Process mining continuously populates SLI measurements from event logs.</p>
+<p><strong>Bottleneck Analysis:</strong> Apply Theory of Constraints: find the step with the longest queue or highest wait time. Improving non-bottleneck steps has zero impact on throughput. Automation should target the bottleneck first.</p>
+<p><strong>Dashboard Design for AI Workflows:</strong> Real-time metrics: current automation rate, escalation rate, active cases by stage. Trend charts: daily cycle time, weekly throughput, monthly cost per case. Anomaly alerts: automation rate drops &gt; 5% in 24h (model degradation), escalation rate spikes (distributional shift).</p>
+</div>`,
+    questions: [
+      { text: 'According to Theory of Constraints, where should AI automation investment be prioritized?', options: [
+        { letter: 'A', text: 'The step with the highest error rate regardless of volume', correct: false, explain: 'High error rate in a non-bottleneck step has limited throughput impact. Constraints theory targets the throughput-limiting bottleneck first.' },
+        { letter: 'B', text: 'The bottleneck step — the process constraint with the longest queue or wait time, since improving it directly increases overall throughput', correct: true, explain: '' },
+        { letter: 'C', text: 'The first step in the process to reduce end-to-end cycle time most efficiently', correct: false, explain: "Improving non-bottleneck steps (even the first) doesn't increase throughput if the bottleneck is downstream. The constraint governs flow." },
+        { letter: 'D', text: 'The most expensive step to maximize ROI per automation dollar', correct: false, explain: 'Cost-per-step is a partial view. Automating an expensive non-bottleneck step saves money per step but does not increase throughput or reduce cycle time proportionally.' },
+      ]},
+      { text: "What does a 'well-calibrated' AI model mean in the context of process metrics?", options: [
+        { letter: 'A', text: 'The model runs within the allocated GPU memory budget', correct: false, explain: 'Memory usage is an infrastructure metric. Calibration refers to alignment between stated confidence and actual accuracy.' },
+        { letter: 'B', text: "The model's stated confidence scores accurately predict actual accuracy — an 80% confidence prediction is correct approximately 80% of the time", correct: true, explain: '' },
+        { letter: 'C', text: 'The model produces consistent outputs for identical inputs across multiple runs', correct: false, explain: 'That describes determinism or low variance. Calibration specifically measures whether confidence scores are meaningful probability estimates.' },
+        { letter: 'D', text: 'The model has been tested on the same data distribution as training data', correct: false, explain: 'Testing on training distribution would show optimistic results. Calibration is measured on held-out data and specifically assesses confidence-accuracy alignment.' },
+      ]},
+      { text: 'The difference between SLA and SLO in process monitoring is:', options: [
+        { letter: 'A', text: "SLAs are for internal teams; SLOs are customer-facing commitments", correct: false, explain: "It's the reverse. SLAs are customer-facing contracts. SLOs are internal targets, typically stricter, providing a buffer before the SLA is breached." },
+        { letter: 'B', text: 'SLAs are customer-facing commitments; SLOs are stricter internal targets that provide a safety buffer before the SLA threshold is breached', correct: true, explain: '' },
+        { letter: 'C', text: 'SLAs measure throughput; SLOs measure latency', correct: false, explain: 'Both SLAs and SLOs can cover any metric (latency, availability, throughput). The distinction is internal vs. external, not metric type.' },
+        { letter: 'D', text: 'SLOs are legally binding; SLAs are aspirational goals', correct: false, explain: 'SLAs are typically the legally/contractually binding agreements. SLOs are operational targets used internally to stay ahead of SLA breaches.' },
+      ]},
+    ]
+  },
+];
+
+// ─── State ───────────────────────────────────────────────────────────────────
+const KEY = 'pa7_completed';
+const state = { active: null, tab: 'lesson', completed: new Set(), answered: {}, qIndex: 0 };
+function save() { localStorage.setItem(KEY, JSON.stringify([...state.completed])); }
+function load() { try { const d = JSON.parse(localStorage.getItem(KEY)||'[]'); state.completed = new Set(d); } catch(e){} }
+load();
+
+function isPaperUnlocked(paper) {
+  return paper.prereqs.every(id => state.completed.has(id));
+}
+
+function renderSidebar() {
+  const el = document.getElementById('sidebar-scroll');
+  const total = PAPERS.length, done = state.completed.size;
+  document.getElementById('badge').textContent = done + ' / ' + total + ' complete';
+  let html = '';
+  TRACKS.forEach(track => {
+    html += `<div class="track-label">${track.label}</div>`;
+    track.papers.forEach(pid => {
+      const p = PAPERS.find(x => x.id === pid);
+      if (!p) return;
+      const isDone = state.completed.has(p.id);
+      const unlocked = isPaperUnlocked(p);
+      const active = state.active === p.id;
+      const iconClass = isDone ? 'done' : (unlocked ? 'unlocked' : 'locked-icon');
+      const iconChar = isDone ? '✓' : (unlocked ? '→' : '🔒');
+      const itemClass = 'paper-item' + (active ? ' active' : '') + (!unlocked && !isDone ? ' locked' : '');
+      html += `<div class="${itemClass}" onclick="${unlocked || isDone ? `openPaper('${p.id}')` : 'void(0)'}">
+        <div class="paper-icon ${iconClass}">${iconChar}</div>
+        <div class="paper-meta">
+          <div class="paper-title">${p.title}</div>
+          <div class="paper-sub">${isDone ? 'Completed' : (unlocked ? 'Ready' : 'Locked')}</div>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+function openPaper(id) {
+  const p = PAPERS.find(x => x.id === id);
+  if (!p || (!isPaperUnlocked(p) && !state.completed.has(p.id))) return;
+  state.active = id;
+  state.tab = 'lesson';
+  state.answered = {};
+  state.qIndex = 0;
+  document.getElementById('topbar-title').textContent = p.title;
+  document.getElementById('tabs').style.display = 'flex';
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  renderSidebar();
+  renderTabContent();
+}
+
+function showTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.toLowerCase() === tab));
+  renderTabContent();
+}
+
+function renderTabContent() {
+  const p = PAPERS.find(x => x.id === state.active);
+  if (!p) return renderWelcome();
+  const el = document.getElementById('content');
+  if (state.tab === 'lesson') {
+    el.innerHTML = `<div class="lesson-body">${p.lesson}</div>
+      <div style="margin-top:32px">
+        <button class="btn" onclick="showTab('quiz')">Test Your Knowledge →</button>
+      </div>`;
+  } else {
+    if (state.completed.has(p.id)) { renderCompletion(p); return; }
+    renderQuiz();
+  }
+}
+
+function renderQuiz() {
+  const p = PAPERS.find(x => x.id === state.active);
+  const q = p.questions[state.qIndex];
+  const el = document.getElementById('content');
+  const ans = state.answered[state.qIndex];
+  let optHtml = q.options.map(opt => {
+    let cls = 'option' + (ans !== undefined ? ' answered' : '');
+    if (ans !== undefined) { cls += opt.correct ? ' correct' : (opt.letter === ans ? ' wrong' : ''); }
+    let explainHtml = '';
+    if (ans !== undefined) {
+      if (opt.correct) explainHtml = `<div class="option-explain">Correct.</div>`;
+      else if (opt.letter === ans) explainHtml = `<div class="option-explain">${opt.explain}</div>`;
+    }
+    return `<div class="${cls}" onclick="selectOption('${p.id}',${state.qIndex},'${opt.letter}')">
+      <div class="option-letter">${opt.letter}</div>
+      <div class="option-text">${opt.text}${explainHtml}</div>
+    </div>`;
+  }).join('');
+  let actionHtml = '';
+  if (ans !== undefined) {
+    if (state.qIndex < p.questions.length - 1) {
+      actionHtml = `<button class="btn" onclick="nextQ()">Next Question →</button>`;
+    } else {
+      actionHtml = `<button class="btn" onclick="checkDone()">Finish Quiz</button>`;
+    }
+  }
+  el.innerHTML = `<div class="quiz-wrap">
+    <div class="q-progress">Question ${state.qIndex + 1} of ${p.questions.length}</div>
+    <div class="q-text">${q.text}</div>
+    ${optHtml}
+    <div class="quiz-action">${actionHtml}</div>
+  </div>`;
+}
+
+function selectOption(pid, qIdx, letter) {
+  if (state.answered[qIdx] !== undefined) return;
+  state.answered[qIdx] = letter;
+  renderQuiz();
+}
+
+function nextQ() {
+  state.qIndex++;
+  renderQuiz();
+}
+
+function checkDone() {
+  const p = PAPERS.find(x => x.id === state.active);
+  const allPass = p.questions.every((q, i) => {
+    const a = state.answered[i];
+    return a !== undefined && q.options.find(o => o.letter === a)?.correct;
+  });
+  if (allPass) {
+    state.completed.add(p.id); save(); updateBadge(); renderSidebar();
+    renderCompletion(p);
+  } else {
+    state.qIndex = p.questions.findIndex((q, i) => {
+      const a = state.answered[i];
+      return !(a !== undefined && q.options.find(o => o.letter === a)?.correct);
+    });
+    renderQuiz();
+  }
+}
+
+function updateBadge() {
+  document.getElementById('badge').textContent = state.completed.size + ' / ' + PAPERS.length + ' complete';
+}
+
+function renderCompletion(p) {
+  const el = document.getElementById('content');
+  const unlocked = PAPERS.filter(x => x.prereqs.includes(p.id) && !state.completed.has(x.id) && isPaperUnlocked(x));
+  let unlockedHtml = unlocked.length ? `<div class="unlocked-list"><p style="font-size:13px;color:#666;margin-bottom:12px">Newly unlocked:</p>${unlocked.map(x => `<div class="unlocked-item" onclick="openPaper('${x.id}')">→ ${x.title}</div>`).join('')}</div>` : '';
+  el.innerHTML = `<div class="completion">
+    <div style="font-size:48px;margin-bottom:16px">⚙️</div>
+    <h3>Topic Complete!</h3>
+    <p>${p.title} — all questions answered correctly.</p>
+    ${unlockedHtml}
+    <button class="btn btn-secondary" onclick="showTab('lesson')">Review Lesson</button>
+  </div>`;
+}
+
+function renderWelcome() {
+  document.getElementById('tabs').style.display = 'none';
+  document.getElementById('topbar-title').textContent = 'BPM + Agents';
+  const done = state.completed.size, total = PAPERS.length;
+  document.getElementById('content').innerHTML = `<div id="welcome">
+    <h2>⚙️ Business Process Management + Agents</h2>
+    <p>Master BPMN 2.0, process mining, DMN, Temporal.io, saga patterns, RPA-to-agents evolution, human-in-the-loop design, agentic workflow patterns, orchestration vs. choreography, and process metrics for AI workflows.</p>
+    <div>
+      <button class="start-btn" onclick="openPaper('bpmn_basics')">Start: BPMN Foundations</button>
+      <button class="start-btn" onclick="openPaper('temporal_durable')">Start: Durable Execution</button>
+      <button class="start-btn" onclick="openPaper('rpa_to_agents')">Start: RPA to Agents</button>
+    </div>
+    <div class="welcome-stats">
+      <div class="stat"><div class="stat-num">${total}</div><div class="stat-label">Topics</div></div>
+      <div class="stat"><div class="stat-num">36</div><div class="stat-label">Questions</div></div>
+      <div class="stat"><div class="stat-num">${done}</div><div class="stat-label">Completed</div></div>
+    </div>
+  </div>`;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderSidebar();
+renderWelcome();
+</script>
+<!-- Cross-device progress sync -->
+<script>
+(function(){
+  var SU='https://gbkhkbfbarsnpbdkxzii.supabase.co';
+  var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+  var MOD='pa7';
+  var LSK='pa7_completed';
+  var FMT='array';
+
+  function getIds(){
+    var raw=localStorage.getItem(LSK);
+    if(!raw) return [];
+    try{
+      var p=JSON.parse(raw);
+      if(Array.isArray(p)) return p;
+      return Object.keys(p).filter(function(k){return p[k];});
+    }catch(e){return [];}
+  }
+
+  function push(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    var ids=getIds();
+    if(!ids.length) return;
+    fetch(SU+'/rest/v1/academy_progress',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({email:email,module:MOD,completed:ids,updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }
+
+  var _orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    _orig.call(this,k,v);
+    if(k===LSK) push();
+  };
+
+  window.addEventListener('load',function(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    fetch(SU+'/rest/v1/academy_progress?email=eq.'+encodeURIComponent(email)+'&module=eq.'+MOD+'&select=completed',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(!rows||!rows[0]||!rows[0].completed||!rows[0].completed.length) return;
+      var remote=rows[0].completed;
+      var raw=localStorage.getItem(LSK);
+      var merged;
+      if(FMT==='object'){
+        merged=raw?JSON.parse(raw):{};
+        remote.forEach(function(id){merged[id]=true;});
+        _orig.call(localStorage,LSK,JSON.stringify(merged));
+      } else {
+        var local=raw?JSON.parse(raw):[];
+        var s=new Set(local);
+        remote.forEach(function(id){s.add(id);});
+        _orig.call(localStorage,LSK,JSON.stringify(Array.from(s)));
+      }
+      if(typeof renderTree==='function') renderTree();
+      if(typeof updateProgressBar==='function') updateProgressBar();
+      if(typeof render==='function') render();
+    }).catch(function(){});
+  });
+
+  var btn=document.createElement('a');
+  btn.href='index.html';
+  btn.innerHTML='&#8592; Menu';
+  btn.style.cssText='position:fixed;top:10px;left:10px;z-index:9999;background:#16213E;color:#7C4DFF;border:1px solid #7C4DFF44;padding:5px 12px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;opacity:0.8;transition:opacity 0.2s';
+  btn.onmouseover=function(){this.style.opacity='1';};
+  btn.onmouseout=function(){this.style.opacity='0.8';};
+  document.body.appendChild(btn);
+})();
+</script>
+</body>
+</html>

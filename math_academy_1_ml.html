@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Academy I — ML Mathematics</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0F0F23; color: #E0E0E0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
+  a { color: inherit; text-decoration: none; }
+
+  /* Header */
+  #header {
+    background: #16213E;
+    border-bottom: 2px solid #FFB300;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  #header h1 { font-size: 1.1rem; font-weight: 700; color: #FFB300; flex: 1; }
+  #badge {
+    background: #0F0F23;
+    border: 1.5px solid #FF6F00;
+    color: #FF6F00;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  /* Layout */
+  #app { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 57px); }
+
+  /* Sidebar */
+  #sidebar {
+    width: 260px;
+    min-width: 220px;
+    background: #16213E;
+    border-right: 1px solid #2a2000;
+    overflow-y: auto;
+    padding: 12px 0;
+    flex-shrink: 0;
+  }
+  .track-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #888;
+    padding: 12px 16px 4px;
+  }
+  .sidebar-item {
+    padding: 9px 16px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-item:hover { background: rgba(255,179,0,0.08); }
+  .sidebar-item.active { background: rgba(255,179,0,0.15); border-left-color: #FFB300; color: #FFB300; }
+  .sidebar-item.locked { opacity: 0.38; cursor: not-allowed; }
+  .sidebar-item .si-icon { font-size: 0.75rem; flex-shrink: 0; width: 18px; text-align: center; }
+  .sidebar-item .si-title { flex: 1; }
+  .sidebar-item .si-done { color: #FFB300; font-size: 0.85rem; }
+
+  /* Main */
+  #main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    max-width: 900px;
+  }
+
+  /* Welcome */
+  #welcome-screen { max-width: 680px; margin: 0 auto; padding-top: 24px; }
+  #welcome-screen h2 { font-size: 1.8rem; color: #FFB300; margin-bottom: 8px; }
+  #welcome-screen .sub { color: #aaa; margin-bottom: 28px; font-size: 0.95rem; }
+  .stats-row { display: flex; gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: #16213E;
+    border: 1px solid #2a2000;
+    border-radius: 10px;
+    padding: 18px 28px;
+    text-align: center;
+    flex: 1;
+  }
+  .stat-card .num { font-size: 2rem; font-weight: 800; color: #FF6F00; }
+  .stat-card .lbl { font-size: 0.78rem; color: #888; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .start-btns { display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn {
+    background: linear-gradient(135deg, #FFB300, #FF6F00);
+    color: #0F0F23;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 11px 22px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn.secondary {
+    background: transparent;
+    border: 1.5px solid #FFB300;
+    color: #FFB300;
+  }
+  .btn.secondary:hover { background: rgba(255,179,0,0.1); }
+  .welcome-desc { color: #bbb; line-height: 1.65; margin-bottom: 28px; font-size: 0.92rem; }
+  .track-overview { margin-top: 32px; }
+  .track-overview h3 { color: #FF6F00; margin-bottom: 14px; font-size: 1rem; }
+  .track-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .track-chip {
+    background: #16213E;
+    border: 1px solid #2a2000;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+  }
+  .track-chip span { color: #FFB300; font-weight: 700; }
+
+  /* Paper view */
+  #paper-view { display: none; }
+  .paper-header { margin-bottom: 24px; }
+  .paper-header .track-badge {
+    display: inline-block;
+    background: rgba(255,179,0,0.15);
+    color: #FFB300;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .paper-header h2 { font-size: 1.35rem; color: #fff; margin-bottom: 6px; line-height: 1.3; }
+  .paper-header .authors { color: #888; font-size: 0.82rem; font-style: italic; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid #2a2000; margin-bottom: 24px; }
+  .tab-btn {
+    padding: 9px 22px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #888;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn.active { color: #FFB300; border-bottom-color: #FFB300; }
+  .tab-btn:hover:not(.active) { color: #ccc; }
+
+  /* Lesson */
+  .lesson-body { line-height: 1.75; font-size: 0.93rem; color: #ccc; }
+  .lesson-body p { margin-bottom: 14px; }
+  .lesson-body h3 { color: #FF6F00; font-size: 1rem; margin: 22px 0 8px; }
+  .lesson-body strong { color: #fff; }
+  .lesson-body ul { padding-left: 20px; margin-bottom: 14px; }
+  .lesson-body ul li { margin-bottom: 5px; }
+
+  /* Math-specific boxes */
+  .prereq-box {
+    background: #0A0A1A;
+    border: 1px solid #2a2000;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    font-size: 0.82rem;
+    color: #666;
+  }
+  .prereq-box span { color: #FFB300; font-weight: 600; }
+
+  .eq-box {
+    background: #0D0D00;
+    border: 2px solid #FFB300;
+    border-radius: 12px;
+    padding: 22px 28px;
+    text-align: center;
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 17px;
+    color: #FFB300;
+    margin-bottom: 22px;
+    line-height: 1.9;
+    letter-spacing: 0.03em;
+  }
+  .eq-box .eq-name {
+    font-size: 0.68rem;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .eq-box .eq-line { color: #FFE082; font-size: 1.1rem; }
+  .eq-box .eq-sub { font-size: 0.8rem; color: #888; margin-top: 6px; }
+
+  .intuition-box {
+    background: #12120A;
+    border: 1px solid #2a2000;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    font-size: 0.88rem;
+    color: #BBB;
+    line-height: 1.7;
+  }
+  .intuition-box .label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #FFB300;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .example-box {
+    background: #0A0A16;
+    border-left: 3px solid #FF6F00;
+    border-radius: 0 8px 8px 0;
+    padding: 16px 18px;
+    margin: 18px 0 22px;
+  }
+  .example-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #FF6F00;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+  .step {
+    font-size: 0.87rem;
+    color: #CCC;
+    margin-bottom: 6px;
+    padding-left: 6px;
+  }
+  .step strong { color: #FFE082; }
+  .step code {
+    background: #1A1A00;
+    color: #FF6F00;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+  }
+  .step-result {
+    color: #FFB300;
+    font-family: 'Courier New', monospace;
+    font-size: 0.87rem;
+    font-weight: 700;
+  }
+
+  /* Quiz */
+  .quiz-progress { font-size: 0.78rem; color: #888; margin-bottom: 18px; }
+  .quiz-progress span { color: #FFB300; font-weight: 700; }
+  .question-card {
+    background: #16213E;
+    border: 1px solid #2a2000;
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+  .question-text { font-size: 0.95rem; color: #fff; margin-bottom: 18px; line-height: 1.5; font-weight: 500; }
+  .option-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #0F0F23;
+    border: 1.5px solid #2a2000;
+    border-radius: 8px;
+    padding: 11px 16px;
+    margin-bottom: 9px;
+    cursor: pointer;
+    font-size: 0.87rem;
+    color: #ccc;
+    transition: border-color 0.15s, background 0.15s;
+    line-height: 1.4;
+  }
+  .option-btn:hover:not(:disabled) { border-color: #FFB300; color: #fff; background: rgba(255,179,0,0.07); }
+  .option-btn.correct { border-color: #00C853; background: rgba(0,200,83,0.12); color: #00C853; }
+  .option-btn.wrong { border-color: #f44336; background: rgba(244,67,54,0.1); color: #f44336; }
+  .option-btn:disabled { cursor: default; }
+  .option-letter { font-weight: 700; margin-right: 8px; color: #FFB300; }
+  .option-btn.correct .option-letter { color: #00C853; }
+  .option-btn.wrong .option-letter { color: #f44336; }
+  .wrong-explanation {
+    background: rgba(244,67,54,0.08);
+    border: 1px solid rgba(244,67,54,0.3);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: #ef9a9a;
+    margin-top: 8px;
+    line-height: 1.5;
+    display: none;
+  }
+  .correct-explanation {
+    background: rgba(0,200,83,0.08);
+    border: 1px solid rgba(0,200,83,0.3);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: #a5d6a7;
+    margin-top: 8px;
+    line-height: 1.5;
+    display: none;
+  }
+  .next-btn { margin-top: 16px; }
+
+  /* Completion */
+  .completion-card {
+    background: linear-gradient(135deg, rgba(255,179,0,0.1), rgba(255,111,0,0.05));
+    border: 1.5px solid #FFB300;
+    border-radius: 14px;
+    padding: 36px;
+    text-align: center;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .completion-icon { font-size: 3.5rem; margin-bottom: 16px; }
+  .completion-card h2 { color: #FFB300; font-size: 1.3rem; margin-bottom: 10px; }
+  .completion-card p { color: #bbb; font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px; }
+  .unlocked-list { text-align: left; margin: 16px 0; }
+  .unlocked-list h4 { color: #FF6F00; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .unlocked-item {
+    background: #0F0F23;
+    border: 1px solid #2a2000;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    font-size: 0.83rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .unlocked-item:hover { border-color: #FFB300; color: #FFB300; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0F0F23; }
+  ::-webkit-scrollbar-thumb { background: #2a2000; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #FFB300; }
+
+  @media (max-width: 700px) {
+    #sidebar { width: 200px; min-width: 160px; }
+    #main { padding: 16px; }
+    .track-list { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Math Academy I &mdash; ML Mathematics</h1>
+  <div id="badge">0 / 12 completed</div>
+</div>
+
+<div id="app">
+  <div id="sidebar"></div>
+  <div id="main">
+    <div id="welcome-view"></div>
+    <div id="paper-view"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const TRACKS = [
+  { id: 'prob', label: 'Probability & Statistics' },
+  { id: 'regression', label: 'Regression' },
+  { id: 'classification', label: 'Classification' },
+  { id: 'deep', label: 'Deep Learning' }
+];
+
+const PAPERS = [
+
+// ─── TRACK 1: PROBABILITY ────────────────────────────────────────────────────
+
+{
+  id: 'bayes', track: 'prob', prereqs: [],
+  title: "Bayes' Theorem",
+  authors: "Thomas Bayes (1763) · Pierre-Simon Laplace · DAT401 Core",
+  lesson: `
+<div class="prereq-box">Starting point — no prerequisites</div>
+<div class="eq-box">
+  <span class="eq-name">Bayes' Theorem</span>
+  <div class="eq-line">P(A|B) = P(B|A) &middot; P(A) / P(B)</div>
+  <div class="eq-sub">where P(B) = P(B|A)&middot;P(A) + P(B|&not;A)&middot;P(&not;A) &nbsp;[Total Probability]</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Bayes' theorem <strong>updates our belief P(A)</strong> after observing evidence B.
+  P(A) is the <strong>prior</strong> (belief before). P(A|B) is the <strong>posterior</strong> (belief after seeing B).
+  P(B|A) is the <strong>likelihood</strong> (how probable is B if A is true). P(B) normalizes.
+  Used in: spam filters, medical diagnosis, Naive Bayes classifiers, Bayesian neural networks.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Medical Test</div>
+  <div class="step"><strong>Setup:</strong> Disease prevalence P(D)=0.03. Sensitivity P(+|D)=0.90. False positive rate P(+|&not;D)=0.25.</div>
+  <div class="step"><strong>Question:</strong> You test positive. What is P(D|+)?</div>
+  <div class="step"><strong>Step 1 &mdash; P(+) via Total Probability:</strong></div>
+  <div class="step">P(+) = 0.90&times;0.03 + 0.25&times;0.97 = 0.027 + 0.2425 = <code>0.2695</code></div>
+  <div class="step"><strong>Step 2 &mdash; Apply Bayes:</strong></div>
+  <div class="step">P(D|+) = P(+|D)&middot;P(D) / P(+) = 0.027 / 0.2695 &asymp; <span class="step-result">0.100</span></div>
+  <div class="step">Even with a positive test, only <strong>10% chance of disease</strong>. Low prior dominates.</div>
+</div>`,
+  questions: [
+    {
+      text: 'A spam filter has P(spam)=0.40. The word "URGENT" appears in 70% of spam and 5% of legitimate email. What is P(spam | email contains URGENT)?',
+      options: [
+        { letter: 'A', text: '0.70', correct: false, wrongExplanation: "That's P(URGENT|spam) — the likelihood, not the posterior. You must weight it by the prior and normalize by P(URGENT) across all emails." },
+        { letter: 'B', text: '0.50', correct: false, wrongExplanation: "That's the result if P(spam)=0.5. The prior here is 0.40, and URGENT is much more common in spam (70% vs 5%), so the posterior must be well above 0.5." },
+        { letter: 'C', text: '0.903', correct: true },
+        { letter: 'D', text: '0.40', correct: false, wrongExplanation: "That's the prior P(spam) before observing any evidence. Bayes updates this: P(URGENT)=0.70&times;0.40+0.05&times;0.60=0.31. Posterior=0.28/0.31&asymp;0.903." }
+      ]
+    },
+    {
+      text: "In the formula P(A|B) = P(B|A) &middot; P(A) / P(B), which term is the 'prior'?",
+      options: [
+        { letter: 'A', text: 'P(A|B)', correct: false, wrongExplanation: "P(A|B) is the posterior — our updated belief in A after observing B. The prior is what we believed before seeing any evidence." },
+        { letter: 'B', text: 'P(B|A)', correct: false, wrongExplanation: "P(B|A) is the likelihood — how probable the evidence B is, given A is true. It measures how well A 'explains' B." },
+        { letter: 'C', text: 'P(A)', correct: true },
+        { letter: 'D', text: 'P(B)', correct: false, wrongExplanation: "P(B) is the normalizing constant (marginal likelihood), computed via Total Probability. The prior is our initial belief P(A) before observing evidence." }
+      ]
+    },
+    {
+      text: "A disease test has 99% sensitivity P(+|D)=0.99 and 99% specificity P(-|\u00acD)=0.99. Disease prevalence is 0.1% (P(D)=0.001). What is P(D|+)?",
+      options: [
+        { letter: 'A', text: '0.99', correct: false, wrongExplanation: "That's the sensitivity, not the posterior. Even with 99% accuracy, a very rare disease (0.1%) makes false positives far outnumber true positives." },
+        { letter: 'B', text: '0.50', correct: false, wrongExplanation: "The prior is so small that even a near-perfect test gives a much lower posterior. P(+)=0.99\u00d70.001+0.01\u00d70.999\u22480.01098; P(D|+)=0.00099/0.01098\u22480.09." },
+        { letter: 'C', text: '0.09', correct: true },
+        { letter: 'D', text: '0.001', correct: false, wrongExplanation: "That's the prior P(D). The positive test result updates this upward. With P(+)&asymp;0.011, posterior P(D|+)=0.00099/0.011&asymp;0.09 — 90&times; larger than the prior." }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'expected_value', track: 'prob', prereqs: [],
+  title: 'Expected Value E[X]',
+  authors: 'Christiaan Huygens (1657) · Pascal & de Fermat · DAT401',
+  lesson: `
+<div class="prereq-box">Starting point &mdash; no prerequisites</div>
+<div class="eq-box">
+  <span class="eq-name">Expected Value (Discrete)</span>
+  <div class="eq-line">E[X] = &Sigma; x&middot;P(X = x)</div>
+  <div class="eq-sub">Linearity: E[aX + b] = a&middot;E[X] + b &nbsp;&middot;&nbsp; E[X+Y] = E[X] + E[Y]</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  E[X] is the <strong>long-run average</strong> value over many repetitions. It's the center of mass of the distribution.
+  <strong>Linearity of expectation</strong> is the key property: constants scale and shift the result.
+  E[X+Y]=E[X]+E[Y] holds even when X and Y are dependent. Used everywhere: loss functions, risk, value of information.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Dice Game</div>
+  <div class="step"><strong>Setup:</strong> Roll a fair 6-sided die. Win $X where X = number rolled.</div>
+  <div class="step">E[X] = 1(1/6)+2(1/6)+3(1/6)+4(1/6)+5(1/6)+6(1/6) = 21/6 = <span class="step-result">3.5</span></div>
+  <div class="step">You'd pay up to $3.50 per game to break even.</div>
+  <div class="step"><strong>Now:</strong> Y = 3X + 5 (win 3&times; roll plus $5 bonus)</div>
+  <div class="step">E[Y] = 3&middot;E[X] + 5 = 3(3.5) + 5 = 10.5 + 5 = <span class="step-result">$15.50</span></div>
+  <div class="step">Linearity avoids recomputing the whole sum from scratch.</div>
+</div>`,
+  questions: [
+    {
+      text: 'X has P(X=0)=0.5, P(X=2)=0.3, P(X=10)=0.2. What is E[2X &minus; 1]?',
+      options: [
+        { letter: 'A', text: '2.6', correct: false, wrongExplanation: "That's E[X] = 0(0.5)+2(0.3)+10(0.2) = 2.6. You still need to apply the linear transformation: E[2X&minus;1] = 2&middot;E[X] &minus; 1." },
+        { letter: 'B', text: '4.2', correct: true },
+        { letter: 'C', text: '5.2', correct: false, wrongExplanation: "That's 2&middot;E[X] = 2(2.6) = 5.2. You forgot to subtract 1. The formula is E[aX+b] = a&middot;E[X]+b, so b=&minus;1 must be added." },
+        { letter: 'D', text: '1.6', correct: false, wrongExplanation: "E[X]=2.6, so E[2X&minus;1] = 2(2.6)&minus;1 = 5.2&minus;1 = 4.2. Check: don't multiply the constant b by a." }
+      ]
+    },
+    {
+      text: 'E[X]=4 and E[Y]=7. What is E[3X &minus; 2Y + 5]?',
+      options: [
+        { letter: 'A', text: '3', correct: true },
+        { letter: 'B', text: '9', correct: false, wrongExplanation: "That's 3&times;4&minus;2&times;7 = 12&minus;14 = &minus;2, without the +5. Apply all three terms: 3(4)&minus;2(7)+5 = 12&minus;14+5 = 3." },
+        { letter: 'C', text: '&minus;2', correct: false, wrongExplanation: "That's 3E[X]&minus;2E[Y] = 12&minus;14 = &minus;2, but you forgot the additive constant +5. Linearity: E[aX+bY+c] = aE[X]+bE[Y]+c." },
+        { letter: 'D', text: '19', correct: false, wrongExplanation: "That would be if you added instead of subtracted: 3(4)+2(7)+5 = 31 &ne; 19. The coefficient on Y is &minus;2: E[&minus;2Y] = &minus;2(7) = &minus;14." }
+      ]
+    },
+    {
+      text: 'A game: flip a fair coin. Heads you win $6, tails you lose $2. What is the expected net gain per flip?',
+      options: [
+        { letter: 'A', text: '$4', correct: false, wrongExplanation: "That's the win amount if you only considered heads. You must weight by probabilities: E = 0.5(6) + 0.5(&minus;2) = 3&minus;1 = $2." },
+        { letter: 'B', text: '$2', correct: true },
+        { letter: 'C', text: '$0', correct: false, wrongExplanation: "Zero E[X] would require equal magnitude wins and losses (e.g., win $2 or lose $2). Here the win is $6 vs. loss of $2, so the expectation is positive: 0.5(6)+0.5(&minus;2) = $2." },
+        { letter: 'D', text: '$3', correct: false, wrongExplanation: "That's just 0.5&times;$6 &mdash; the expected win on heads alone, ignoring the tails loss. Full E = 0.5(6)+0.5(&minus;2) = 3&minus;1 = $2." }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'variance', track: 'prob', prereqs: ['expected_value'],
+  title: 'Variance and Standard Deviation',
+  authors: 'Carl Friedrich Gauss (1809) · DAT401 Core',
+  lesson: `
+<div class="prereq-box">Requires: <span>Expected Value E[X]</span></div>
+<div class="eq-box">
+  <span class="eq-name">Variance &mdash; Computational Formula</span>
+  <div class="eq-line">Var(X) = E[X&sup2;] &minus; (E[X])&sup2;</div>
+  <div class="eq-sub">&sigma; = &radic;Var(X) &nbsp;&middot;&nbsp; Var(aX+b) = a&sup2;&middot;Var(X) &nbsp;&middot;&nbsp; Var(X+Y) = Var(X)+Var(Y) [if independent]</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Variance measures <strong>spread around the mean &mu; = E[X]</strong>. The shortcut E[X&sup2;]&minus;(E[X])&sup2; avoids computing (x&minus;&mu;)&sup2; for each x.
+  Critical rules: <strong>Var(aX+b) = a&sup2;Var(X)</strong> (additive constant b has no effect on spread; only multiplicative constant matters, squared).
+  For independent X,Y: Var(X+Y) = Var(X)+Var(Y).
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example</div>
+  <div class="step"><strong>X:</strong> P(X=1)=0.25, P(X=3)=0.50, P(X=5)=0.25</div>
+  <div class="step"><strong>E[X]:</strong> 1(0.25)+3(0.50)+5(0.25) = 0.25+1.5+1.25 = <code>3.0</code></div>
+  <div class="step"><strong>E[X&sup2;]:</strong> 1(0.25)+9(0.50)+25(0.25) = 0.25+4.5+6.25 = <code>11.0</code></div>
+  <div class="step"><strong>Var(X):</strong> 11.0 &minus; 3.0&sup2; = 11.0 &minus; 9.0 = <span class="step-result">2.0</span></div>
+  <div class="step"><strong>&sigma;:</strong> &radic;2.0 &asymp; <span class="step-result">1.414</span></div>
+  <div class="step"><strong>Y = 2X+3:</strong> Var(Y) = 2&sup2;&times;Var(X) = 4&times;2.0 = <span class="step-result">8.0</span> (the +3 shifts mean, not spread)</div>
+</div>`,
+  questions: [
+    {
+      text: 'Random variable X has E[X]=5 and E[X&sup2;]=30. What is Var(3X)?',
+      options: [
+        { letter: 'A', text: '5', correct: false, wrongExplanation: "That's Var(X) = E[X&sup2;]&minus;(E[X])&sup2; = 30&minus;25 = 5. You still need to apply the scaling rule Var(aX) = a&sup2;&middot;Var(X) with a=3." },
+        { letter: 'B', text: '15', correct: false, wrongExplanation: "That's 3&middot;Var(X) = 3&times;5 = 15. The rule is Var(aX) = a&sup2;&middot;Var(X), not a&middot;Var(X). Multiply by 3&sup2;=9, not 3." },
+        { letter: 'C', text: '45', correct: true },
+        { letter: 'D', text: '75', correct: false, wrongExplanation: "Var(X)&times;(3&times;E[X]) = 5&times;15 = 75. This mixes up scaling with the mean. The rule is simply Var(3X) = 9&middot;Var(X) = 9&times;5 = 45." }
+      ]
+    },
+    {
+      text: 'Var(X) = 9. What is Var(X + 10)?',
+      options: [
+        { letter: 'A', text: '19', correct: false, wrongExplanation: "Adding a constant shifts the distribution but not its spread. Var(X+10) = Var(X) + Var(10) = Var(X) + 0 = 9. Var of a constant is always 0." },
+        { letter: 'B', text: '90', correct: false, wrongExplanation: "That's 10&times;Var(X) = 90. The +10 is additive, not multiplicative. Var(X+b) = Var(X) for any constant b." },
+        { letter: 'C', text: '9', correct: true },
+        { letter: 'D', text: '100', correct: false, wrongExplanation: "That's Var(X+10) if both terms were random. But 10 is a constant with Var=0. Adding a constant slides the whole distribution without changing its width." }
+      ]
+    },
+    {
+      text: 'X and Y are independent, each with Var(X)=Var(Y)=4. What is Var(X &minus; Y)?',
+      options: [
+        { letter: 'A', text: '0', correct: false, wrongExplanation: "Var(X&minus;Y)=0 only if X and Y are identical (not just equal variance). Independence means Var(X&minus;Y) = Var(X)+Var(&minus;Y) = Var(X)+(&minus;1)&sup2;Var(Y) = 4+4 = 8." },
+        { letter: 'B', text: '4', correct: false, wrongExplanation: "That's Var(X) alone. Subtraction still adds variances for independent variables: Var(X&minus;Y) = Var(X)+Var(Y) = 8. Note (&minus;1)&sup2;=1 so signs don't reduce variance." },
+        { letter: 'C', text: '8', correct: true },
+        { letter: 'D', text: '16', correct: false, wrongExplanation: "That would be Var(X+Y) = 8 doubled. Var(X&minus;Y) = Var(X)+(&minus;1)&sup2;Var(Y) = 4+4 = 8, the same as Var(X+Y) for independent variables." }
+      ]
+    }
+  ]
+},
+
+// ─── TRACK 2: REGRESSION ─────────────────────────────────────────────────────
+
+{
+  id: 'ols', track: 'regression', prereqs: ['expected_value'],
+  title: 'OLS Normal Equation',
+  authors: 'Adrien-Marie Legendre (1805) · Carl Friedrich Gauss',
+  lesson: `
+<div class="prereq-box">Requires: <span>Expected Value E[X]</span></div>
+<div class="eq-box">
+  <span class="eq-name">Ordinary Least Squares &mdash; Normal Equation</span>
+  <div class="eq-line">&beta;&#x0302; = (X&#x1D40;X)&#x207B;&#x00B9; X&#x1D40;y</div>
+  <div class="eq-sub">minimizes RSS = ||y &minus; X&beta;||&sup2; &nbsp;&middot;&nbsp; X is n&times;p, y is n&times;1, &beta;&#x0302; is p&times;1</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  We want &beta; that minimizes RSS. Setting the derivative &part;RSS/&part;&beta;=0 gives the normal equation X&#x1D40;(y&minus;X&beta;)=0,
+  which rearranges to &beta;&#x0302;=(X&#x1D40;X)&sup2;X&#x1D40;y. The matrix (X&#x1D40;X) is always square (p&times;p); when features are linearly independent, it's invertible.
+  When multicollinearity exists, add regularization (Ridge: (X&#x1D40;X+&lambda;I)&sup2;).
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Simple Linear Regression</div>
+  <div class="step"><strong>For 1 feature:</strong> &beta;&#x0302;&sub;1; = &Sigma;(x&shy;&minus;x&#x0304;)(y&shy;&minus;y&#x0304;) / &Sigma;(x&shy;&minus;x&#x0304;)&sup2;</div>
+  <div class="step"><strong>Data:</strong> (x,y) = (1,2),(2,3),(3,5) &rarr; x&#x0304;=2, y&#x0304;=10/3&asymp;3.33</div>
+  <div class="step"><strong>Numerator:</strong> (&minus;1)(&minus;1.33)+(0)(&minus;0.33)+(1)(1.67) = 1.33+0+1.67 = <code>3.0</code></div>
+  <div class="step"><strong>Denominator:</strong> 1+0+1 = <code>2.0</code></div>
+  <div class="step"><strong>&beta;&#x0302;&sub;1;</strong> = 3.0/2.0 = <span class="step-result">1.5</span></div>
+  <div class="step"><strong>&beta;&#x0302;&sub;0;</strong> = y&#x0304; &minus; &beta;&#x0302;&sub;1;&middot;x&#x0304; = 3.33&minus;1.5(2) = <span class="step-result">0.33</span></div>
+  <div class="step">Predicted: <strong>y&#x0302; = 0.33 + 1.5x</strong></div>
+</div>`,
+  questions: [
+    {
+      text: "In matrix form, why can't we compute &beta;&#x0302; = X&sup2;y instead of &beta;&#x0302; = (X&#x1D40;X)&sup2;X&#x1D40;y?",
+      options: [
+        { letter: 'A', text: 'X&sup2; is too computationally expensive to calculate', correct: false, wrongExplanation: "Actually (X&#x1D40;X)&sup2; is comparably expensive. The issue is mathematical, not computational: inverses only exist for square matrices." },
+        { letter: 'B', text: 'X is almost always non-square (n rows, p columns with n >> p), so X&sup2; simply does not exist', correct: true },
+        { letter: 'C', text: 'X&sup2;y gives the maximum of RSS, not the minimum', correct: false, wrongExplanation: "The optimization direction isn't the issue &mdash; X&sup2; cannot be computed at all for rectangular matrices. Only square matrices have inverses." },
+        { letter: 'D', text: 'X&sup2; only works for logistic regression, not linear regression', correct: false, wrongExplanation: "Neither X&sup2; works for any regression. The rectangular matrix problem applies to all least-squares problems." }
+      ]
+    },
+    {
+      text: 'In Ridge Regression, the normal equation becomes &beta;&#x0302;=(X&#x1D40;X+&lambda;I)&sup2;X&#x1D40;y. What problem does adding &lambda;I solve?',
+      options: [
+        { letter: 'A', text: 'It makes the computation run faster by reducing matrix size', correct: false, wrongExplanation: "&lambda;I adds to X&#x1D40;X without changing its dimensions. The purpose is numerical stability and regularization, not speed." },
+        { letter: 'B', text: 'It ensures X&#x1D40;X+&lambda;I is always invertible, even when features are perfectly collinear', correct: true },
+        { letter: 'C', text: 'It centers the features to have zero mean before fitting', correct: false, wrongExplanation: "Feature centering is a preprocessing step done to X before computing X&#x1D40;X. Adding &lambda;I to the already-computed X&#x1D40;X is a regularization trick, not feature centering." },
+        { letter: 'D', text: 'It forces all coefficients to be exactly zero', correct: false, wrongExplanation: "Forcing coefficients to zero is L1 (Lasso). Ridge shrinks coefficients toward zero but rarely sets them exactly to zero, and only makes the matrix invertible." }
+      ]
+    },
+    {
+      text: 'Data points (1,2),(2,4),(3,6) fit perfectly on y=2x with intercept 0. What is the RSS?',
+      options: [
+        { letter: 'A', text: '4', correct: false, wrongExplanation: "RSS=4 would imply some prediction error. But y&#x0302;=2x gives y&#x0302;&sub;1;=2, y&#x0302;&sub;2;=4, y&#x0302;&sub;3;=6 &mdash; exactly matching all three points. Each residual is 0." },
+        { letter: 'B', text: '12', correct: false, wrongExplanation: "That's TSS = &Sigma;(y&shy;&minus;y&#x0304;)&sup2; with y&#x0304;=4: (2&minus;4)&sup2;+(4&minus;4)&sup2;+(6&minus;4)&sup2; = 4+0+4=8, not 12. And RSS measures prediction error, not total variance." },
+        { letter: 'C', text: '0', correct: true },
+        { letter: 'D', text: '1.5', correct: false, wrongExplanation: "No error here. The model y&#x0302;=2x perfectly predicts all three points. Residuals: (2&minus;2),(4&minus;4),(6&minus;6) = (0,0,0). RSS = 0&sup2;+0&sup2;+0&sup2; = 0." }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'rss_r2', track: 'regression', prereqs: ['ols'],
+  title: 'RSS and R&sup2; &mdash; Model Fit',
+  authors: 'Karl Pearson (1896) · ISLR Chapter 3',
+  lesson: `
+<div class="prereq-box">Requires: <span>OLS Normal Equation</span></div>
+<div class="eq-box">
+  <span class="eq-name">Residual Sum of Squares & R-Squared</span>
+  <div class="eq-line">RSS = &Sigma; (y&shy; &minus; y&#x0302;&shy;)&sup2;</div>
+  <div class="eq-line">TSS = &Sigma; (y&shy; &minus; y&#x0304;)&sup2;</div>
+  <div class="eq-line">R&sup2; = 1 &minus; RSS / TSS</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  <strong>RSS</strong> = total unexplained error after fitting. <strong>TSS</strong> = total variance in y (error if you always predicted y&#x0304;).
+  <strong>R&sup2;</strong> = fraction of variance explained. R&sup2;=1 is perfect; R&sup2;=0 means the model is no better than the mean.
+  Adding any feature (even random noise) can only increase R&sup2; &mdash; adjusted R&sup2; penalizes this.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example</div>
+  <div class="step"><strong>Data:</strong> y=[2,3,5], y&#x0302;=[1.83,3.33,4.83], y&#x0304;=3.33</div>
+  <div class="step"><strong>RSS:</strong> (2&minus;1.83)&sup2;+(3&minus;3.33)&sup2;+(5&minus;4.83)&sup2; = 0.029+0.109+0.029 = <code>0.167</code></div>
+  <div class="step"><strong>TSS:</strong> (2&minus;3.33)&sup2;+(3&minus;3.33)&sup2;+(5&minus;3.33)&sup2; = 1.769+0.109+2.789 = <code>4.667</code></div>
+  <div class="step"><strong>R&sup2; = 1 &minus; 0.167/4.667 = 1 &minus; 0.036 = <span class="step-result">0.964</span></strong></div>
+  <div class="step">96.4% of variance in y is explained by x. Excellent fit.</div>
+</div>`,
+  questions: [
+    {
+      text: 'Model 1 has TSS=100 and RSS=40. Model 2 on the same data has RSS=25. By how much did R&sup2; improve?',
+      options: [
+        { letter: 'A', text: '0.40', correct: false, wrongExplanation: "That's R&sup2; of Model 1 = 1&minus;40/100 = 0.60. The question asks for the IMPROVEMENT between models, not the absolute R&sup2; of the first model." },
+        { letter: 'B', text: '15', correct: false, wrongExplanation: "That's the raw RSS reduction (40&minus;25=15). You must divide by TSS to get the R&sup2; change: 15/100 = 0.15." },
+        { letter: 'C', text: '0.15', correct: true },
+        { letter: 'D', text: '0.25', correct: false, wrongExplanation: "That's RSS&sub;2;/TSS = 25/100 = 0.25 &mdash; the unexplained fraction in Model 2, not the improvement. Improvement = (RSS&sub;1;&minus;RSS&sub;2;)/TSS = 15/100 = 0.15." }
+      ]
+    },
+    {
+      text: 'A model has R&sup2;=0.72. You add a completely random (noise) feature. What happens to R&sup2;?',
+      options: [
+        { letter: 'A', text: 'R&sup2; decreases because the random feature adds noise', correct: false, wrongExplanation: "R&sup2; on training data can never decrease when you add a feature &mdash; OLS can always set the new coefficient to 0 and recover the original model. R&sup2; stays equal or increases." },
+        { letter: 'B', text: 'R&sup2; stays exactly 0.72 since the feature is pure noise', correct: false, wrongExplanation: "By chance, the random feature will slightly correlate with y in the training sample. OLS will exploit this, increasing RSS marginally, so R&sup2; slightly increases." },
+        { letter: 'C', text: 'R&sup2; stays the same or slightly increases, which is why adjusted R&sup2; penalizes extra features', correct: true },
+        { letter: 'D', text: 'R&sup2; becomes undefined when noise features are added', correct: false, wrongExplanation: "R&sup2; remains perfectly well-defined. The issue is that raw R&sup2; is too generous &mdash; it rewards adding any feature. That's why adjusted R&sup2; exists." }
+      ]
+    },
+    {
+      text: 'A model achieves R&sup2;=0. What does this tell you?',
+      options: [
+        { letter: 'A', text: 'The model made zero prediction errors', correct: false, wrongExplanation: "Zero errors means R&sup2;=1 (perfect fit, RSS=0). R&sup2;=0 means the opposite: the model explains nothing, RSS=TSS." },
+        { letter: 'B', text: 'The model performs identically to simply predicting the mean y&#x0304; for every observation', correct: true },
+        { letter: 'C', text: 'The model has no intercept term', correct: false, wrongExplanation: "Excluding the intercept can sometimes give R&sup2;&lt;0, but R&sup2;=0 specifically means RSS=TSS &mdash; predicting y&#x0304; every time matches the model's performance." },
+        { letter: 'D', text: 'R&sup2;=0 means the model coefficients are all zero', correct: false, wrongExplanation: "Coefficients can be nonzero yet yield RSS=TSS if they cancel each other out. R&sup2;=0 is about predictive performance matching the mean baseline, not coefficient magnitude." }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'mle', track: 'regression', prereqs: ['bayes', 'expected_value'],
+  title: 'Maximum Likelihood Estimation',
+  authors: 'R.A. Fisher (1912) · DAT401 Module 5',
+  lesson: `
+<div class="prereq-box">Requires: <span>Bayes' Theorem</span>, <span>Expected Value E[X]</span></div>
+<div class="eq-box">
+  <span class="eq-name">Maximum Likelihood Estimation</span>
+  <div class="eq-line">L(&theta;) = &Pi; P(x&shy; | &theta;)</div>
+  <div class="eq-line">log L(&theta;) = &Sigma; log P(x&shy; | &theta;)</div>
+  <div class="eq-sub">&theta;&#x0302;_MLE = argmax<sub>&theta;</sub> log L(&theta;)</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  MLE finds the parameter &theta; that makes the observed data <strong>most probable</strong>.
+  We maximize <strong>log-likelihood</strong> instead of likelihood because: (1) log turns products into sums &mdash; easier to differentiate;
+  (2) log is monotone so same argmax; (3) avoids numerical underflow from multiplying many small probabilities.
+  Setting d(log L)/d&theta;=0 and solving gives &theta;&#x0302;.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Bernoulli MLE</div>
+  <div class="step"><strong>Data:</strong> Coin flips = {H,H,T,H,T} &rarr; 3 heads out of 5</div>
+  <div class="step"><strong>L(p) = p&sup3;(1&minus;p)&sup2;</strong></div>
+  <div class="step"><strong>log L(p)</strong> = 3&middot;log(p) + 2&middot;log(1&minus;p)</div>
+  <div class="step"><strong>Maximize:</strong> d/dp [log L] = 3/p &minus; 2/(1&minus;p) = 0</div>
+  <div class="step">&rarr; 3(1&minus;p) = 2p &rarr; 3 = 5p &rarr; <span class="step-result">p&#x0302; = 3/5 = 0.60</span></div>
+  <div class="step">MLE for Bernoulli is always the <strong>sample proportion</strong>.</div>
+</div>`,
+  questions: [
+    {
+      text: 'You observe data [1,0,1,1,0,1] from a Bernoulli(p) distribution. What is the MLE for p?',
+      options: [
+        { letter: 'A', text: '0.5', correct: false, wrongExplanation: "That's the uniform prior (equal chance), not the MLE. MLE ignores priors &mdash; it only maximizes the likelihood of observed data. Count: 4 ones, 2 zeros." },
+        { letter: 'B', text: '0.667', correct: true },
+        { letter: 'C', text: '0.75', correct: false, wrongExplanation: "That would be 3/4. This sample has 4 successes out of 6 total, so MLE = 4/6 &asymp; 0.667, not 3/4." },
+        { letter: 'D', text: '0.333', correct: false, wrongExplanation: "That's the proportion of zeros (failures): 2/6 = 0.333. MLE for Bernoulli p is the proportion of SUCCESSES: 4/6 &asymp; 0.667." }
+      ]
+    },
+    {
+      text: 'Why do we maximize log-likelihood instead of likelihood directly?',
+      options: [
+        { letter: 'A', text: 'Log-likelihood is always larger than likelihood, giving a better optimum', correct: false, wrongExplanation: "log(x) < x for x&in;(0,1), so log-likelihood of probabilities is actually more negative than the likelihood. The argmax is identical &mdash; that's the whole point." },
+        { letter: 'B', text: 'Log converts the product &Pi; P(x&shy;|&theta;) into a sum &Sigma; log P(x&shy;|&theta;), which is easier to differentiate and avoids numerical underflow', correct: true },
+        { letter: 'C', text: 'Likelihood functions have multiple local maxima; log removes them', correct: false, wrongExplanation: "Log transformation doesn't change the number of optima in general. The main reasons are numerical stability (underflow) and analytical convenience (product &rarr; sum)." },
+        { letter: 'D', text: 'Log-likelihood is required by the Chain Rule during backpropagation', correct: false, wrongExplanation: "The chain rule works on any differentiable function. Log is used in MLE for analytical and numerical reasons independent of backpropagation." }
+      ]
+    },
+    {
+      text: 'Data drawn from a Normal distribution: [2, 4, 6, 8]. What is the MLE for the mean &mu;?',
+      options: [
+        { letter: 'A', text: '4', correct: false, wrongExplanation: "That's the median (middle value) or the second-smallest value. MLE for &mu; of a Normal is the sample mean: (2+4+6+8)/4 = 20/4 = 5." },
+        { letter: 'B', text: '6', correct: false, wrongExplanation: "That's the third observation, not the MLE. MLE for Normal &mu; is the sample mean: (2+4+6+8)/4 = 5." },
+        { letter: 'C', text: '5', correct: true },
+        { letter: 'D', text: '2', correct: false, wrongExplanation: "That's the minimum observation. MLE for Normal &mu; is the sample mean, not the minimum. Taking derivatives of log L and setting to 0 gives &mu;&#x0302; = (1/n)&Sigma;x&shy; = 5." }
+      ]
+    }
+  ]
+},
+
+// ─── TRACK 3: CLASSIFICATION ─────────────────────────────────────────────────
+
+{
+  id: 'sigmoid', track: 'classification', prereqs: ['expected_value'],
+  title: 'The Sigmoid Function',
+  authors: 'Verhulst (1845) · Logistic Regression · CIS412',
+  lesson: `
+<div class="prereq-box">Requires: <span>Expected Value E[X]</span></div>
+<div class="eq-box">
+  <span class="eq-name">Sigmoid / Logistic Function</span>
+  <div class="eq-line">&sigma;(z) = 1 / (1 + e&sup2;)</div>
+  <div class="eq-sub">&sigma;'(z) = &sigma;(z)&middot;(1&minus;&sigma;(z)) &nbsp;&middot;&nbsp; &sigma;(0) = 0.5 &nbsp;&middot;&nbsp; range: (0, 1)</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Sigmoid <strong>squashes any real number z into (0,1)</strong>, making it interpretable as a probability.
+  It's the link function in logistic regression: z = &beta;&sub;0;+&beta;&sub;1;x&sub;1;+&hellip; is the linear part; &sigma;(z) converts it to P(y=1|x).
+  The derivative &sigma;'(z) = &sigma;(z)(1&minus;&sigma;(z)) is elegant and cheap to compute &mdash; essential for backpropagation.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Spam Classifier</div>
+  <div class="step"><strong>Model:</strong> &beta;&sub;0;=&minus;3, &beta;&sub;1;=0.5 (word count), &beta;&sub;2;=2.0 (has "URGENT")</div>
+  <div class="step"><strong>Email:</strong> x&sub;1;=4 (400 words), x&sub;2;=1 (has URGENT)</div>
+  <div class="step"><strong>Linear part:</strong> z = &minus;3+0.5(4)+2.0(1) = &minus;3+2+2 = <code>1.0</code></div>
+  <div class="step"><strong>Probability:</strong> &sigma;(1.0) = 1/(1+e&sup2;) = 1/1.368 &asymp; <span class="step-result">0.731</span></div>
+  <div class="step">73.1% probability of spam &rarr; classify as spam (threshold 0.5).</div>
+  <div class="step"><strong>Derivative:</strong> &sigma;'(1.0) = 0.731&times;(1&minus;0.731) = 0.731&times;0.269 &asymp; <span class="step-result">0.197</span></div>
+</div>`,
+  questions: [
+    {
+      text: 'A logistic regression model computes z=&minus;2 for a new observation. What is the predicted probability P(y=1)?',
+      options: [
+        { letter: 'A', text: '0.50', correct: false, wrongExplanation: "&sigma;(0)=0.5. Here z=&minus;2&lt;0, so the output must be less than 0.5. Negative z always gives probability below 0.5." },
+        { letter: 'B', text: '0.88', correct: false, wrongExplanation: "&sigma;(2)&asymp;0.88. The sign matters: &sigma;(&minus;2) = 1&minus;&sigma;(2) &asymp; 1&minus;0.88 = 0.12. A negative z reflects a prediction toward class 0." },
+        { letter: 'C', text: '0.12', correct: true },
+        { letter: 'D', text: '&minus;0.12', correct: false, wrongExplanation: "Sigmoid always outputs values strictly in (0,1). Negative probabilities are impossible. The formula 1/(1+e&sup2;) = 1/8.39 &asymp; 0.12 is always positive." }
+      ]
+    },
+    {
+      text: 'What is &sigma;\'(z) when z=0?',
+      options: [
+        { letter: 'A', text: '0', correct: false, wrongExplanation: "&sigma;'(z)=0 at the extremes (z&rarr;&plusmn;&infin;) where sigmoid saturates. At z=0, sigmoid is most sensitive to changes." },
+        { letter: 'B', text: '1', correct: false, wrongExplanation: "The derivative of the sigmoid is never 1. Its maximum value is 0.25 (at z=0). &sigma;'(0) = &sigma;(0)&times;(1&minus;&sigma;(0)) = 0.5&times;0.5 = 0.25." },
+        { letter: 'C', text: '0.25', correct: true },
+        { letter: 'D', text: '0.5', correct: false, wrongExplanation: "&sigma;(0)=0.5, but that's the function value, not the derivative. The derivative formula is &sigma;'(z)=&sigma;(z)(1&minus;&sigma;(z)): at z=0, this is 0.5&times;0.5=0.25." }
+      ]
+    },
+    {
+      text: 'Why is sigmoid preferred over a step function (outputs 0 or 1) for logistic regression trained with gradient descent?',
+      options: [
+        { letter: 'A', text: 'Sigmoid outputs are bounded between 0 and 1, just like probabilities', correct: false, wrongExplanation: "A step function also outputs 0 or 1, which are valid probabilities. The real reason sigmoid is needed is its gradient properties, not its range." },
+        { letter: 'B', text: 'The step function has zero gradient everywhere except at z=0, making gradient descent unable to update weights', correct: true },
+        { letter: 'C', text: 'Step functions cannot handle multi-class classification', correct: false, wrongExplanation: "Multi-class handling is why softmax exists, not sigmoid. The step function's problem for gradient descent is the vanishing gradient issue, not classification capacity." },
+        { letter: 'D', text: 'Sigmoid computes faster than a step function on modern GPUs', correct: false, wrongExplanation: "A step function (just a comparison) is faster to compute than sigmoid (which requires exp). The preference for sigmoid is mathematical, not computational." }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'entropy', track: 'classification', prereqs: ['bayes'],
+  title: 'Entropy and Gini Impurity',
+  authors: 'Shannon (1948) · Breiman CART (1984) · CIS412',
+  lesson: `
+<div class="prereq-box">Requires: <span>Bayes' Theorem</span></div>
+<div class="eq-box">
+  <span class="eq-name">Shannon Entropy & Gini Impurity</span>
+  <div class="eq-line">H(S) = &minus;&Sigma; p&shy;&middot;log&sub;2;(p&shy;)</div>
+  <div class="eq-line">Gini(S) = 1 &minus; &Sigma; p&shy;&sup2;</div>
+  <div class="eq-sub">Both equal 0 for pure nodes &middot; H is in bits &middot; Gini &isin; [0, 0.5] for binary</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Both measure <strong>impurity / uncertainty</strong> at a decision tree node. H=0 when all items are the same class (pure).
+  H is maximized when classes are equally likely. Decision trees choose splits that most reduce impurity
+  (Information Gain for entropy; Gini used in CART). Gini is faster &mdash; no logarithm needed.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Node with 7 positive, 3 negative</div>
+  <div class="step"><strong>Probabilities:</strong> p&sub;1;=0.7, p&sub;2;=0.3</div>
+  <div class="step"><strong>Entropy:</strong> H = &minus;(0.7&middot;log&sub;2;0.7 + 0.3&middot;log&sub;2;0.3)</div>
+  <div class="step">= &minus;(0.7(&minus;0.515)+0.3(&minus;1.737)) = &minus;(&minus;0.361&minus;0.521) = <span class="step-result">0.881 bits</span></div>
+  <div class="step"><strong>Gini:</strong> 1&minus;(0.7&sup2;+0.3&sup2;) = 1&minus;(0.49+0.09) = 1&minus;0.58 = <span class="step-result">0.42</span></div>
+  <div class="step"><strong>Pure node (10/0):</strong> H=0, Gini=0 &nbsp;|&nbsp; <strong>Max entropy (5/5):</strong> H=1.0 bit, Gini=0.5</div>
+</div>`,
+  questions: [
+    {
+      text: 'A decision tree node has 8 class-A and 2 class-B samples. What is the Gini impurity?',
+      options: [
+        { letter: 'A', text: '0.32', correct: true },
+        { letter: 'B', text: '0.50', correct: false, wrongExplanation: "Gini=0.5 is the maximum (50/50 split). With 8/2, the node is fairly pure, so Gini must be less than 0.5. Gini = 1&minus;(0.8&sup2;+0.2&sup2;) = 1&minus;0.68 = 0.32." },
+        { letter: 'C', text: '0.47', correct: false, wrongExplanation: "That's approximately the entropy H &asymp; 0.72 bits. Gini uses p&sup2; (no logarithm): 1&minus;(0.8&sup2;+0.2&sup2;) = 1&minus;0.68 = 0.32." },
+        { letter: 'D', text: '0', correct: false, wrongExplanation: "Gini=0 only for a 100% pure node. With 8 class-A and 2 class-B, there is impurity: 1&minus;(0.64+0.04) = 0.32 &gt; 0." }
+      ]
+    },
+    {
+      text: 'A node is perfectly pure (100% same class). What are H (entropy) and Gini?',
+      options: [
+        { letter: 'A', text: 'H=1, Gini=0.5', correct: false, wrongExplanation: "H=1 bit and Gini=0.5 describe a maximally impure 50/50 split, not a pure node. Pure nodes have minimum impurity." },
+        { letter: 'B', text: 'H=0, Gini=0', correct: true },
+        { letter: 'C', text: 'H=0, Gini=1', correct: false, wrongExplanation: "Gini=1 is impossible (max is 0.5 for binary). For a pure node p=[1,0]: Gini=1&minus;(1&sup2;+0&sup2;)=1&minus;1=0." },
+        { letter: 'D', text: 'H=&infin;, Gini=0', correct: false, wrongExplanation: "Entropy approaches &infin; only with infinitely many equiprobable classes. For one class with p=1: H = &minus;1&middot;log&sub;2;(1) = &minus;1&times;0 = 0." }
+      ]
+    },
+    {
+      text: 'A perfectly balanced node has 5 class-A and 5 class-B. What is the Shannon entropy H?',
+      options: [
+        { letter: 'A', text: '0.5 bits', correct: false, wrongExplanation: "0.5 bits is Gini impurity for a 50/50 split, not entropy. H = &minus;2&times;(0.5&times;log&sub;2;0.5) = &minus;2&times;(0.5&times;&minus;1) = 1.0 bit." },
+        { letter: 'B', text: '2 bits', correct: false, wrongExplanation: "2 bits would require 4 equally likely classes (log&sub;2;4=2). For binary 50/50: H = &minus;2(0.5&times;&minus;1) = 1.0 bit." },
+        { letter: 'C', text: '1.0 bit', correct: true },
+        { letter: 'D', text: '0 bits', correct: false, wrongExplanation: "H=0 means perfect purity (one class only). A 50/50 split is maximally impure &mdash; the highest possible entropy for a binary node is exactly 1.0 bit." }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'knn', track: 'classification', prereqs: [],
+  title: 'Distance Metrics for KNN',
+  authors: 'Cover & Hart (1967) · CIS412 KNN Module',
+  lesson: `
+<div class="prereq-box">Starting point &mdash; no prerequisites</div>
+<div class="eq-box">
+  <span class="eq-name">Euclidean & Manhattan Distance</span>
+  <div class="eq-line">Euclidean: d(x,y) = &radic;&Sigma; (x&shy;&minus;y&shy;)&sup2;</div>
+  <div class="eq-line">Manhattan: d(x,y) = &Sigma; |x&shy;&minus;y&shy;|</div>
+  <div class="eq-sub">Cosine similarity: cos(x,y) = (x&middot;y) / (||x||&middot;||y||)</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  KNN classifies a new point by finding its <strong>k nearest neighbors</strong> and majority voting.
+  Euclidean = straight-line distance; Manhattan = city-block distance (more robust to outliers).
+  <strong>Feature scaling is critical:</strong> a feature with large values (income in $1000s) will dominate Euclidean distance, making other features irrelevant.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; K=3</div>
+  <div class="step"><strong>Training:</strong> A(1,2)[Blue], B(3,4)[Blue], C(5,1)[Red], D(4,3)[Red], E(2,3)[Blue]</div>
+  <div class="step"><strong>New point P=(3,3). Euclidean distances:</strong></div>
+  <div class="step">d(P,B) = &radic;((3&minus;3)&sup2;+(3&minus;4)&sup2;) = &radic;1 = <code>1.00</code> [Blue]</div>
+  <div class="step">d(P,D) = &radic;((3&minus;4)&sup2;+(3&minus;3)&sup2;) = &radic;1 = <code>1.00</code> [Red]</div>
+  <div class="step">d(P,E) = &radic;((3&minus;2)&sup2;+(3&minus;3)&sup2;) = &radic;1 = <code>1.00</code> [Blue]</div>
+  <div class="step"><strong>3 nearest: B[Blue], D[Red], E[Blue] &rarr; majority vote: <span class="step-result">Blue (2 vs 1)</span></strong></div>
+</div>`,
+  questions: [
+    {
+      text: 'Why should features be standardized (zero mean, unit variance) before computing KNN distances?',
+      options: [
+        { letter: 'A', text: 'Standardization makes the KNN algorithm run faster', correct: false, wrongExplanation: "Standardization adds a preprocessing step &mdash; it does not speed up distance computation. The improvement is accuracy, not speed." },
+        { letter: 'B', text: 'A feature with large scale (income in $1000s vs. age 0&ndash;100) dominates Euclidean distance, making other features irrelevant', correct: true },
+        { letter: 'C', text: 'KNN requires all features to sum to 1, like probabilities', correct: false, wrongExplanation: "KNN has no such requirement. Standardization centers features at 0 with std=1, not to a probability scale." },
+        { letter: 'D', text: 'Standardization reduces overfitting by smoothing the decision boundary', correct: false, wrongExplanation: "Overfitting in KNN is controlled by K (larger K = smoother boundary), not feature scaling. Standardization ensures fair distance contribution per feature." }
+      ]
+    },
+    {
+      text: 'With K=1, what is the training set classification accuracy of KNN?',
+      options: [
+        { letter: 'A', text: 'It depends on the dataset', correct: false, wrongExplanation: "With K=1, every training point's nearest neighbor is itself (distance=0). It always predicts its own label perfectly. Training accuracy is always 100% regardless of the dataset." },
+        { letter: 'B', text: '50%', correct: false, wrongExplanation: "50% would be random guessing. K=1 uses each training point as its own nearest neighbor, always returning the correct label. Training accuracy is 100%." },
+        { letter: 'C', text: '100%', correct: true },
+        { letter: 'D', text: 'K=1 cannot be used for training accuracy calculations', correct: false, wrongExplanation: "K=1 is perfectly valid but over-fits: 100% training accuracy but typically poor test accuracy because it memorizes noise." }
+      ]
+    },
+    {
+      text: 'Point A=(0,0,0) and B=(3,4,0) in 3D. What is their Euclidean distance?',
+      options: [
+        { letter: 'A', text: '7', correct: false, wrongExplanation: "That's the Manhattan distance: |3&minus;0|+|4&minus;0|+|0&minus;0| = 3+4+0 = 7. Euclidean uses squares and square root: &radic;(9+16+0) = &radic;25 = 5." },
+        { letter: 'B', text: '5', correct: true },
+        { letter: 'C', text: '25', correct: false, wrongExplanation: "That's the squared Euclidean distance (3&sup2;+4&sup2;+0&sup2; = 25). Euclidean distance requires taking the square root: &radic;25 = 5." },
+        { letter: 'D', text: '&radic;7', correct: false, wrongExplanation: "Euclidean: &radic;((3&minus;0)&sup2;+(4&minus;0)&sup2;+(0&minus;0)&sup2;) = &radic;(9+16+0) = &radic;25 = 5. This is the classic 3-4-5 right triangle." }
+      ]
+    }
+  ]
+},
+
+// ─── TRACK 4: DEEP LEARNING ──────────────────────────────────────────────────
+
+{
+  id: 'attention', track: 'deep', prereqs: ['sigmoid'],
+  title: 'Scaled Dot-Product Attention',
+  authors: 'Vaswani et al. 2017 &mdash; Attention Is All You Need',
+  lesson: `
+<div class="prereq-box">Requires: <span>The Sigmoid Function</span></div>
+<div class="eq-box">
+  <span class="eq-name">Attention Mechanism (Vaswani et al., 2017)</span>
+  <div class="eq-line">Attention(Q,K,V) = softmax( QK&#x1D40; / &radic;d&#x2096; ) &middot; V</div>
+  <div class="eq-sub">softmax(z&shy;) = e&#x207F; / &Sigma; e&#x207F; &nbsp;&middot;&nbsp; Q,K,V &isin; &reals;&#x207F;&sup2;</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Q (queries), K (keys), V (values) are linear projections of the input.
+  <strong>QK&#x1D40; computes similarity</strong> between each query and all keys.
+  <strong>Dividing by &radic;d&sub;k;</strong> prevents large dot products from saturating softmax.
+  <strong>Softmax converts scores to weights.</strong> The output is a weighted sum of V &mdash; the model "attends" more to relevant positions.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; 2-token sequence, d&#x2096;=2</div>
+  <div class="step"><strong>Q = [[1,0],[0,1]] &nbsp; K = [[1,0],[0,1]] &nbsp; V = [[10,0],[0,20]]</strong></div>
+  <div class="step"><strong>Step 1 &mdash; QK&#x1D40;:</strong> [[1,0],[0,1]] (identity)</div>
+  <div class="step"><strong>Step 2 &mdash; Scale by 1/&radic;2:</strong> [[0.707,0],[0,0.707]]</div>
+  <div class="step"><strong>Step 3 &mdash; Softmax row 1:</strong> e&sup0;&middot;&sup7;&sup0;&sup7;/(e&sup0;&middot;&sup7;&sup0;&sup7;+e&sup0;) &asymp; <code>[0.67, 0.33]</code></div>
+  <div class="step"><strong>Step 3 &mdash; Softmax row 2:</strong> &asymp; <code>[0.33, 0.67]</code></div>
+  <div class="step"><strong>Step 4 &mdash; Output token 1:</strong> 0.67&times;[10,0]+0.33&times;[0,20] = <span class="step-result">[6.7, 6.6]</span></div>
+  <div class="step"><strong>Output token 2:</strong> 0.33&times;[10,0]+0.67&times;[0,20] = <span class="step-result">[3.3, 13.4]</span></div>
+</div>`,
+  questions: [
+    {
+      text: 'Why is the attention score divided by &radic;d&#x2096; before softmax?',
+      options: [
+        { letter: 'A', text: 'To normalize V values to unit magnitude', correct: false, wrongExplanation: "The &radic;d&sub;k; scaling is applied to QK&#x1D40; dot products, not to V. V values are summed with softmax weights after the scaling step." },
+        { letter: 'B', text: 'Large dot products push softmax into saturation (outputs near 0 or 1) where gradients vanish, making training slow', correct: true },
+        { letter: 'C', text: 'To ensure attention weights sum to d&#x2096; instead of 1', correct: false, wrongExplanation: "Softmax ALWAYS outputs values summing to 1, regardless of the scaling factor. The scaling happens before softmax." },
+        { letter: 'D', text: 'To reduce the computational cost of matrix multiplication', correct: false, wrongExplanation: "Dividing by a constant adds trivial overhead. The purpose is gradient stability during training &mdash; saturation of softmax blocks gradient flow." }
+      ]
+    },
+    {
+      text: 'In Attention(Q,K,V), what role does the V (Values) matrix play?',
+      options: [
+        { letter: 'A', text: 'V determines which tokens are similar to each other', correct: false, wrongExplanation: "Similarity is computed by QK&#x1D40;. V plays no role in determining attention weights &mdash; it provides the content that is retrieved once we know how much to attend to each position." },
+        { letter: 'B', text: 'V is the actual content retrieved; after softmax determines how much to attend to each position, V provides what is returned', correct: true },
+        { letter: 'C', text: 'V normalizes Q and K to prevent gradient explosion', correct: false, wrongExplanation: "Gradient control is the job of &radic;d&sub;k; scaling. V is the information payload &mdash; the output is a weighted sum of V rows, determined by the softmax attention pattern." },
+        { letter: 'D', text: 'V is used only during multi-head attention, not single-head', correct: false, wrongExplanation: "V is present in both single-head and multi-head attention. Multi-head attention simply runs the mechanism h times in parallel with different Q,K,V projections." }
+      ]
+    },
+    {
+      text: 'Multi-head attention runs h parallel attention operations. What is the primary benefit?',
+      options: [
+        { letter: 'A', text: 'It reduces the computational cost compared to single-head attention of the same size', correct: false, wrongExplanation: "Multi-head attention with h heads and d/h dimensions per head has similar cost to single-head. The benefit is representational diversity, not compute savings." },
+        { letter: 'B', text: 'Each head can attend to different positional patterns and relationship types simultaneously', correct: true },
+        { letter: 'C', text: 'Multiple heads are required to handle sequences longer than 512 tokens', correct: false, wrongExplanation: "Sequence length handling is a separate challenge (position encodings, sparse attention). Multi-head is about learning diverse relationship types, not sequence length." },
+        { letter: 'D', text: 'Multi-head prevents the model from attending to the same token twice', correct: false, wrongExplanation: "Attention can attend to any token any number of times across heads. In fact, multiple heads often attend to the same important tokens from different perspectives." }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'cross_entropy', track: 'deep', prereqs: ['sigmoid', 'entropy'],
+  title: 'Cross-Entropy Loss',
+  authors: 'Shannon (1948) · Kullback-Leibler Divergence',
+  lesson: `
+<div class="prereq-box">Requires: <span>The Sigmoid Function</span>, <span>Entropy and Gini Impurity</span></div>
+<div class="eq-box">
+  <span class="eq-name">Cross-Entropy Loss</span>
+  <div class="eq-line">Binary: L = &minus;[y&middot;log(p) + (1&minus;y)&middot;log(1&minus;p)]</div>
+  <div class="eq-line">Multi-class: L = &minus;&Sigma; y&shy;&middot;log(p&shy;)</div>
+  <div class="eq-sub">Gradient: &part;L/&part;p = &minus;y/p + (1&minus;y)/(1&minus;p)</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Cross-entropy <strong>heavily penalizes confident wrong predictions</strong>. If y=1 but p&asymp;0, then &minus;log(0)&rarr;&infin;: catastrophic penalty.
+  If p&asymp;1, &minus;log(1)=0: no penalty. The gradient is large when the model is wrong and small when it's right &mdash;
+  gradient descent naturally accelerates out of bad predictions.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; Two predictions compared</div>
+  <div class="step"><strong>True label y=1. Predicted p=0.3:</strong></div>
+  <div class="step">L = &minus;log(0.3) = <span class="step-result">1.204</span> &nbsp; Gradient: &part;L/&part;p = &minus;1/0.3 = <code>&minus;3.33</code> (large update)</div>
+  <div class="step"><strong>Same label, but p=0.9:</strong></div>
+  <div class="step">L = &minus;log(0.9) = <span class="step-result">0.105</span> &nbsp; Gradient: &part;L/&part;p = &minus;1/0.9 = <code>&minus;1.11</code> (small refinement)</div>
+  <div class="step">The model that was wrong pays <strong>11&times; more penalty</strong> and gets a 3&times; larger gradient update.</div>
+</div>`,
+  questions: [
+    {
+      text: 'True label y=0 (not spam). The model predicts p=0.8. What is the binary cross-entropy loss?',
+      options: [
+        { letter: 'A', text: '0.223', correct: false, wrongExplanation: "That's &minus;log(0.8) = 0.223, the loss term for y=1 and p=0.8. When y=0, the relevant term is &minus;log(1&minus;p) = &minus;log(0.2)." },
+        { letter: 'B', text: '1.609', correct: true },
+        { letter: 'C', text: '0', correct: false, wrongExplanation: "Zero loss means perfect prediction. Predicting p=0.8 when y=0 is a large error &mdash; 80% confident about the wrong class." },
+        { letter: 'D', text: '0.8', correct: false, wrongExplanation: "That's just the raw predicted probability. Cross-entropy transforms probabilities through log to penalize confident errors: &minus;log(1&minus;0.8) = &minus;log(0.2) &asymp; 1.609." }
+      ]
+    },
+    {
+      text: 'True label y=1. The model predicts p=0.5. What is the binary cross-entropy loss?',
+      options: [
+        { letter: 'A', text: '0', correct: false, wrongExplanation: "Zero loss means perfect prediction (p=1 when y=1). p=0.5 means the model is maximally uncertain &mdash; that's a non-trivial loss." },
+        { letter: 'B', text: '0.5', correct: false, wrongExplanation: "That's just the predicted probability. Loss = &minus;log(p) = &minus;log(0.5) = &minus;(&minus;0.693) = 0.693." },
+        { letter: 'C', text: '0.693', correct: true },
+        { letter: 'D', text: '2.0', correct: false, wrongExplanation: "&minus;log(0.5) = log(2) &asymp; 0.693, not 2.0. You might be thinking of log base 10: log&sub;10;(2) &asymp; 0.301. Natural log: ln(2) &asymp; 0.693." }
+      ]
+    },
+    {
+      text: 'Why is cross-entropy preferred over Mean Squared Error (MSE) for classification tasks?',
+      options: [
+        { letter: 'A', text: 'MSE cannot be computed for discrete class labels', correct: false, wrongExplanation: "MSE can be applied to classification outputs (treat predictions as 0-1 values). The problem is not computability but gradient behavior." },
+        { letter: 'B', text: 'MSE with sigmoid produces near-zero gradients when predictions are confidently wrong; cross-entropy gradients remain large in those cases', correct: true },
+        { letter: 'C', text: 'Cross-entropy is computationally faster than MSE', correct: false, wrongExplanation: "Both are O(n) operations. Cross-entropy requires log computation. The preference is about gradient properties during learning, not compute speed." },
+        { letter: 'D', text: 'MSE requires knowing the true probability distribution, which is never available in practice', correct: false, wrongExplanation: "MSE only requires labels (0 or 1), just like cross-entropy. The issue is how the loss surface behaves during gradient descent, particularly the vanishing gradient problem." }
+      ]
+    }
+  ]
+},
+
+{
+  id: 'backprop', track: 'deep', prereqs: ['cross_entropy'],
+  title: 'Backpropagation: Chain Rule',
+  authors: 'Rumelhart, Hinton, Williams (1986)',
+  lesson: `
+<div class="prereq-box">Requires: <span>Cross-Entropy Loss</span></div>
+<div class="eq-box">
+  <span class="eq-name">Backpropagation &mdash; Chain Rule</span>
+  <div class="eq-line">&part;L/&part;w = (&part;L/&part;a) &middot; (&part;a/&part;z) &middot; (&part;z/&part;w)</div>
+  <div class="eq-sub">z = w&middot;x+b &nbsp;&middot;&nbsp; a = &sigma;(z) &nbsp;&middot;&nbsp; L = &minus;log(a) [binary, y=1]</div>
+</div>
+<div class="intuition-box">
+  <span class="label">What it means</span>
+  Backpropagation computes <strong>&part;L/&part;w for every weight</strong> by repeatedly applying the chain rule from output to input.
+  Each layer's gradient depends on the gradient from the layer above (closer to the output).
+  <strong>Weight update:</strong> w &larr; w &minus; lr&middot;(&part;L/&part;w).
+  Without backprop, we'd need 2 forward passes per parameter to estimate gradients numerically &mdash; impractical for millions of weights.
+</div>
+<div class="example-box">
+  <div class="example-title">Worked Example &mdash; 1 neuron, y=1</div>
+  <div class="step"><strong>Forward:</strong> x=2, w=0.5, b=0 &rarr; z=1.0, a=&sigma;(1.0)&asymp;<code>0.731</code>, L=&minus;log(0.731)&asymp;<code>0.313</code></div>
+  <div class="step"><strong>&part;L/&part;a</strong> = &minus;1/a = &minus;1/0.731 &asymp; <code>&minus;1.368</code></div>
+  <div class="step"><strong>&part;a/&part;z</strong> = &sigma;(z)(1&minus;&sigma;(z)) = 0.731&times;0.269 &asymp; <code>0.197</code></div>
+  <div class="step"><strong>&part;z/&part;w</strong> = x = <code>2</code></div>
+  <div class="step"><strong>&part;L/&part;w</strong> = &minus;1.368&times;0.197&times;2 = <span class="step-result">&minus;0.539</span></div>
+  <div class="step"><strong>Update (lr=0.1):</strong> w = 0.5 &minus; 0.1&times;(&minus;0.539) = <span class="step-result">0.554</span></div>
+  <div class="step">Negative gradient &rarr; weight increases &rarr; &sigma;(z) increases &rarr; L decreases. &check;</div>
+</div>`,
+  questions: [
+    {
+      text: 'In a 3-layer network, why must gradients be computed starting from the output layer backwards?',
+      options: [
+        { letter: 'A', text: 'GPUs can only process matrices in reverse order', correct: false, wrongExplanation: "GPU processing order is an implementation detail. The backward direction is a mathematical requirement of the chain rule, not a hardware constraint." },
+        { letter: 'B', text: "Each layer's gradient requires the gradient from the next layer (closer to output) as an intermediate &mdash; you need &part;L/&part;a&sub;3; before you can compute &part;L/&part;w&sub;1;", correct: true },
+        { letter: 'C', text: 'Forward propagation already computed the gradients; backprop just reverses their order', correct: false, wrongExplanation: "Forward propagation computes activations, not gradients. Gradients are a separate computation using the chain rule in reverse." },
+        { letter: 'D', text: 'Backpropagation IS gradient descent', correct: false, wrongExplanation: "Gradient descent is the update rule w &larr; w&minus;lr&middot;&part;L/&part;w. Backpropagation efficiently COMPUTES &part;L/&part;w using the chain rule. One computes, the other applies." }
+      ]
+    },
+    {
+      text: 'In the worked example, w increased from 0.5 to 0.554 after one update. Why did w increase?',
+      options: [
+        { letter: 'A', text: 'The loss was greater than 1.0, so weights always increase', correct: false, wrongExplanation: "Loss magnitude doesn't determine increase vs. decrease. The sign of the gradient determines direction: negative gradient &rarr; weight increases." },
+        { letter: 'B', text: 'The gradient &part;L/&part;w was negative (&minus;0.539), so w &larr; w &minus; lr&times;(negative) = w + positive', correct: true },
+        { letter: 'C', text: 'The learning rate lr=0.1 is positive, which always causes weight increases', correct: false, wrongExplanation: "lr is always positive. Direction depends on gradient sign. w &larr; w &minus; lr&times;gradient: positive gradient decreases w, negative gradient increases w." },
+        { letter: 'D', text: 'Sigmoid outputs less than 1.0 always require the weight to increase', correct: false, wrongExplanation: "Weight direction depends on whether increasing w helps reduce loss. With y=1, p=0.731 (underpredicting), increasing w raises z and p, which reduces cross-entropy loss. The gradient captures this." }
+      ]
+    },
+    {
+      text: 'What causes vanishing gradients in deep networks with sigmoid activations?',
+      options: [
+        { letter: 'A', text: 'Sigmoid outputs between 0 and 1 are directly multiplied into the gradient at each layer', correct: false, wrongExplanation: "The activations themselves aren't multiplied; the DERIVATIVE &sigma;'(z) is. And &sigma;'(z) = &sigma;(z)(1&minus;&sigma;(z)) &le; 0.25 &mdash; that's the problematic shrinkage." },
+        { letter: 'B', text: "&sigma;'(z) = &sigma;(z)(1&minus;&sigma;(z)) &le; 0.25 always; chaining many such terms through the chain rule makes early-layer gradients exponentially small", correct: true },
+        { letter: 'C', text: 'The learning rate is too large, causing gradients to vanish after numerical overflow', correct: false, wrongExplanation: "Large learning rates cause gradient explosion or oscillation, not vanishing. Vanishing gradients come from chained multiplications of small numbers (sigmoid derivatives)." },
+        { letter: 'D', text: 'Deep networks have too many parameters, causing the gradient to be divided by layer count', correct: false, wrongExplanation: "Gradients are not divided by layer count. Vanishing occurs because each sigmoid layer multiplies the gradient by at most 0.25, exponentially shrinking it over many layers." }
+      ]
+    }
+  ]
+}
+
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+const state = {
+  active: null,
+  tab: 'lesson',
+  answered: {},
+  qIndex: 0,
+  completed: new Set(JSON.parse(localStorage.getItem('math1_completed') || '[]'))
+};
+
+function save() {
+  localStorage.setItem('math1_completed', JSON.stringify([...state.completed]));
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function isPaperUnlocked(paper) {
+  return paper.prereqs.every(id => state.completed.has(id));
+}
+
+function updateBadge() {
+  document.getElementById('badge').textContent = `${state.completed.size} / 12 completed`;
+}
+
+function getTrackLabel(trackId) {
+  return TRACKS.find(t => t.id === trackId)?.label || trackId;
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+
+function renderSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  let html = '';
+
+  TRACKS.forEach(track => {
+    const papers = PAPERS.filter(p => p.track === track.id);
+    if (!papers.length) return;
+
+    html += `<div class="track-label">${track.label}</div>`;
+
+    papers.forEach(paper => {
+      const unlocked = isPaperUnlocked(paper);
+      const done = state.completed.has(paper.id);
+      const active = state.active === paper.id;
+
+      let icon = unlocked ? (done ? '&#10003;' : '&#9675;') : '&#128274;';
+      let classes = 'sidebar-item';
+      if (active) classes += ' active';
+      if (!unlocked) classes += ' locked';
+
+      const clickHandler = unlocked ? `onclick="openPaper('${paper.id}')"` : '';
+
+      html += `
+        <div class="${classes}" ${clickHandler}>
+          <span class="si-icon">${icon}</span>
+          <span class="si-title">${paper.title}</span>
+          ${done ? '<span class="si-done">&#931;</span>' : ''}
+        </div>
+      `;
+    });
+  });
+
+  sidebar.innerHTML = html;
+}
+
+// ─── WELCOME ─────────────────────────────────────────────────────────────────
+
+function renderWelcome() {
+  document.getElementById('paper-view').style.display = 'none';
+  const wv = document.getElementById('welcome-view');
+  wv.style.display = 'block';
+
+  wv.innerHTML = `
+    <div id="welcome-screen">
+      <h2>ML Mathematics</h2>
+      <p class="sub">The equations behind the papers &mdash; same math from DAT401 &amp; CIS412, applied to AI/ML concepts.</p>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="num">12</div>
+          <div class="lbl">Equations</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">36</div>
+          <div class="lbl">Problems</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">${state.completed.size}</div>
+          <div class="lbl">Solved</div>
+        </div>
+      </div>
+
+      <p class="welcome-desc">
+        Each paper covers one ML equation: the formula displayed prominently, the intuition explained, a worked numerical example, then 3 problems to solve. Must pass all 3 to unlock dependent topics.
+      </p>
+
+      <div class="start-btns">
+        <button class="btn" onclick="openPaper('bayes')">Start: Bayes' Theorem</button>
+        <button class="btn secondary" onclick="openPaper('expected_value')">Start: Expected Value</button>
+        <button class="btn secondary" onclick="openPaper('knn')">Start: KNN Distances</button>
+      </div>
+
+      <div class="track-overview">
+        <h3>Tracks</h3>
+        <div class="track-list">
+          ${TRACKS.map(t => {
+            const count = PAPERS.filter(p => p.track === t.id).length;
+            const done = PAPERS.filter(p => p.track === t.id && state.completed.has(p.id)).length;
+            return `<div class="track-chip"><span>${t.label}</span><br>${done}/${count} complete</div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── OPEN PAPER ──────────────────────────────────────────────────────────────
+
+function openPaper(id) {
+  const paper = PAPERS.find(p => p.id === id);
+  if (!paper || !isPaperUnlocked(paper)) return;
+
+  state.active = id;
+  state.tab = 'lesson';
+  state.answered = {};
+  state.qIndex = 0;
+
+  document.getElementById('welcome-view').style.display = 'none';
+  document.getElementById('paper-view').style.display = 'block';
+
+  renderSidebar();
+  renderTabContent();
+
+  document.getElementById('main').scrollTop = 0;
+}
+
+// ─── TAB CONTENT ─────────────────────────────────────────────────────────────
+
+function showTab(tab) {
+  state.tab = tab;
+  renderTabContent();
+}
+
+function renderTabContent() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  if (!paper) return;
+
+  const pv = document.getElementById('paper-view');
+
+  const lessonActive = state.tab === 'lesson' ? 'active' : '';
+  const quizActive = state.tab === 'quiz' ? 'active' : '';
+
+  pv.innerHTML = `
+    <div class="paper-header">
+      <div class="track-badge">${getTrackLabel(paper.track)}</div>
+      <h2>${paper.title}</h2>
+      <div class="authors">${paper.authors}</div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn ${lessonActive}" onclick="showTab('lesson')">Lesson</button>
+      <button class="tab-btn ${quizActive}" onclick="showTab('quiz')">Problems (${paper.questions.length} questions)</button>
+    </div>
+    <div id="tab-body"></div>
+  `;
+
+  if (state.tab === 'lesson') {
+    renderLesson(paper);
+  } else {
+    renderQuiz();
+  }
+}
+
+// ─── LESSON ──────────────────────────────────────────────────────────────────
+
+function renderLesson(paper) {
+  const body = document.getElementById('tab-body');
+  body.innerHTML = `
+    <div class="lesson-body">${paper.lesson}</div>
+    <div style="margin-top:28px;">
+      <button class="btn" onclick="showTab('quiz')">Solve the Problems &rarr;</button>
+    </div>
+  `;
+}
+
+// ─── QUIZ ────────────────────────────────────────────────────────────────────
+
+function renderQuiz() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  const body = document.getElementById('tab-body');
+
+  const q = paper.questions[state.qIndex];
+  const answered = state.answered[state.qIndex];
+  const total = paper.questions.length;
+  const doneCount = Object.keys(state.answered).length;
+
+  let optionsHtml = q.options.map(opt => {
+    let cls = 'option-btn';
+    let extraHtml = '';
+
+    if (answered !== undefined) {
+      if (opt.correct) {
+        cls += ' correct';
+        extraHtml = `<div class="correct-explanation" style="display:block;">Correct.</div>`;
+      } else if (opt.letter === answered && !opt.correct) {
+        cls += ' wrong';
+        extraHtml = `<div class="wrong-explanation" style="display:block;">${opt.wrongExplanation}</div>`;
+      }
+    }
+
+    const disabled = answered !== undefined ? 'disabled' : '';
+    const clickHandler = answered === undefined ? `onclick="selectOption('${opt.letter}')"` : '';
+
+    return `
+      <button class="${cls}" ${disabled} ${clickHandler}>
+        <span class="option-letter">${opt.letter}.</span>${opt.text}
+      </button>
+      ${extraHtml}
+    `;
+  }).join('');
+
+  let nextHtml = '';
+  if (answered !== undefined) {
+    if (state.qIndex < total - 1) {
+      nextHtml = `<button class="btn next-btn" onclick="nextQ()">Next Problem &rarr;</button>`;
+    } else {
+      nextHtml = `<button class="btn next-btn" onclick="checkDone()">Check Results</button>`;
+    }
+  }
+
+  body.innerHTML = `
+    <div class="quiz-progress">Problem <span>${state.qIndex + 1}</span> of <span>${total}</span> &nbsp;|&nbsp; ${doneCount} answered</div>
+    <div class="question-card">
+      <div class="question-text">${q.text}</div>
+      ${optionsHtml}
+      ${nextHtml}
+    </div>
+  `;
+}
+
+function selectOption(letter) {
+  if (state.answered[state.qIndex] !== undefined) return;
+  state.answered[state.qIndex] = letter;
+  renderQuiz();
+}
+
+function nextQ() {
+  const paper = PAPERS.find(p => p.id === state.active);
+  if (state.qIndex < paper.questions.length - 1) {
+    state.qIndex++;
+    renderQuiz();
+    document.getElementById('main').scrollTop = 0;
+  }
+}
+
+function checkDone() {
+  const p = PAPERS.find(x => x.id === state.active);
+  const allPass = p.questions.every((q, i) => {
+    const a = state.answered[i];
+    return a !== undefined && q.options.find(o => o.letter === a)?.correct;
+  });
+
+  if (allPass) {
+    state.completed.add(p.id);
+    save();
+    updateBadge();
+    renderSidebar();
+    renderCompletion(p);
+  } else {
+    state.qIndex = p.questions.findIndex((q, i) => {
+      const a = state.answered[i];
+      return !(a !== undefined && q.options.find(o => o.letter === a)?.correct);
+    });
+    renderQuiz();
+  }
+}
+
+// ─── COMPLETION ──────────────────────────────────────────────────────────────
+
+function renderCompletion(paper) {
+  const body = document.getElementById('tab-body');
+
+  const unlocked = PAPERS.filter(p =>
+    p.prereqs.includes(paper.id) && isPaperUnlocked(p)
+  );
+
+  let unlockedHtml = '';
+  if (unlocked.length > 0) {
+    unlockedHtml = `
+      <div class="unlocked-list">
+        <h4>Newly Unlocked</h4>
+        ${unlocked.map(p => `
+          <div class="unlocked-item" onclick="openPaper('${p.id}')">
+            ${p.title}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  const allDone = state.completed.size === PAPERS.length;
+
+  body.innerHTML = `
+    <div class="completion-card">
+      <div class="completion-icon">&#931;</div>
+      <h2>${paper.title} Solved</h2>
+      <p>You passed all ${paper.questions.length} problems. This equation is now marked complete.</p>
+      ${unlockedHtml}
+      ${allDone ? '<p style="color:#FFB300;font-weight:700;font-size:1rem;">All 12 equations complete. Math mastered.</p>' : ''}
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
+        <button class="btn secondary" onclick="renderWelcome()">Back to Overview</button>
+        ${unlocked.length > 0 ? `<button class="btn" onclick="openPaper('${unlocked[0].id}')">Next: ${unlocked[0].title}</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+updateBadge();
+renderSidebar();
+renderWelcome();
+</script>
+<!-- Cross-device progress sync -->
+<script>
+(function(){
+  var SU='https://gbkhkbfbarsnpbdkxzii.supabase.co';
+  var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+  var MOD='math1';
+  var LSK='math1_completed';
+  var FMT='array';
+
+  function getIds(){
+    var raw=localStorage.getItem(LSK);
+    if(!raw) return [];
+    try{
+      var p=JSON.parse(raw);
+      if(Array.isArray(p)) return p;
+      return Object.keys(p).filter(function(k){return p[k];});
+    }catch(e){return [];}
+  }
+
+  function push(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    var ids=getIds();
+    if(!ids.length) return;
+    fetch(SU+'/rest/v1/academy_progress',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({email:email,module:MOD,completed:ids,updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }
+
+  var _orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    _orig.call(this,k,v);
+    if(k===LSK) push();
+  };
+
+  window.addEventListener('load',function(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    fetch(SU+'/rest/v1/academy_progress?email=eq.'+encodeURIComponent(email)+'&module=eq.'+MOD+'&select=completed',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(!rows||!rows[0]||!rows[0].completed||!rows[0].completed.length) return;
+      var remote=rows[0].completed;
+      var raw=localStorage.getItem(LSK);
+      var merged;
+      if(FMT==='object'){
+        merged=raw?JSON.parse(raw):{};
+        remote.forEach(function(id){merged[id]=true;});
+        _orig.call(localStorage,LSK,JSON.stringify(merged));
+      } else {
+        var local=raw?JSON.parse(raw):[];
+        var s=new Set(local);
+        remote.forEach(function(id){s.add(id);});
+        _orig.call(localStorage,LSK,JSON.stringify(Array.from(s)));
+      }
+      if(typeof renderTree==='function') renderTree();
+      if(typeof updateProgressBar==='function') updateProgressBar();
+      if(typeof render==='function') render();
+    }).catch(function(){});
+  });
+
+  var btn=document.createElement('a');
+  btn.href='index.html';
+  btn.innerHTML='&#8592; Menu';
+  btn.style.cssText='position:fixed;top:10px;left:10px;z-index:9999;background:#16213E;color:#7C4DFF;border:1px solid #7C4DFF44;padding:5px 12px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;opacity:0.8;transition:opacity 0.2s';
+  btn.onmouseover=function(){this.style.opacity='1';};
+  btn.onmouseout=function(){this.style.opacity='0.8';};
+  document.body.appendChild(btn);
+})();
+</script>
+</body>
+</html>

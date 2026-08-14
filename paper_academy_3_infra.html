@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Academy — Docker, Kubernetes & MLOps</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0F0F23;color:#E0E0E0;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;height:100vh;overflow:hidden}
+#sidebar{width:280px;min-width:280px;background:#0a0a1a;border-right:1px solid #1e1e3a;display:flex;flex-direction:column;overflow:hidden}
+#sidebar-header{padding:18px 16px 12px;border-bottom:1px solid #1e1e3a}
+#sidebar-header h1{font-size:1rem;font-weight:800;background:linear-gradient(90deg,#00BCD4,#1DE9B6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+#sidebar-header p{font-size:0.68rem;color:#555;margin-top:3px}
+#progress-bar-wrap{padding:10px 16px;border-bottom:1px solid #1e1e3a}
+#progress-label{font-size:0.68rem;color:#555;margin-bottom:5px}
+#progress-bar{height:4px;background:#1e1e3a;border-radius:2px}
+#progress-fill{height:4px;background:linear-gradient(90deg,#00BCD4,#1DE9B6);border-radius:2px;transition:width 0.4s}
+#tree{flex:1;overflow-y:auto;padding:12px 8px}
+#tree::-webkit-scrollbar{width:4px}
+#tree::-webkit-scrollbar-thumb{background:#2a2a4a;border-radius:2px}
+.track-label{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#444;padding:12px 8px 4px}
+.paper-node{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;border:1px solid transparent;transition:all 0.15s}
+.paper-node:hover:not(.locked){background:#16213E;border-color:#2a2a4a}
+.paper-node.active{background:#16213E;border-color:#00BCD455}
+.paper-node.locked{opacity:0.4;cursor:not-allowed}
+.paper-node.completed .node-icon{background:#1DE9B6;color:#000}
+.paper-node.active .node-icon{background:#00BCD4;color:#fff}
+.paper-node.locked .node-icon{background:#1e1e3a;color:#444}
+.node-icon{width:28px;height:28px;border-radius:50%;background:#1e1e3a;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0}
+.node-text{flex:1;min-width:0}
+.node-title{font-size:0.8rem;font-weight:600;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node-year{font-size:0.65rem;color:#555}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{padding:14px 28px;border-bottom:1px solid #1e1e3a;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#paper-tag{font-size:0.7rem;color:#00BCD4;font-weight:600;background:#00BCD411;border:1px solid #00BCD433;padding:3px 10px;border-radius:10px;white-space:nowrap}
+#paper-title-main{font-size:1rem;font-weight:700;color:#fff}
+#paper-meta{font-size:0.72rem;color:#555;margin-left:auto}
+#tabs{display:flex;border-bottom:1px solid #1e1e3a;padding:0 28px}
+.tab{padding:10px 20px;font-size:0.8rem;font-weight:600;color:#555;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s}
+.tab.active{color:#00BCD4;border-bottom-color:#00BCD4}
+.tab:hover:not(.active){color:#aaa}
+#content{flex:1;overflow-y:auto;padding:28px}
+#content::-webkit-scrollbar{width:6px}
+#content::-webkit-scrollbar-thumb{background:#2a2a4a;border-radius:3px}
+.lesson-section{margin-bottom:28px}
+.lesson-section h3{font-size:0.9rem;font-weight:700;color:#00BCD4;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.lesson-section h3::before{content:'';display:block;width:3px;height:16px;background:#00BCD4;border-radius:2px}
+.lesson-section p{color:#bbb;line-height:1.8;font-size:0.85rem;margin-bottom:10px}
+.lesson-section ul,ol{margin-left:20px;color:#bbb;font-size:0.85rem;line-height:2}
+.callout{background:#16213E;border-left:3px solid #00BCD4;border-radius:0 8px 8px 0;padding:14px 16px;margin:16px 0;font-size:0.83rem;color:#ccc;line-height:1.7}
+.callout.green{border-color:#1DE9B6}
+.callout.red{border-color:#FF5252}
+.callout.yellow{border-color:#FFD740}
+.code{background:#0a0a1a;border:1px solid #2a2a4a;border-radius:6px;padding:12px 16px;font-family:monospace;font-size:0.78rem;color:#1DE9B6;margin:12px 0;line-height:1.8;overflow-x:auto}
+.quiz-progress{display:flex;gap:6px;margin-bottom:24px}
+.qp-dot{width:8px;height:8px;border-radius:50%;background:#1e1e3a;transition:background 0.3s}
+.qp-dot.done{background:#1DE9B6}
+.qp-dot.current{background:#00BCD4}
+.question-card{background:#16213E;border:1px solid #2a2a4a;border-radius:12px;padding:24px;margin-bottom:20px}
+.question-num{font-size:0.7rem;color:#555;margin-bottom:8px}
+.question-text{font-size:0.95rem;color:#fff;line-height:1.6;margin-bottom:20px;font-weight:500}
+.options{display:flex;flex-direction:column;gap:10px}
+.option{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#0F0F23;border:1px solid #2a2a4a;border-radius:8px;cursor:pointer;transition:all 0.15s;text-align:left;width:100%}
+.option:hover:not(.disabled){border-color:#00BCD455;background:#16213E}
+.option.selected-wrong{border-color:#FF5252;background:#FF525211;animation:shake 0.3s}
+.option.selected-right{border-color:#1DE9B6;background:#1DE9B611}
+.option.revealed-right{border-color:#1DE9B6;background:#1DE9B608}
+.option.disabled{cursor:not-allowed;opacity:0.5}
+.option-letter{width:22px;height:22px;border-radius:50%;background:#1e1e3a;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0;margin-top:1px}
+.option-text{font-size:0.83rem;color:#ccc;line-height:1.5;flex:1}
+.feedback{margin-top:14px;padding:14px;border-radius:8px;font-size:0.82rem;line-height:1.6;display:none}
+.feedback.wrong{display:block;background:#FF525211;border:1px solid #FF525244;color:#FF8A80}
+.feedback.right{display:block;background:#1DE9B611;border:1px solid #1DE9B644;color:#69F0AE}
+.feedback strong{color:#fff}
+.next-btn{margin-top:16px;padding:10px 24px;background:#00BCD4;color:#000;border:none;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;display:none}
+.next-btn:hover{background:#00ACC1}
+.start-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:16px}
+.start-card{background:#16213E;border:1px solid #2a2a4a;border-radius:10px;padding:16px;cursor:pointer;transition:all 0.15s}
+.start-card:hover{border-color:#00BCD455;transform:translateY(-2px)}
+.start-card .sc-year{font-size:0.68rem;color:#00BCD4;margin-bottom:4px}
+.start-card .sc-title{font-size:0.85rem;font-weight:700;color:#fff;margin-bottom:4px}
+.start-card .sc-desc{font-size:0.72rem;color:#555}
+#reset-btn{margin:8px 16px;padding:6px;font-size:0.68rem;color:#333;background:none;border:1px solid #1e1e3a;border-radius:6px;cursor:pointer;width:calc(100% - 32px)}
+#reset-btn:hover{color:#666;border-color:#2a2a4a}
+.origin-badge{display:inline-block;background:#00BCD411;border:1px solid #00BCD433;color:#00BCD4;padding:2px 8px;border-radius:4px;font-size:0.7rem;margin-bottom:12px}
+.biz-box{background:#0a0a1a;border:1px solid #1DE9B633;border-radius:8px;padding:14px;margin:14px 0}
+.biz-box .biz-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:#1DE9B6;margin-bottom:8px}
+.biz-box table{width:100%;border-collapse:collapse;font-size:0.78rem}
+.biz-box td{padding:5px 10px;border-bottom:1px solid #1a1a2e;color:#bbb}
+.biz-box td:first-child{color:#fff;font-weight:600;width:40%}
+.biz-box tr:last-child td{border:none}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.25s ease forwards}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>Paper Academy III</h1>
+    <p>Docker · Kubernetes · MLOps</p>
+  </div>
+  <div id="progress-bar-wrap">
+    <div id="progress-label">0 of 14 completed</div>
+    <div id="progress-bar"><div id="progress-fill" style="width:0%"></div></div>
+  </div>
+  <div id="tree"></div>
+  <button id="reset-btn" onclick="resetProgress()">Reset progress</button>
+</div>
+<div id="main">
+  <div id="topbar">
+    <span id="paper-tag">Select a topic</span>
+    <span id="paper-title-main">Welcome to Paper Academy III</span>
+    <span id="paper-meta"></span>
+  </div>
+  <div id="tabs">
+    <div class="tab active" onclick="showTab('learn')" id="tab-learn">Learn</div>
+    <div class="tab" onclick="showTab('quiz')" id="tab-quiz">Quiz</div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+const PAPERS = [
+
+// ─── LINUX FOUNDATIONS ────────────────────────────────────────────────────────
+{
+  id:'cgroups', title:'Linux cgroups & Namespaces', shortTitle:'cgroups & Namespaces', year:2006,
+  authors:'Menage et al. · Linux Kernel / Google',
+  venue:'Linux Kernel 2.6.24 (2008)', category:'Linux Foundation', prereqs:[],
+  icon:'🐧', tagline:'The kernel primitives that make containers possible',
+  lesson:[
+    {h:'Why Isolation Is Hard',body:`Running multiple applications on one machine creates problems: app A uses 90% of CPU starving app B; app B reads app A's files; app C's crash takes down the whole server. Traditional solution: run one application per physical machine. Expensive and wasteful — a server might use 5% of its CPU on average.
+
+Virtual machines (VMware, 2001) solved isolation by emulating entire hardware. But VMs carry the weight of a full OS kernel (1-2GB) and take minutes to start. The Linux kernel developed two lighter primitives that make containers possible: cgroups and namespaces.`},
+    {h:'Namespaces: Isolation',body:`A namespace wraps a global resource and makes it appear to processes inside as if they have their own isolated instance. Linux has 8 namespace types:
+<ul>
+<li><strong>PID namespace:</strong> Process 1 inside the container doesn't know about processes outside</li>
+<li><strong>Network namespace:</strong> Container has its own network interfaces, routing table, port space</li>
+<li><strong>Mount namespace:</strong> Container has its own filesystem view — can't see host filesystem</li>
+<li><strong>UTS namespace:</strong> Container can have its own hostname</li>
+<li><strong>User namespace:</strong> Container's root (uid 0) maps to unprivileged user on host</li>
+</ul>`,callout:`Namespaces provide the ILLUSION of an isolated machine. The container thinks it's alone on the system. In reality, it shares the host kernel with every other container.`},
+    {h:'cgroups: Resource Limits',body:`Control Groups (cgroups) limit, account for, and isolate the resource usage of process groups:
+<ul>
+<li><strong>CPU:</strong> Limit container A to max 2 CPU cores, guarantee container B at least 0.5 cores</li>
+<li><strong>Memory:</strong> Kill container if it exceeds 512MB — preventing one container from exhausting host RAM</li>
+<li><strong>Block I/O:</strong> Limit disk read/write bandwidth</li>
+<li><strong>Network:</strong> Throttle network bandwidth per container</li>
+</ul>
+Google developed cgroups internally as "process containers" to manage Borg workloads. Contributed to Linux kernel in 2007. The same technology runs Google's internal infrastructure and your Docker containers.`,callout_green:`cgroups + namespaces = containers. Docker didn't invent new technology — it packaged these Linux kernel primitives into a developer-friendly interface. The kernel did the hard work in 2006-2008.`},
+    {h:'Why This Matters for AI',body:`Every model serving container, every training job on a Kubernetes cluster, every cloud function running inference — all rely on cgroups for resource limits and namespaces for isolation. When you set <code>memory: "4Gi"</code> in a Kubernetes pod spec, Kubernetes translates this to a cgroup limit on the container. When your training job is killed for using too much memory (OOMKilled), that's the cgroup memory controller in action.
+
+Understanding cgroups helps you debug why your model container gets killed, why GPU memory isn't isolated the same way CPU memory is, and how cloud providers bill you for compute.`}
+  ],
+  questions:[
+    {q:'What is the fundamental difference between a container and a virtual machine in terms of isolation?',
+     opts:['Containers are slower than VMs','VMs emulate entire hardware with their own kernel; containers share the host kernel and use Linux namespaces/cgroups for isolation — making them lighter and faster to start','Containers provide stronger security than VMs','VMs cannot run on Linux; containers are Linux-only'],
+     correct:1,
+     explain:['Containers start in milliseconds vs minutes for VMs, and have lower overhead. Containers are generally faster, not slower.', null,'VMs provide stronger isolation because the attack surface is limited to the hypervisor. A container escape (breaking out of namespace isolation) gives an attacker access to the host kernel. VMs require compromising the hypervisor, which has a much smaller attack surface. Containers trade security for speed and density.','VMs run on Windows, Linux, macOS via hypervisors (VMware, VirtualBox, Hyper-V). Containers can run on any OS, though Linux containers on non-Linux hosts need a Linux VM layer (Docker Desktop on Mac runs a lightweight Linux VM).']},
+    {q:'A Kubernetes pod is killed with "OOMKilled" status. What exactly caused this?',
+     opts:['The pod\'s code had an infinite loop that crashed the process','The container exceeded its cgroup memory limit — the kernel\'s OOM killer terminated the process to protect the host from memory exhaustion','The pod was killed because it had too many open file descriptors','OOMKilled means the pod was killed by another pod stealing its memory'],
+     correct:1,
+     explain:['An infinite loop would cause CPU saturation, not OOMKilled. The OOM (Out of Memory) killer is a specific kernel mechanism.',null,'When a container\'s memory usage hits the cgroup limit (e.g., the <code>resources.limits.memory: "2Gi"</code> in your pod spec), the kernel sends SIGKILL to the container\'s main process. The exit code is 137 (128+SIGKILL). Kubernetes reports this as OOMKilled. Fix: either increase the memory limit or find the memory leak in your code.','File descriptor limits are controlled by ulimit/rlimit, not cgroups memory limits. Exceeding them causes "too many open files" errors, not OOMKilled.','Containers are isolated by namespaces — they cannot access each other\'s memory. One container cannot steal another\'s memory.']},
+    {q:'Google contributed cgroups to the Linux kernel. Why did a company known for software contribute to kernel infrastructure?',
+     opts:['Google was required to contribute by open-source license obligations','Google built cgroups for its internal Borg cluster manager — contributing to the kernel meant all future Linux servers would support their resource isolation model, making it a universal standard they could rely on','Google wanted to slow down competitors by making infrastructure more complex','cgroups was an accident — a Google intern contributed it without approval'],
+     correct:1,
+     explain:['cgroups was contributed under GPL as part of kernel development, but the motivation was strategic/practical, not legal obligation. Google could have kept it internal.', null,'This is the key strategic insight. Google runs Borg on Linux. By contributing cgroups to the kernel, every Linux machine globally gained the ability to isolate and limit processes — enabling the container ecosystem and indirectly Kubernetes. Google didn\'t donate charity; it invested in making Linux a better platform for its workloads.','Google consistently makes infrastructure contributions that improve Linux for its own scale requirements. This is deliberate infrastructure investment, not complexity creation.','Paul Menage (the primary cgroups author) was a senior Google engineer. This was an official Google contribution.']},
+  ]
+},
+
+{
+  id:'docker', title:'Docker & The Container Image', shortTitle:'Docker', year:2013,
+  authors:'Solomon Hykes et al. · dotCloud / Docker Inc.',
+  venue:'PyCon 2013 (announced)', category:'Linux Foundation', prereqs:['cgroups'],
+  icon:'🐳', tagline:'Ship code that always works',
+  lesson:[
+    {h:'The "Works on My Machine" Problem',body:`Before Docker, deploying software looked like this: developer writes code on their MacBook → sends to staging server → breaks because staging has Python 3.8 not 3.11 → fixed → sent to production → breaks again because production has different library versions → ops team manually fixes dependencies → works → 3 weeks later, new dependency breaks it again.
+
+Docker solved this by packaging the application AND its entire environment (OS libraries, language runtime, dependencies, config files) into one portable unit: a container image.`},
+    {h:'The Dockerfile: Reproducible Environments',body:`A Dockerfile is a recipe for building an image:
+<div class="code">FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0"]</div>
+<code>docker build</code> → creates a deterministic image. <code>docker run</code> → starts a container from that image. Same image, same behavior, on any machine with Docker installed: developer laptop, CI server, production cluster.`,callout:`Docker images are layered. Each Dockerfile instruction creates a layer. Layers are cached — if your <code>pip install</code> layer hasn't changed, Docker reuses it. This is why changing code is fast to rebuild but changing dependencies requires rebuilding from that layer down.`},
+    {h:'The Docker Hub Ecosystem',body:`Docker introduced Docker Hub — a registry where images are stored and shared. <code>docker pull nginx:latest</code> downloads the official NGINX image. <code>docker pull python:3.11</code> gets the official Python runtime. No installation — just pull and run.
+
+This created a new software distribution model: instead of shipping source code or installers, you ship a container image. Every major software project now publishes official Docker images: PostgreSQL, Redis, Prometheus, Grafana, PyTorch, TensorFlow.`,callout_green:`Docker Hub has 15 million+ images. Over 13 billion image pulls per month. Container images replaced virtual machine snapshots as the standard unit of software deployment.`},
+    {h:'The Docker Business Cautionary Tale',body:`Docker Inc. raised $180M in VC funding. The product was revolutionary. The business was not. Docker gave the core technology away for free (open-source). They tried to monetize with Docker Enterprise (paid orchestration), but Kubernetes (Google, 2014) replaced their orchestration and was also free.
+
+Timeline:
+<ul>
+<li>2013: Docker released, changes industry</li>
+<li>2016: Kubernetes wins the container orchestration war</li>
+<li>2019: Docker Inc. sells its enterprise business to Mirantis for ~$35-50M</li>
+<li>2024: Docker Inc. survives as Docker Desktop + Hub (developer tools)</li>
+</ul>`,callout_red:`Lesson: inventing a foundational technology doesn't guarantee business success. The value accrued to cloud providers (AWS ECS, Google GKE, Azure AKS) and Kubernetes ecosystem companies (Red Hat, SUSE, Datadog) — not to Docker Inc.`}
+  ],
+  questions:[
+    {q:'What is a Docker image layer, and why does the layer cache matter for ML workflows?',
+     opts:['Layers are Docker\'s security model — each layer is encrypted separately','Each Dockerfile instruction creates an immutable layer; layers are cached and reused if unchanged. Putting frequently-changing code after rarely-changing dependencies means rebuilds only redo the changed layers.','Layers are different versions of the same image stored simultaneously','Docker layers are the same as Kubernetes namespaces'],
+     correct:1,
+     explain:['Docker layers have nothing to do with encryption. Security in Docker is provided by namespaces and cgroups.', null,'In an ML Dockerfile: <code>COPY requirements.txt</code> then <code>RUN pip install</code> then <code>COPY model_code/</code>. Dependencies change rarely; model code changes often. If you <code>COPY</code> all code first, THEN pip install, every code change invalidates the pip install cache — reinstalling 2GB of packages every time. Correct ordering means code changes only rebuild the last layer (seconds), not the pip install layer (minutes).','Layers represent build steps within a single image, not different versions. Versioning is done via image tags (myimage:v1, myimage:v2).','Kubernetes namespaces are a cluster-level concept for isolating workloads. Docker layers are an image-level storage optimization. Completely unrelated.']},
+    {q:'Why did Docker Inc. fail commercially despite creating the most important infrastructure technology of the 2010s?',
+     opts:['Docker\'s technology was too complex for enterprises to adopt','Docker gave the core runtime away free and open-source, but couldn\'t monetize orchestration because Kubernetes (also free) won that layer. The value shifted to cloud providers and the ecosystem, not Docker Inc.','Docker was acquired by Microsoft before it could IPO','Docker failed because containers never achieved mainstream enterprise adoption'],
+     correct:1,
+     explain:['Docker adoption was massive — essentially universal in cloud-native development. Complexity was not the failure mode.',null,'This is the classic open-source monetization trap. Docker\'s strategy was: free runtime → paid orchestration (Docker Swarm/Enterprise). But Google open-sourced Kubernetes at the same time, which was better and also free. AWS, GCP, and Azure built managed Kubernetes services. Datadog built monitoring on top. Red Hat built OpenShift on top. All charged for value-added layers. Docker Inc. owned the foundation but couldn\'t tax traffic across it.','Docker was not acquired by Microsoft. Docker Desktop continues independently. The enterprise business was sold to Mirantis.','Container adoption is near-universal in tech. 87% of organizations use containers in production (CNCF survey 2023).']},
+    {q:'What does it mean for a Docker container to share the host kernel?',
+     opts:['Containers can read and write the host\'s kernel files','All containers on a host run on the same Linux kernel instance — no per-container kernel. This is why Linux containers cannot run natively on Windows (no Linux kernel on bare metal).','Sharing the kernel means containers have shared file systems','Kernel sharing means containers run slower because they compete for kernel resources'],
+     correct:1,
+     explain:['Namespaces prevent containers from accessing host filesystem (including kernel files). Mount namespaces create isolated filesystem views.',null,'A VM boots its own kernel. A container uses the host\'s already-running kernel — it just sees an isolated view via namespaces. This is why Docker on Mac/Windows requires a Linux VM underneath (Docker Desktop runs a lightweight Linux VM). All your containers then share THAT VM\'s kernel. This is also why Linux containers cannot run on Windows without WSL2 or a VM — there\'s no Linux kernel on bare metal Windows.','Mount namespaces give containers isolated filesystem views. The default Docker setup does not share filesystems between containers unless you explicitly use shared volumes.','All containers use kernel system calls, but the kernel is designed for this — scheduling fairly among thousands of processes is its core job. Kernel sharing has negligible performance overhead compared to the alternative (per-VM kernel).']},
+  ]
+},
+
+// ─── ORCHESTRATION TRACK ──────────────────────────────────────────────────────
+{
+  id:'borg', title:'Borg — Google\'s Cluster Manager', shortTitle:'Google Borg', year:2015,
+  authors:'Verma, Pedrosa, Korupolu, Oppenheimer, Tune, Wilkes · Google',
+  venue:'EuroSys 2015', category:'Orchestration', prereqs:['cgroups'],
+  icon:'🏭', tagline:'How Google runs everything — the Kubernetes blueprint',
+  lesson:[
+    {h:'The Scale Problem',body:`By 2004, Google operated hundreds of thousands of machines across multiple data centers. Engineers were manually managing which jobs ran on which machines. A job might need 4 cores and 8GB RAM — finding and reserving those machines by hand was error-prone and wasted resources. Machines sat idle while engineers hand-placed jobs conservatively.
+
+Borg automated this entirely: describe what resources your job needs, and Borg finds the machines, schedules your job, monitors it, and restarts it if it fails.`},
+    {h:'Jobs, Tasks, and the Borgmaster',body:`Borg has a simple model:
+<ul>
+<li><strong>Job:</strong> A collection of identical tasks (e.g., "run 100 copies of my web server")</li>
+<li><strong>Task:</strong> A Linux process (or set of processes) running in a container on one machine</li>
+<li><strong>Borgmaster:</strong> The central controller that accepts job submissions, finds machines, assigns tasks</li>
+<li><strong>Borglet:</strong> An agent running on every machine, executing what Borgmaster tells it</li>
+</ul>`,callout:`Borg runs EVERYTHING at Google: Gmail, Search, YouTube, Maps, internal tools — all scheduled by the same system. At peak, Borg managed hundreds of thousands of machines and millions of tasks. The Kubernetes team is literally the Borg team.`},
+    {h:'Key Innovations That Became Kubernetes',body:`Borg invented concepts that Kubernetes adopted directly:
+<ul>
+<li><strong>Declarative configuration:</strong> Describe desired state ("I want 10 replicas of this service running"), not imperative commands ("start task on machine X"). Borg makes it happen.</li>
+<li><strong>Health checks:</strong> Borglet monitors tasks and reports health. Borgmaster restarts failed tasks automatically.</li>
+<li><strong>Resource packing:</strong> Borg bin-packs tasks onto machines to maximize utilization — mixing latency-sensitive (web serving) with batch (MapReduce) jobs on the same machines.</li>
+<li><strong>Allocs (→ Pods):</strong> Groups of tasks that should be co-located on the same machine.</li>
+</ul>`,callout_green:`Kubernetes is the open-source version of Borg. Pod = Alloc. Deployment = Job. Node = Machine. kubelet = Borglet. The naming changed; the concepts didn't.`},
+    {h:'The 2015 Paper That Changed Everything',body:`Google kept Borg secret for 10 years. The 2015 EuroSys paper was the first public description. By then, Kubernetes had already been open-sourced (2014) — Kubernetes was built by ex-Borg engineers as the public version.
+
+The paper revealed what Google had learned operating at scale for a decade: utilization of 60-80% across the fleet (vs. industry average of 10-15%), automatic bin packing, graceful degradation during machine failures, and the declarative model as the key to operational stability.`}
+  ],
+  questions:[
+    {q:'What is the key difference between imperative and declarative configuration, and why did Borg/Kubernetes choose declarative?',
+     opts:['Imperative is slower than declarative','Imperative: tell the system exactly what commands to run. Declarative: describe the desired end state; the system figures out how to achieve it. Declarative is easier to reconcile after failures.','Declarative requires more code to write','Imperative configuration is used for databases; declarative for web servers'],
+     correct:1,
+     explain:['Speed difference is minimal. The choice is about operational correctness and recovery, not performance.',null,'Imperative: "ssh into machine 42, run docker start myapp." If machine 42 dies, nothing happens automatically. Declarative: "I want 3 replicas of myapp running." If a machine dies, Kubernetes sees the actual state (2 replicas) diverges from desired state (3), and schedules the missing replica. Declarative configuration is self-healing by design.','Declarative config (YAML) is often LESS code than imperative scripts. The benefit is correctness, not brevity.','Both approaches work for any workload type. The distinction is operational model, not workload category.']},
+    {q:'Borg packs latency-sensitive workloads (web serving) together with batch workloads (MapReduce) on the same machines. Why?',
+     opts:['To make debugging easier when both types fail simultaneously','Web servers use CPU heavily during the day when people are active; batch jobs use CPU at night. Co-locating them improves machine utilization without performance interference.','Google couldn\'t afford separate machines for each workload type','Batch jobs help keep web servers warm by generating CPU heat'],
+     correct:1,
+     explain:['Running different workload types together makes debugging harder, not easier. The motivation is economics.',null,'This is the key insight behind multi-tenant cluster scheduling. A web server cluster might sit at 20% CPU utilization at 3am. Rather than leaving those cores idle, Borg fills the spare capacity with batch processing (data pipelines, ML training). At 9am when web traffic spikes, batch jobs are preempted. Result: 60-80% average utilization vs. 10-15% with dedicated clusters — a 4-6× improvement in hardware efficiency. This is why Google could run at massive scale affordably.','Google buys enormous amounts of hardware. The motivation is efficiency and economics, not hardware limitations.','CPU heat has no bearing on workload scheduling. This is a thermal physics non sequitur.']},
+  ]
+},
+
+{
+  id:'kubernetes', title:'Kubernetes', shortTitle:'Kubernetes', year:2014,
+  authors:'Burns, Grant, Oppenheimer, Brewer, Wilkes · Google',
+  venue:'ACM Queue 2016 / Open-sourced 2014', category:'Orchestration', prereqs:['docker','borg'],
+  icon:'⚓', tagline:'The operating system for the cloud',
+  lesson:[
+    {h:'Why Kubernetes Won',body:`After Docker launched in 2013, every company rushed to build "container orchestration" — the system that runs and manages containers at scale. Docker released Docker Swarm. Apache Mesos with Marathon was the enterprise favorite. Google open-sourced Kubernetes in 2014.
+
+By 2017, the war was over. Kubernetes won. Docker Swarm is deprecated. Mesos is dead. Kubernetes runs 96% of organizations using containers (CNCF 2023).
+
+Why? Because Kubernetes was built by the team that ran Google's infrastructure for a decade. It incorporated lessons from Borg that the others didn't have.`},
+    {h:'The Core Model: Desired State Reconciliation',body:`Kubernetes' entire design principle is: declare what you want; Kubernetes makes it happen and keeps it that way.
+
+You write YAML:
+<div class="code">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-serving
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: vllm
+        image: vllm/vllm-openai:latest
+        resources:
+          limits:
+            nvidia.com/gpu: 1</div>
+Kubernetes schedules 3 pods, each with 1 GPU. If one crashes → Kubernetes starts a replacement. If a node dies → pods rescheduled to healthy nodes. No human intervention.`,callout:`The key components: API Server (accepts YAML), etcd (stores desired state), Scheduler (picks which node for each pod), Controller Manager (reconciles actual vs. desired state), kubelet (runs containers on each node).`},
+    {h:'Services, Ingress, and the Network Model',body:`Pods have ephemeral IPs that change when pods restart. Kubernetes Services provide a stable IP and DNS name that routes to healthy pods:
+<ul>
+<li><strong>ClusterIP:</strong> Internal only — other pods can reach your service</li>
+<li><strong>NodePort:</strong> Exposes on every node's IP at a static port</li>
+<li><strong>LoadBalancer:</strong> Provisions a cloud load balancer (AWS ALB, GCP LB)</li>
+<li><strong>Ingress:</strong> HTTP/HTTPS routing rules — route /api to service A, /app to service B</li>
+</ul>
+For ML serving: your vLLM pod gets a Service → Ingress routes /v1/completions to it → clients call a stable URL regardless of which pod handles the request.`},
+    {h:'The Kubernetes Economy',body:`Kubernetes is free and open-source. The business model is "managed Kubernetes":
+<div class="biz-box"><div class="biz-label">The Kubernetes Economy</div><table>
+<tr><td>Google GKE</td><td>Google Cloud's managed K8s — ~25% market share</td></tr>
+<tr><td>AWS EKS</td><td>Amazon's managed K8s — ~35% market share</td></tr>
+<tr><td>Azure AKS</td><td>Microsoft's managed K8s — ~25% market share</td></tr>
+<tr><td>Red Hat OpenShift</td><td>Enterprise K8s platform — IBM acquisition $34B</td></tr>
+<tr><td>Rancher / SUSE</td><td>Multi-cluster K8s management — SUSE acquisition $600M</td></tr>
+<tr><td>Datadog</td><td>K8s monitoring — $40B public company</td></tr>
+</table></div>`,callout_green:`Kubernetes is the infrastructure layer of every modern AI deployment. Every major LLM API (OpenAI, Anthropic, Cohere, Mistral) runs on Kubernetes. Every ML training cluster on the cloud runs on Kubernetes. It is the universal substrate.`}
+  ],
+  questions:[
+    {q:'A Kubernetes Deployment has replicas: 3. One pod crashes. What happens next and why?',
+     opts:['Nothing — you must manually restart the failed pod','The Deployment controller continuously reconciles desired state (3 replicas) with actual state (2 running). Detecting the gap, it creates a new pod automatically.','Kubernetes emails an alert but waits for human approval before restarting','The other two pods each spawn a replacement to maintain the count'],
+     correct:1,
+     explain:['Manual restarts are exactly what Kubernetes eliminates. The entire point of a Deployment is self-healing.',null,'The ReplicaSet controller watches actual pod count vs. desired replicas. The reconciliation loop runs continuously (every few seconds). When actual < desired, it creates new pods. When actual > desired, it terminates excess pods. No human required. This is the "declarative model" in practice: you declared "I want 3," Kubernetes ensures 3 exists.',  'Kubernetes does not require human approval to restart pods (unless you configure explicit manual policies, which is rare). The default is immediate automatic restart.','Pod replacement logic is centralized in the controller, not distributed among surviving pods. Pods don\'t spawn siblings.']},
+    {q:'What is a Kubernetes Namespace (not to be confused with Linux namespaces)?',
+     opts:['A Kubernetes Namespace is the same as a Linux namespace — it provides container isolation','A Kubernetes Namespace is a virtual cluster within a physical cluster — it partitions resources, access control, and resource quotas between teams or environments (dev/staging/prod)','Namespaces are how Kubernetes routes network traffic between pods','A Namespace is Kubernetes terminology for a Docker image'],
+     correct:1,
+     explain:['Confusingly similar names, completely different concepts. Linux namespaces provide container OS-level isolation. Kubernetes Namespaces partition the cluster for multi-tenancy. Docker containers use Linux namespaces under the hood; Kubernetes Namespaces are a higher-level organizational concept.',null,'In a shared cluster: team A\'s workloads in namespace "team-a", team B\'s in "team-b". A ResourceQuota on each namespace limits how much CPU/memory each team can use. RBAC (Role-Based Access Control) grants team A\'s engineers access to their namespace only. This is how one Kubernetes cluster serves multiple teams without interference.','Network routing between pods is handled by Services and the pod network (CNI plugins like Calico or Flannel). Namespaces have no built-in network isolation between them by default.','Namespaces have nothing to do with container images. Images are stored in registries (Docker Hub, GCR, ECR).']},
+    {q:'What is the role of etcd in a Kubernetes cluster and what happens if it goes down?',
+     opts:['etcd is the container runtime that actually runs pods','etcd is Kubernetes\'s distributed key-value store that holds all cluster state — desired state, actual state, secrets, config. If etcd goes down, the API server cannot accept changes and controllers cannot reconcile, though running pods continue running.','etcd is the monitoring component that watches pod health','etcd is only used in development; production clusters use a SQL database'],
+     correct:1,
+     explain:['The container runtime (containerd, CRI-O) actually runs containers. etcd stores data, not containers.',null,'etcd is the single source of truth for the entire cluster. Every kubectl apply writes to etcd. Every controller reads from etcd to know desired state. Running pods on nodes continue running if etcd fails — kubelet keeps them alive — but no new pods can be scheduled, no failed pods replaced, no config changes applied. etcd is why Kubernetes runs it as a 3 or 5 node cluster with Raft consensus — losing the majority means losing the cluster brain.','Health monitoring is done by kubelet (per-node) and the controller manager. etcd is purely data storage.','etcd is used in production — it is the most critical production component of a Kubernetes cluster. Its operational stability is the #1 concern in self-managed cluster operations.']},
+  ]
+},
+
+{
+  id:'helm', title:'Helm + GitOps / ArgoCD', shortTitle:'Helm & GitOps', year:2016,
+  authors:'DeisLabs → CNCF (Helm) · Weaveworks (GitOps)',
+  venue:'KubeCon 2016 / Weaveworks blog 2017', category:'Orchestration', prereqs:['kubernetes'],
+  icon:'⛵', tagline:'Package management and continuous delivery for Kubernetes',
+  lesson:[
+    {h:'The Kubernetes YAML Problem',body:`Kubernetes is powerful but verbose. A production application might need: a Deployment, a Service, an Ingress, a ConfigMap, a Secret, a HorizontalPodAutoscaler, a PodDisruptionBudget, a ServiceAccount — 200+ lines of YAML per application. Deploying to dev, staging, and production means maintaining three near-identical YAML files with minor differences (different image tags, replica counts, resource limits).
+
+Helm (2016) solved this by bringing package management to Kubernetes — like npm for Node, pip for Python, apt for Ubuntu, but for Kubernetes applications.`},
+    {h:'Helm Charts: Parameterized Kubernetes Manifests',body:`A Helm chart is a directory of templated YAML files with a <code>values.yaml</code> for configuration:
+<div class="code"># values.yaml
+replicaCount: 3
+image:
+  repository: myorg/llm-api
+  tag: v1.4.2
+resources:
+  limits:
+    memory: "8Gi"
+    nvidia.com/gpu: 1</div>
+<code>helm install my-llm ./chart -f prod-values.yaml</code> → deploys the parameterized app to production. <code>helm upgrade my-llm ./chart --set image.tag=v1.4.3</code> → rolling update to new version. <code>helm rollback my-llm 1</code> → rolls back to previous release.`,callout:`Helm has a public chart repository (Artifact Hub) with pre-built charts for every major service: PostgreSQL, Redis, Prometheus, Grafana, Elasticsearch, ArgoCD itself, and hundreds more. Instead of writing 300 lines of YAML for Prometheus, you run <code>helm install prometheus prometheus-community/prometheus</code>.`},
+    {h:'GitOps: Git as the Source of Truth',body:`GitOps (Weaveworks, 2017) takes the declarative model further: Git is the single source of truth for cluster state. Desired cluster state lives in a Git repository. An operator (ArgoCD or Flux) watches the Git repo and automatically applies changes.
+
+Workflow:
+<ol>
+<li>Engineer opens a Pull Request changing image tag from v1.4.2 → v1.4.3</li>
+<li>CI runs tests, another engineer reviews and merges</li>
+<li>ArgoCD detects the Git change, applies the new Deployment to the cluster</li>
+<li>Rollback = revert the Git commit</li>
+</ol>`,callout_green:`GitOps means your cluster state is always auditable (git log), reviewable (PR process), and reversible (git revert). Every change to production goes through code review. This is how mature engineering teams manage infrastructure at scale.`},
+    {h:'ArgoCD and the MLOps Connection',body:`ArgoCD is the most popular GitOps operator. It continuously syncs a Kubernetes cluster with a Git repo, showing drift (what changed outside of Git) and enabling one-click sync or automatic sync.
+
+For ML teams: model deployment becomes a Git operation. Update the Helm values.yaml with the new model version → open PR → merge → ArgoCD deploys. Model rollback = git revert. A/B testing = two Helm releases with different traffic splits via Ingress weights. Feature flags = ConfigMap changes in Git.`}
+  ],
+  questions:[
+    {q:'What problem does Helm solve that plain Kubernetes YAML does not?',
+     opts:['Helm makes Kubernetes faster by optimizing YAML parsing','Helm provides templating and parameterization — one chart works across dev/staging/prod with different values, plus versioned releases with rollback capability','Helm provides network policies that plain Kubernetes cannot','Helm is required to use GPUs in Kubernetes'],
+     correct:1,
+     explain:['YAML parsing performance is irrelevant at the scale of cluster configuration. Helm\'s value is in configuration management, not runtime performance.',null,'Without Helm: maintain three copies of near-identical YAML for dev/staging/prod. Change an environment variable → update in three places → forget one → environments diverge. With Helm: one chart, three values files (dev-values.yaml, staging-values.yaml, prod-values.yaml). Change the chart once → deploy to all environments with correct per-environment values.','Network policies are a Kubernetes native feature. Helm doesn\'t add new Kubernetes capabilities — it makes existing capabilities easier to manage.','GPU scheduling is a Kubernetes feature (with NVIDIA device plugin). Helm is packaging, not GPU infrastructure.']},
+    {q:'In a GitOps workflow, what is the canonical way to roll back a bad production deployment?',
+     opts:['SSH into the cluster and delete the broken pods manually','Run kubectl rollout undo deployment/myapp directly on the cluster','Revert the Git commit that introduced the bad change — ArgoCD detects the revert and restores the previous cluster state','Open a support ticket with the cloud provider'],
+     correct:2,
+     explain:['Direct intervention bypasses the GitOps audit trail and creates drift — the cluster state no longer matches Git. This is the anti-pattern GitOps is designed to prevent.',null,'kubectl rollout undo works but also creates drift. The cluster is now in a state that doesn\'t match Git. The next GitOps sync would override the rollback. Direct kubectl commands are the anti-pattern in GitOps.','This is the GitOps answer. git revert creates a new commit that undoes the previous change. ArgoCD (or Flux) detects that Git now describes the old desired state and applies it. Full audit trail: you can see WHO introduced the bad change, WHO rolled it back, and WHEN. Everything went through code review. The cluster always matches Git.','Cloud providers don\'t manage your application deployments. This is an application-level operation.']},
+  ]
+},
+
+// ─── CLOUD NATIVE ARCHITECTURE ────────────────────────────────────────────────
+{
+  id:'twelvefactor', title:'The Twelve-Factor App', shortTitle:'12-Factor App', year:2011,
+  authors:'Adam Wiggins et al. · Heroku',
+  venue:'12factor.net 2011', category:'Cloud Native', prereqs:[],
+  icon:'📋', tagline:'The rulebook for building cloud-native software',
+  lesson:[
+    {h:'The Problem: Apps That Don\'t Scale',body:`In 2011, Heroku (the first major PaaS) had run thousands of customer applications. They noticed patterns: apps that scaled easily vs. apps that were impossible to run in the cloud. The difference was always in how the app was built.
+
+Adam Wiggins at Heroku codified 12 factors — practices that make applications portable, scalable, and maintainable in modern cloud environments. This methodology predates Docker and Kubernetes but describes exactly what containerized microservices need to be.`},
+    {h:'The Most Important Factors',body:`All 12 matter, but these are critical for ML systems:
+<ul>
+<li><strong>III. Config:</strong> Store config in environment variables, never in code. Connection strings, API keys, feature flags → env vars. This is why <code>.env</code> files exist and why Docker/Kubernetes has ConfigMaps and Secrets.</li>
+<li><strong>VI. Processes:</strong> Execute the app as stateless processes. Any request can be served by any process. No local disk state. Sessions stored externally (Redis). This enables horizontal scaling and restarts without data loss.</li>
+<li><strong>IX. Disposability:</strong> Processes start fast and shut down gracefully. When Kubernetes kills a pod, the app has 30 seconds to finish in-flight requests. Slow startup = slow rollouts. Non-graceful shutdown = dropped requests.</li>
+</ul>`,callout:`Factor VI (stateless processes) is the most commonly violated by ML engineers. Storing model weights in local memory that gets shared between requests (request B uses state from request A) breaks horizontal scaling and causes subtle bugs.`},
+    {h:'Backing Services and the API Contract',body:`<strong>Factor IV: Treat backing services as attached resources.</strong> Your app should connect to a database, cache, or message queue via a URL in an environment variable. Swapping PostgreSQL for MySQL should require only changing the URL — not the code.
+
+For ML: the model is a backing service. The serving API doesn't care if the model is GPT-4 or LLaMA — it just calls an endpoint. This is why OpenAI-compatible APIs (vLLM, Ollama) are powerful: any client that speaks the OpenAI protocol can switch providers by changing one URL.`},
+    {h:'Why This Matters in 2026',body:`The 12-Factor methodology predates containers by 2 years, but describes exactly how containerized microservices should work. Kubernetes enforces most of these factors structurally:
+<ul>
+<li>Env vars → Kubernetes ConfigMaps and Secrets</li>
+<li>Stateless → pods can be killed and replaced at any time</li>
+<li>Disposability → pod termination grace period</li>
+<li>Logs as event streams → kubectl logs, Datadog, Loki</li>
+</ul>
+Understanding 12-Factor helps you understand WHY Kubernetes is designed the way it is.`}
+  ],
+  questions:[
+    {q:'Factor III says "store config in environment variables." A junior engineer hardcodes the database URL in the Python file. What specific problems does this cause?',
+     opts:['Hardcoded URLs are slower to parse than env vars','The URL is the same for dev/staging/prod (can\'t run in multiple environments), the database credential is committed to Git (security incident), and changing it requires a code deployment instead of a config change','Python cannot read environment variables','Hardcoded config prevents Docker from building the image'],
+     correct:1,
+     explain:['URL parsing speed is negligible. The problem is configuration management correctness, not performance.',null,'Three distinct problems: (1) Environment portability: the dev database URL is different from production — hardcoding means deploying different code to each environment. (2) Security: if the file is committed to Git, the database password is now in version history permanently, readable by anyone with repo access. (3) Operational: changing a database URL requires a code change, PR review, CI/CD pipeline — instead of just updating an environment variable and restarting the pod.','Python\'s os.environ is a core library. Python absolutely can read environment variables.','Docker builds the image from the Dockerfile; config values at runtime come from env vars. The image builds fine; the problem is at runtime configuration, not build time.']},
+    {q:'Factor VI says "stateless processes." A model serving API caches user sessions in a local Python dictionary. What breaks when you scale to 3 replicas?',
+     opts:['The dictionary uses too much RAM and crashes the pod','Each pod has its own local dictionary — user A\'s session stored in pod 1 is not visible to pod 2 or pod 3. If the load balancer routes user A\'s next request to pod 2, their session is gone.','Python dictionaries are not thread-safe and cause race conditions','Stateful processes are actually fine in Kubernetes because pods are persistent'],
+     correct:1,
+     explain:['RAM usage from a session dictionary is typically negligible. The problem is logical correctness across replicas.',null,'This is the horizontal scaling trap. In a single-replica deployment, local state works. When you add replicas for load, requests are distributed across pods randomly. User session data in pod 1\'s memory is invisible to pods 2 and 3. Result: users randomly lose their session every few requests. Fix: store sessions in Redis (or any external store) — all pods read from the same Redis, regardless of which pod handles the request.','Thread safety is a separate concern. The statefulness problem exists even with single-threaded pods.','Pods are emphatically NOT persistent. They are killed and replaced regularly — during deployments, node failures, scaling events, and resource pressure. Any local state is lost when the pod dies.']},
+  ]
+},
+
+{
+  id:'microservices', title:'Microservices Architecture', shortTitle:'Microservices', year:2014,
+  authors:'Martin Fowler & James Lewis · ThoughtWorks',
+  venue:'martinfowler.com 2014', category:'Cloud Native', prereqs:['twelvefactor'],
+  icon:'🔩', tagline:'Small services > one big application',
+  lesson:[
+    {h:'The Monolith Problem',body:`A monolith is one application that does everything: user authentication, product catalog, payment processing, recommendation engine, email sending — all in one codebase, deployed as one unit. Teams of 200 engineers all working on one codebase means:
+<ul>
+<li>A bug in the email service takes down payments</li>
+<li>Deploying a one-line payment fix requires redeploying the entire application</li>
+<li>The recommendation engine needs to scale 10× for Black Friday — but you must scale everything 10×</li>
+<li>Teams block each other — merging 200 people's code causes constant conflicts</li>
+</ul>`},
+    {h:'The Microservices Answer',body:`Microservices decomposes the monolith into small, independently deployable services. Each service:
+<ul>
+<li>Owns one business capability (recommendations, payments, auth)</li>
+<li>Has its own database (no shared databases between services)</li>
+<li>Communicates via APIs (HTTP/REST or gRPC or message queues)</li>
+<li>Is independently deployable (payment fix → redeploy only payment service)</li>
+<li>Is independently scalable (Black Friday → scale only recommendation service)</li>
+</ul>`,callout:`Conway's Law: "Organizations which design systems are constrained to produce designs which are copies of the communication structures of those organizations." Microservices align software boundaries with team boundaries. One team owns one service.`},
+    {h:'The Costs: Distributed Systems Complexity',body:`Microservices introduce distributed systems problems that monoliths don't have:
+<ul>
+<li><strong>Network failures:</strong> Service A calling service B can fail for network reasons. You need retry logic, circuit breakers, timeouts.</li>
+<li><strong>Distributed tracing:</strong> A request touching 10 services — where did it fail? You need Jaeger or Datadog APM.</li>
+<li><strong>Data consistency:</strong> No shared database means no ACID transactions across services. Eventual consistency is hard.</li>
+<li><strong>Operational overhead:</strong> 50 services = 50 deployment pipelines, 50 monitoring dashboards, 50 places to look for bugs.</li>
+</ul>`,callout_red:`Microservices are NOT for small teams. A 5-person startup with microservices has all the operational overhead with none of the organizational benefit. Start monolith. Extract services when pain is proven. (This is what Shopify, Stack Overflow, and Basecamp did.)`},
+    {h:'For ML Systems Specifically',body:`ML systems naturally decompose into microservices:
+<ul>
+<li><strong>Model serving service:</strong> vLLM serving LLaMA-3</li>
+<li><strong>Feature service:</strong> computes real-time features from Kafka</li>
+<li><strong>Retrieval service:</strong> FAISS + document index for RAG</li>
+<li><strong>Orchestration service:</strong> FastAPI coordinating the above</li>
+</ul>
+Each service scales independently. The model serving service needs GPUs — scale it separately from the feature service (CPU-only). The retrieval service has different memory requirements. Kubernetes + microservices + Helm gives you a composable, independently scalable ML platform.`}
+  ],
+  questions:[
+    {q:'A company has a "user service" and an "order service" as microservices. They need to ensure a user exists before creating an order. Why can\'t they share a database to do a JOIN?',
+     opts:['Databases are too expensive to run twice','Sharing a database creates coupling between services — both teams must coordinate schema changes, and the database becomes a single point of failure and a scaling bottleneck shared by both services','JOIN operations don\'t work across microservices','Databases cannot be networked between different services'],
+     correct:1,
+     explain:['Database cost is rarely the reason for separation. Small databases on cloud providers cost cents per hour.',null,'If both services share a database: the user team can\'t change their schema without coordinating with the order team. If the orders table grows and causes DB slowness, it affects user lookups. A bug in one team\'s queries can corrupt the other team\'s data. The solution: each service owns its data. The order service validates user existence by calling the user service\'s API (synchronous) or by listening to a "user created" event on Kafka (asynchronous). No shared database.','SQL JOINs work within one database. The constraint is logical ownership of data, not technical JOIN limitations.','Databases are absolutely networked between services in reality — the constraint is about data ownership and operational coupling, not network access.']},
+    {q:'When should a startup NOT use microservices?',
+     opts:['Startups should always use microservices for future scalability','Startups with small teams should start with a monolith — microservices require operational maturity (Kubernetes, service mesh, distributed tracing) that adds overhead without organizational benefit when the team is under ~50 engineers','Microservices are only for Java teams, not Python','Startups should use microservices only if they have more than $10M in funding'],
+     correct:1,
+     explain:['The "future scalability" argument is premature optimization. You don\'t know which parts of your system will need to scale. Monoliths can be extracted to microservices when the pain is proven.',null,'The key insight from engineers at Shopify, Stack Overflow, and Basecamp who kept their monoliths at scale: microservices solve organizational problems (teams stepping on each other) more than technical ones. A 5-person team doesn\'t have that problem. They DO have the problem of maintaining 20 deployment pipelines instead of 1. Martin Fowler himself wrote "MonolithFirst" advocating starting with a monolith and extracting services as boundaries become clear.','Microservices patterns apply to any language. Python, Go, Java, Rust — language is not the constraint.','Engineering architecture should be driven by organizational and technical needs, not funding levels. Some well-funded companies run monoliths; some bootstrapped companies have microservices where it makes sense.']},
+  ]
+},
+
+// ─── MLOPS TRACK ──────────────────────────────────────────────────────────────
+{
+  id:'techdebt', title:'Hidden Technical Debt in ML Systems', shortTitle:'ML Tech Debt', year:2015,
+  authors:'Sculley, Holt, Golovin, Davydov, Phillips, Ebner, Chaudhary, Young, Crespo, Dennison · Google',
+  venue:'NeurIPS 2015', category:'MLOps', prereqs:[],
+  icon:'💸', tagline:'Why 95% of ML code is not the model',
+  lesson:[
+    {h:'The Naive Picture vs. Reality',body:`Most ML courses teach: get data → train model → evaluate → done. The model code is 5% of a production ML system. The remaining 95% is everything else — and that 95% is where systems fail.
+
+The 2015 Google paper on hidden technical debt in ML systems is the most important paper for anyone deploying ML in production. It identifies patterns that make ML systems brittle, expensive to maintain, and error-prone — patterns that are extremely common.`},
+    {h:'Entanglement: The Changing Anything Changes Everything Problem',body:`ML systems entangle features, data, and model behavior in ways that create fragile dependencies:
+
+<strong>Feature entanglement:</strong> Model trained on features A, B, C, D. Feature B's distribution shifts (a upstream data pipeline changed). Model silently degrades. You added feature E — it correlates with B, so now removing B breaks E's usefulness. Changing anything can change everything.
+
+<strong>Feedback loops:</strong> Model predicts which ads to show → users click those ads → training data reflects model's own choices → model becomes more confident in its original choices → more closed loop. Your training data is contaminated by your model's past decisions.`,callout:`"CACE principle: Changing Anything Changes Everything." In a well-engineered software system, changing module A doesn't break module B. In ML, adding or removing one feature can unpredictably change model behavior across all outputs.`},
+    {h:'Glue Code and Pipeline Jungles',body:`
+<strong>Glue code:</strong> General-purpose ML packages (scikit-learn, HuggingFace) are wrapped in thousands of lines of code to get data in the right format, handle exceptions, retry failed API calls, log predictions. The package itself is clean; the surrounding code is a mess. This code is rarely tested and full of bugs.
+
+<strong>Pipeline jungles:</strong> Data pipelines that were "temporarily" created in bash scripts + cron jobs + Airflow DAGs + Spark jobs + Python notebooks. Nobody knows what runs what. Deleting a "temp" pipeline breaks something else 6 months later. This is the primary cost driver in ML infrastructure.`,callout_red:`The "dark matter" of ML systems: prediction serving logs, feature computation scripts, ad-hoc data corrections, one-off backfills. All critical. All undocumented. All break when a team member leaves.`},
+    {h:'What Good ML Infrastructure Looks Like',body:`The paper doesn't just identify problems — it points toward solutions:
+<ul>
+<li><strong>Test inputs and outputs:</strong> Monitor feature distributions, not just model accuracy metrics</li>
+<li><strong>Modular pipelines:</strong> Each stage independently testable (MLflow, Kubeflow Pipelines)</li>
+<li><strong>Feature stores:</strong> Feast, Tecton — centralized feature computation with versioning</li>
+<li><strong>Model versioning:</strong> MLflow model registry — every model has a version, lineage, and can be rolled back</li>
+<li><strong>Data contracts:</strong> Explicit schema validation between pipeline stages (Great Expectations, Soda)</li>
+</ul>`,callout_green:`This paper is why the MLOps industry exists. Databricks MLflow, Weights & Biases, Tecton, Arize, WhyLabs — all address specific problems identified in this 2015 paper.`}
+  ],
+  questions:[
+    {q:'The CACE principle says "Changing Anything Changes Everything" in ML. Give an example of why adding a feature can break model behavior unpredictably.',
+     opts:['Adding features always improves model accuracy so nothing breaks','A new feature may correlate with existing features, changing the learned weights for all features and causing the model to rely more or less on previously stable signals — breaking behavior that seemed unrelated','Adding features increases model size and causes OOM errors','Features from different data sources have different update frequencies'],
+     correct:1,
+     explain:['Adding features almost never "always improves" accuracy and can easily degrade it — the CACE principle is specifically about unpredictable change.',null,'Example: model uses age and income to predict loan default. You add "number of credit cards." Number of credit cards correlates with income. Now the model has two correlated income signals. It redistributes weight between income and credit cards. The income feature, which previously had a clear positive coefficient, now has a different coefficient. Downstream monitoring alerts on "income feature importance" trigger falsely. A/B test shows regression in a seemingly unrelated segment.','OOM errors are infrastructure problems, not the CACE principle. The principle is about unpredictable behavioral changes.','Update frequency is a data freshness problem (also important!) but distinct from the CACE entanglement problem.']},
+    {q:'What is a "training-serving skew" and why is it a particularly dangerous form of ML technical debt?',
+     opts:['Training is slower than serving because training uses more data','Training uses one version of feature computation; serving uses a different implementation — model was trained on feature X computed one way, but serves with X computed slightly differently, causing silent accuracy degradation','Training-serving skew occurs when the model is trained in Python but served in Java','Skew happens when the training dataset is unbalanced'],
+     correct:1,
+     explain:['Training and serving speed difference is expected and not called "skew." Skew refers to misalignment in data processing.',null,'Classic example: training computes "days since last purchase" using DATEDIFF in SQL. Serving computes it with Python datetime. Timezone handling differs by 1 day in some cases. The model was optimized for the SQL version of the feature. At serving, 5% of examples get a feature value off by 1 day. Model accuracy silently degrades by 2%. No error is raised. The degradation is imperceptible per-request. This is discovered 3 months later during an audit. Fix: use a feature store that computes features identically in both training and serving.','Language differences can cause skew but only if the computation logic differs. Skew is about computation logic, not language.','Class imbalance is a model bias problem, not training-serving skew. Skew refers specifically to the discrepancy between training and serving pipelines.']},
+  ]
+},
+
+{
+  id:'mlflow', title:'MLflow', shortTitle:'MLflow', year:2018,
+  authors:'Zaharia, Chen, Davidson, Ghodsi, Hong, Kraska, Murthy, Xin · Databricks / UC Berkeley',
+  venue:'VLDB 2020 / Open-sourced 2018', category:'MLOps', prereqs:['techdebt'],
+  icon:'📊', tagline:'Experiment tracking and model lifecycle management',
+  lesson:[
+    {h:'The Notebook Chaos Problem',body:`In 2018, every ML team had the same problem: 47 Jupyter notebooks named "final_model_v3_FINAL_actually_final.ipynb." Which model is in production? Who trained it? What hyperparameters? What data version? What was the accuracy? Nobody knows. The model that's been running in production for 8 months — can you reproduce it? Probably not.
+
+MLflow (Databricks, 2018) brought software engineering practices to model development: tracking, versioning, and deployment for ML experiments.`},
+    {h:'The Four Components',body:`
+<ul>
+<li><strong>MLflow Tracking:</strong> Log parameters, metrics, artifacts for every experiment run. <code>mlflow.log_param("lr", 0.001)</code>, <code>mlflow.log_metric("accuracy", 0.94)</code>. Compare runs in a UI. Never lose an experiment result.</li>
+<li><strong>MLflow Projects:</strong> Package ML code in a reproducible format. Any engineer can clone and run any experiment identically.</li>
+<li><strong>MLflow Models:</strong> Standard model format with a consistent API. Package a PyTorch model, a scikit-learn pipeline, or a transformer — all served identically. <code>mlflow.pytorch.log_model(model, "model")</code></li>
+<li><strong>MLflow Registry:</strong> Version control for models. Staging → Production → Archived lifecycle. "Model X, version 7 is in production since 2024-03-15."</li>
+</ul>`,callout:`MLflow integrates with everything: SageMaker, Azure ML, Databricks, GCP Vertex. It's the lingua franca of MLOps — the npm of model lifecycle management.`},
+    {h:'The Experiment Tracking Insight',body:`The core insight of MLflow Tracking: every ML run is an experiment with inputs (parameters, data) and outputs (metrics, artifacts). Logging this systematically makes ML development reproducible and collaborative.
+
+With MLflow:
+<ul>
+<li>You can reproduce any past experiment exactly</li>
+<li>You can compare 50 hyperparameter runs visually</li>
+<li>You know which training run produced the model in production</li>
+<li>You can trace a production model back to its training data version</li>
+</ul>
+This is table stakes for regulated industries (finance, healthcare) where model explainability and reproducibility are legal requirements.`,callout_green:`MLflow is open-source with 17M+ monthly downloads. Competitors: Weights & Biases ($200M raised), Comet ML, Neptune.ai. All solve the same experiment tracking problem; MLflow wins on integration breadth.`}
+  ],
+  questions:[
+    {q:'What specific problem does MLflow Model Registry solve that MLflow Tracking alone does not?',
+     opts:['Model Registry makes models faster at inference time','Tracking logs experiments; Registry manages model lifecycle — which version is staging, which is production, who approved promotion, when was it deployed. Tracking is for data scientists; Registry is for ML engineers deploying to production.','Model Registry stores training data alongside the model','Registry is only needed for models over 1GB'],
+     correct:1,
+     explain:['Model serving speed is determined by the model architecture and serving infrastructure, not MLflow.',null,'MLflow Tracking gives you a record of every experiment: run 142 had lr=0.001 and accuracy=0.94. But it doesn\'t answer: "which of these 142 runs is the model currently serving traffic?" The Registry answers this. Version 7 of "fraud-detector" model is tagged "Production." Version 8 is "Staging" (being evaluated). Version 6 is "Archived." When the DS team trains a new version, it goes to Staging. After validation, an ML engineer promotes it to Production in the Registry. Kubernetes/SageMaker reads the Registry to know which model version to deploy.','MLflow Tracking logs datasets as artifacts and can store dataset hash/versions, but the Registry is specifically about model version lifecycle, not data.','Registry works for models of any size. The distinction is about deployment lifecycle management, not model size.']},
+    {q:'Why is experiment tracking critical for regulatory compliance in finance and healthcare ML?',
+     opts:['Compliance requires models to be faster than a certain latency threshold','Regulators require organizations to explain model decisions and reproduce results — MLflow tracking creates an auditable record of which data, hyperparameters, and code version produced the deployed model','Financial models must be retrained monthly — MLflow automates this','Healthcare models must be approved by FDA before tracking can begin'],
+     correct:1,
+     explain:['Latency is a performance concern, not a regulatory one. GDPR, FCRA, and FDA regulations don\'t specify latency thresholds for ML models.',null,'Under FCRA (credit decisions), the EU AI Act (high-risk AI), and FDA SaMD (software as medical device) regulations, organizations must be able to: explain why a model made a specific decision, reproduce that decision with the same model, prove the model was trained on validated data, and audit who approved the model for production. Without MLflow (or equivalent), answering these questions requires archaeologically reconstructing the training process from memory and old notebooks — frequently impossible.','MLflow doesn\'t automate retraining. It tracks experiments and manages model versions. Retraining schedules are orchestrated by Airflow, Kubeflow, or custom schedulers.','FDA review of ML medical devices happens before deployment, but MLflow tracking is independent of FDA approval timing. Tracking should be in place throughout development.']},
+  ]
+},
+
+{
+  id:'kubeflow', title:'Kubeflow', shortTitle:'Kubeflow', year:2018,
+  authors:'Various · Google / Kubeflow Community',
+  venue:'KubeCon 2018 / kubeflow.org', category:'MLOps', prereqs:['kubernetes','mlflow'],
+  icon:'🚀', tagline:'ML pipelines on Kubernetes',
+  lesson:[
+    {h:'The Gap Between Kubernetes and ML',body:`Kubernetes is general-purpose. It runs any containerized workload. ML workloads have specific needs that Kubernetes doesn't natively address:
+<ul>
+<li>Multi-step pipelines (data prep → training → evaluation → deployment) with dependencies</li>
+<li>Distributed training (parameter servers + workers in specific topologies)</li>
+<li>GPU resource scheduling with specific affinity requirements</li>
+<li>Hyperparameter tuning jobs that spawn hundreds of sub-experiments</li>
+<li>Model serving with A/B testing and canary rollouts</li>
+</ul>
+Kubeflow is a collection of Kubernetes-native ML tools that add these capabilities.`},
+    {h:'Kubeflow Pipelines: The Core',body:`Kubeflow Pipelines is the most-used component. A pipeline is a directed acyclic graph (DAG) of containerized steps:
+<div class="code">@component
+def preprocess(data_path: str) -> str:
+    # runs in container A
+    ...
+
+@component
+def train(preprocessed_data: str, lr: float) -> str:
+    # runs in container B with GPU
+    ...
+
+@pipeline
+def ml_pipeline():
+    step1 = preprocess(data_path="gs://bucket/data")
+    step2 = train(preprocessed_data=step1.output, lr=0.001)</div>
+Each step is a separate Docker container. Kubeflow orchestrates execution, passes artifacts between steps, and provides a UI to visualize runs.`,callout:`The key properties: steps are reproducible (containers are versioned), parallelizable (independent steps run in parallel), and retryable (failed steps can be rerun without rerunning successful ones).`},
+    {h:'Katib: Hyperparameter Tuning at Scale',body:`Katib is Kubeflow's hyperparameter tuning component. Instead of manually trying learning rates and batch sizes, Katib spawns hundreds of parallel training jobs with different hyperparameter combinations, using efficient search algorithms (Bayesian optimization, Hyperband, random search) to find optimal values.
+
+For a 3-parameter search with 10 values each: 1000 experiments. Katib runs 50 in parallel on the cluster, terminates poor performers early (Hyperband), and reports the best configuration. What would take a human weeks of sequential experiments runs in hours.`},
+    {h:'The MLOps Platform Landscape',body:`Kubeflow is one option in a crowded space:
+<div class="biz-box"><div class="biz-label">MLOps Platform Comparison</div><table>
+<tr><td>Kubeflow</td><td>Open-source, Kubernetes-native, complex setup</td></tr>
+<tr><td>AWS SageMaker</td><td>Managed MLOps on AWS, highest adoption</td></tr>
+<tr><td>Vertex AI</td><td>Google Cloud's managed Kubeflow</td></tr>
+<tr><td>Weights & Biases</td><td>Best experiment tracking UX, $200M raised</td></tr>
+<tr><td>Databricks MLflow</td><td>Best integration with Spark/Delta Lake</td></tr>
+<tr><td>Modal / Replicate</td><td>Serverless ML inference, developer-first</td></tr>
+</table></div>`,callout_green:`The MLOps platform market is $10B+ and growing 40% annually. Every organization doing serious ML needs: experiment tracking, pipeline orchestration, model registry, and serving infrastructure. Kubeflow is the open-source foundation that commercial platforms build on.`}
+  ],
+  questions:[
+    {q:'Why are Kubeflow Pipeline steps implemented as separate Docker containers rather than functions in one Python script?',
+     opts:['Docker containers are faster than Python functions','Each step having its own container enables: independent versioning (step A can use PyTorch 2.1, step B can use TensorFlow 2.13), independent resource allocation (step A gets 8 CPUs, step B gets 4 GPUs), and independent caching (rerun only failed steps without repeating successful ones)','Kubeflow cannot execute Python directly','Docker containers prevent memory leaks between pipeline steps'],
+     correct:1,
+     explain:['Containerization adds overhead vs. in-process function calls. The benefit is flexibility and isolation, not speed.',null,'The practical benefit: your data preprocessing step was written by a data engineer using pandas + scikit-learn. Your training step uses PyTorch 2.1 with CUDA 12. Your evaluation step uses a specific version of a custom library. Putting them in one environment creates dependency hell. Separate containers: each step has exactly the environment it needs. If step 3 fails, rerun only step 3 — not the 4-hour preprocessing step that already succeeded. Cache the artifacts from step 1 and 2.','Kubeflow wraps Python code in containers. The containers run Python. The distinction is about environment isolation and artifact management.','Memory isolation is a minor benefit. The primary reasons are dependency isolation, resource allocation, and step-level caching/rerunnability.']},
+    {q:'What is the difference between Kubeflow Pipelines and Airflow, and when would you choose each?',
+     opts:['They are the same tool with different names','Airflow orchestrates general Python tasks with time-based scheduling (cron); Kubeflow Pipelines orchestrates containerized ML-specific steps on Kubernetes with GPU support and ML artifact tracking. Choose Airflow for data engineering workflows; Kubeflow for ML training pipelines.','Kubeflow Pipelines is for training only; Airflow handles both training and serving','Airflow requires a Kubernetes cluster; Kubeflow does not'],
+     correct:1,
+     explain:['They are distinct tools with different origins and use cases. Airflow is from Airbnb (2014); Kubeflow Pipelines is from Google (2018).',null,'Overlap exists (both orchestrate multi-step workflows) but they\'re optimized for different things. Airflow: "every day at 2am, run this ETL pipeline that downloads data, cleans it, and loads to the warehouse." Kubeflow: "when a new model version is triggered, run data validation → distributed training with 8 GPUs → evaluation against holdout set → conditional deployment if accuracy > threshold." Both can be integrated: Airflow triggers Kubeflow pipeline runs as one of its tasks.','Airflow runs on any infrastructure — VMs, containers, Kubernetes (Kubernetes Executor). It doesn\'t require Kubernetes. Kubeflow specifically runs on Kubernetes.']},
+  ]
+},
+
+// ─── SERVICE MESH ─────────────────────────────────────────────────────────────
+{
+  id:'servicemesh', title:'Service Mesh & Observability', shortTitle:'Service Mesh', year:2017,
+  authors:'Various · Lyft (Envoy) · Google/IBM/Lyft (Istio)',
+  venue:'KubeCon 2017', category:'Cloud Native', prereqs:['kubernetes','microservices'],
+  icon:'🕸️', tagline:'Secure, observable communication between microservices',
+  lesson:[
+    {h:'The Microservices Communication Problem',body:`With 50 microservices, every service-to-service call becomes a distributed systems problem:
+<ul>
+<li>What if service B is slow? Does service A wait forever? (timeouts)</li>
+<li>Service B is overwhelmed — should A keep sending requests? (circuit breaking)</li>
+<li>How do we encrypt traffic between A and B? (mTLS)</li>
+<li>A request touches 8 services — where did it slow down? (distributed tracing)</li>
+<li>How much of traffic to service B should go to version 1 vs. version 2? (traffic splitting)</li>
+</ul>
+Implementing all of this in every service's code is impractical. Service meshes move this logic out of application code and into the infrastructure.`},
+    {h:'The Sidecar Pattern',body:`A service mesh works via the sidecar pattern: inject a proxy (Envoy, developed by Lyft) as a second container in every pod. All network traffic in and out of the application container flows through the sidecar proxy.
+
+The application code sends requests normally. The sidecar intercepts and handles:
+<ul>
+<li>Mutual TLS (mTLS) — automatic encryption between all services</li>
+<li>Retries with exponential backoff</li>
+<li>Circuit breaking — stop calling a failing service</li>
+<li>Metrics collection — request rate, latency p50/p95/p99, error rate</li>
+<li>Distributed traces — propagate trace IDs across service calls</li>
+</ul>`,callout:`Zero code changes to your application. Add a label to your Kubernetes namespace, Istio (or Linkerd) automatically injects the Envoy sidecar into every pod. Your microservices instantly gain observability, security, and resilience.`},
+    {h:'Observability: The Three Pillars',body:`Production systems need three types of observability data:
+<ul>
+<li><strong>Metrics:</strong> Numeric measurements over time. Request rate, latency, error rate, GPU utilization, memory usage. Prometheus collects; Grafana visualizes.</li>
+<li><strong>Logs:</strong> Structured events from applications. "User 123 requested completion, took 234ms, returned 512 tokens." Loki, Elasticsearch, Datadog.</li>
+<li><strong>Traces:</strong> End-to-end request journeys across services. User request → API gateway → auth service → model serving → response. Each hop is a "span." Jaeger, Zipkin, Datadog APM.</li>
+</ul>
+For ML serving: the key metrics are time-to-first-token (TTFT), tokens per second (throughput), and error rate. Traces show whether latency is in the model inference or in retrieval.`},
+    {h:'The Business: Datadog at $40B',body:`Observability is a massive market because every company with microservices and Kubernetes needs it. Datadog (founded 2010) became the dominant observability platform:
+<ul>
+<li>All three pillars (metrics, logs, traces) in one platform</li>
+<li>Native Kubernetes integration</li>
+<li>LLM Observability product (traces for AI applications — token counts, prompt costs, latency)</li>
+</ul>
+Datadog went public in 2019 at $7B, peaked at $60B, trades around $35-40B. The observability market is $50B+ annually.`}
+  ],
+  questions:[
+    {q:'What is the "sidecar pattern" and why does it avoid requiring code changes in application services?',
+     opts:['Sidecar refers to a secondary database running alongside each service','An additional proxy container runs in the same pod as the application. All network I/O flows through the proxy, which applies policies (retries, circuit breaking, mTLS, metrics) transparently — the application code sends plain HTTP and the proxy handles the rest.','Sidecar is a backup application that handles requests when the main container fails','The sidecar pattern is specific to Kubernetes and cannot be used with Docker Compose'],
+     correct:1,
+     explain:['Sidecars are proxy containers, not databases. They handle network traffic, not data storage.',null,'The application thinks it\'s sending a plain HTTP request to http://payment-service:8080. The Envoy sidecar intercepts this, applies mTLS (encrypts the connection), adds retry logic if the request fails, records the latency metric, and propagates the trace ID. From the application\'s perspective: just HTTP. From the infrastructure\'s perspective: fully observable, encrypted, resilient. This separation of concerns is the key design principle.','Sidecars handle all traffic routing. If the main container fails, the sidecar can\'t help — the pod restarts. Sidecars are for adding cross-cutting concerns to running traffic, not for failover.','The sidecar pattern is a general architectural pattern applicable to any container orchestration system. Docker Compose, Kubernetes, ECS — the pattern works anywhere you can run multiple containers together.']},
+    {q:'A distributed trace shows a user\'s API request takes 3.2 seconds total: 0.1s in the API gateway, 0.1s in the auth service, 3.0s in the LLM serving service. What does this tell you and what should you investigate?',
+     opts:['The API gateway needs to be scaled up — it\'s the first bottleneck','The LLM serving service is responsible for 94% of latency — investigate: GPU utilization, batch size, whether the model is loading from disk on each request, or whether the KV cache is full causing slow prefill','The auth service is too slow and needs caching','All three services need optimization since the total is 3.2 seconds'],
+     correct:1,
+     explain:['The API gateway uses only 0.1s (3% of total). It\'s clearly not the bottleneck.',null,'Distributed traces pinpoint where time is spent. 3.0s in LLM serving is the 20× longer than the other services combined. Investigation checklist: (1) Is GPU utilization at 100%? If not, why isn\'t the request being computed faster? (2) Is there a queue? Check vLLM\'s waiting queue depth. (3) Time-to-first-token: is prefill slow (long prompt) or generation slow (slow per-token)? (4) Is the model hot (in GPU memory) or being loaded from disk each time (cold start)? The trace narrows the search space from "the whole system" to "this specific service."','Auth service at 0.1s is completely normal. Caching auth might bring it to 0.01s — saving 0.09s when the bottleneck is 3.0s elsewhere is irrelevant. Fix the biggest bottleneck first.','Only the LLM serving service needs investigation. The other services are already fast. Optimizing 0.1s services while a 3.0s bottleneck exists is pure waste.']},
+  ]
+},
+
+];
+
+// ═══════════════════════════════════════════════════════════════
+const TRACKS = [
+  {label:'Linux Foundation', ids:['cgroups','docker']},
+  {label:'Orchestration', ids:['borg','kubernetes','helm']},
+  {label:'Cloud Native', ids:['twelvefactor','microservices']},
+  {label:'MLOps', ids:['techdebt','mlflow','kubeflow']},
+  {label:'Observability', ids:['servicemesh']},
+];
+
+let state = {
+  completed: JSON.parse(localStorage.getItem('pa3_completed') || '{}'),
+  currentPaper: null, currentTab: 'learn', quizState: null
+};
+function saveState(){ localStorage.setItem('pa3_completed', JSON.stringify(state.completed)); }
+function resetProgress(){ if(!confirm('Reset all progress?')) return; state.completed={}; state.currentPaper=null; saveState(); renderTree(); showHome(); updateProgressBar(); }
+function isPaperUnlocked(p){ return p.prereqs.every(pid => state.completed[pid]); }
+
+function renderTree(){
+  const tree=document.getElementById('tree'); tree.innerHTML='';
+  const pm={}; PAPERS.forEach(p=>pm[p.id]=p);
+  TRACKS.forEach(track=>{
+    const lbl=document.createElement('div'); lbl.className='track-label'; lbl.textContent=track.label; tree.appendChild(lbl);
+    track.ids.forEach(pid=>{
+      const paper=pm[pid]; if(!paper) return;
+      const unlocked=isPaperUnlocked(paper), completed=!!state.completed[pid], active=state.currentPaper?.id===pid;
+      const node=document.createElement('div');
+      node.className='paper-node'+(completed?' completed':'')+(active?' active':'')+(!unlocked?' locked':'');
+      node.innerHTML=`<div class="node-icon">${completed?'✓':paper.icon}</div><div class="node-text"><div class="node-title">${paper.shortTitle}</div><div class="node-year">${paper.year} · ${paper.category}</div></div>`;
+      if(unlocked) node.onclick=()=>openPaper(paper);
+      tree.appendChild(node);
+    });
+  });
+}
+function updateProgressBar(){
+  const total=PAPERS.length, done=Object.keys(state.completed).length;
+  document.getElementById('progress-label').textContent=`${done} of ${total} completed`;
+  document.getElementById('progress-fill').style.width=`${(done/total)*100}%`;
+}
+function openPaper(paper){
+  state.currentPaper=paper; state.currentTab='learn'; state.quizState=null;
+  document.getElementById('paper-tag').textContent=paper.category;
+  document.getElementById('paper-title-main').textContent=paper.title;
+  document.getElementById('paper-meta').textContent=`${paper.authors} · ${paper.venue}`;
+  renderTree(); showTab('learn');
+}
+function showHome(){
+  state.currentPaper=null;
+  document.getElementById('paper-tag').textContent='Select a topic';
+  document.getElementById('paper-title-main').textContent='Welcome to Paper Academy III';
+  document.getElementById('paper-meta').textContent='';
+  document.getElementById('tab-learn').classList.add('active');
+  document.getElementById('tab-quiz').classList.remove('active');
+  const unlocked=PAPERS.filter(p=>isPaperUnlocked(p)&&!state.completed[p.id]);
+  const done=Object.keys(state.completed).length;
+  document.getElementById('content').innerHTML=`<div class="fade-in" style="max-width:700px">
+    <h2 style="font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:8px">Docker, Kubernetes & MLOps</h2>
+    <p style="color:#888;font-size:0.85rem;line-height:1.7;margin-bottom:8px">The infrastructure layer under every AI system — from Linux kernel primitives to production ML platforms. This is where Google's internal tools became the industry's default stack.</p>
+    <p style="color:#555;font-size:0.75rem;margin-bottom:20px">Progress: ${done}/${PAPERS.length} completed</p>
+    ${unlocked.length>0?`<div style="font-size:0.72rem;color:#00BCD4;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Ready to learn</div><div class="start-grid">${unlocked.map(p=>`<div class="start-card" onclick="openPaper(PAPERS.find(x=>x.id==='${p.id}'))"><div class="sc-year">${p.year} · ${p.category}</div><div class="sc-title">${p.icon} ${p.shortTitle}</div><div class="sc-desc">${p.tagline}</div></div>`).join('')}</div>`
+    :`<div class="start-grid">
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='cgroups'))"><div class="sc-year">2006 · Linux</div><div class="sc-title">🐧 Start here: cgroups</div><div class="sc-desc">The kernel primitives that make containers possible</div></div>
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='twelvefactor'))"><div class="sc-year">2011 · Cloud Native</div><div class="sc-title">📋 12-Factor App</div><div class="sc-desc">The rulebook for cloud-native software</div></div>
+      <div class="start-card" onclick="openPaper(PAPERS.find(p=>p.id==='techdebt'))"><div class="sc-year">2015 · MLOps</div><div class="sc-title">💸 ML Tech Debt</div><div class="sc-desc">Why 95% of ML code is not the model</div></div>
+    </div>`}
+  </div>`;
+}
+function showTab(tab){
+  state.currentTab=tab;
+  document.getElementById('tab-learn').classList.toggle('active',tab==='learn');
+  document.getElementById('tab-quiz').classList.toggle('active',tab==='quiz');
+  if(!state.currentPaper){showHome();return;}
+  if(tab==='learn') renderLesson(); else renderQuiz();
+}
+function renderLesson(){
+  const p=state.currentPaper;
+  let html=`<div class="fade-in" style="max-width:700px"><div class="origin-badge">${p.authors}</div>`;
+  p.lesson.forEach(sec=>{
+    html+=`<div class="lesson-section"><h3>${sec.h}</h3><p>${sec.body}</p>`;
+    if(sec.callout) html+=`<div class="callout">${sec.callout}</div>`;
+    if(sec.callout_green) html+=`<div class="callout green">${sec.callout_green}</div>`;
+    if(sec.callout_red) html+=`<div class="callout red">${sec.callout_red}</div>`;
+    if(sec.callout_yellow) html+=`<div class="callout yellow">${sec.callout_yellow}</div>`;
+    html+=`</div>`;
+  });
+  const done=!!state.completed[p.id];
+  html+=`<div style="margin-top:24px;padding:16px;background:#16213E;border-radius:10px;border:1px solid #2a2a4a;display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:0.82rem;color:#888;">${done?'✓ Completed':'Ready to test your understanding?'}</span>
+    <button onclick="showTab('quiz')" style="padding:9px 20px;background:${done?'#1DE9B622':'#00BCD4'};color:${done?'#1DE9B6':'#000'};border:${done?'1px solid #1DE9B644':'none'};border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer;">
+      ${done?'Retake Quiz':'Take Quiz →'}
+    </button>
+  </div></div>`;
+  document.getElementById('content').innerHTML=html;
+}
+function renderQuiz(){
+  const p=state.currentPaper;
+  if(!state.quizState) state.quizState={current:0,passed:[],total:p.questions.length};
+  const qs=state.quizState;
+  if(qs.current>=qs.total){renderCompletion();return;}
+  const q=p.questions[qs.current];
+  let dots='';
+  for(let i=0;i<qs.total;i++) dots+=`<div class="qp-dot ${i<qs.current?'done':i===qs.current?'current':''}"></div>`;
+  const letters=['A','B','C','D'];
+  const opts=q.opts.map((o,i)=>`<button class="option" id="opt-${i}" onclick="selectOption(${i})"><div class="option-letter">${letters[i]}</div><div class="option-text">${o}</div></button>`).join('');
+  document.getElementById('content').innerHTML=`<div id="quiz-wrap" class="fade-in" style="max-width:680px">
+    <div class="quiz-progress">${dots}</div>
+    <div class="question-card">
+      <div class="question-num">Question ${qs.current+1} of ${qs.total}</div>
+      <div class="question-text">${q.q}</div>
+      <div class="options">${opts}</div>
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">${qs.current+1<qs.total?'Next Question →':'See Results →'}</button>
+    </div>
+  </div>`;
+}
+function selectOption(idx){
+  const p=state.currentPaper, q=p.questions[state.quizState.current];
+  document.querySelectorAll('.option').forEach(o=>{o.classList.add('disabled');o.onclick=null;});
+  const fb=document.getElementById('feedback'), nb=document.getElementById('next-btn');
+  if(idx===q.correct){
+    document.getElementById(`opt-${idx}`).classList.add('selected-right');
+    fb.className='feedback right'; fb.innerHTML=`<strong>Correct.</strong> ${q.explain[idx]||'That\'s it.'}`;
+    state.quizState.passed.push(true);
+  } else {
+    document.getElementById(`opt-${idx}`).classList.add('selected-wrong');
+    document.getElementById(`opt-${q.correct}`).classList.add('revealed-right');
+    fb.className='feedback wrong'; fb.innerHTML=`<strong>Not quite.</strong> ${q.explain[idx]}`;
+    state.quizState.passed.push(false);
+  }
+  nb.style.display='block';
+  nb.textContent=state.quizState.current+1<state.quizState.total?'Next Question →':'See Results →';
+}
+function nextQuestion(){ state.quizState.current++; renderQuiz(); }
+function renderCompletion(){
+  const p=state.currentPaper, qs=state.quizState;
+  const correct=qs.passed.filter(Boolean).length, total=qs.total, passed=correct===total;
+  if(passed&&!state.completed[p.id]){ state.completed[p.id]=true; saveState(); renderTree(); updateProgressBar(); }
+  const newlyUnlocked=PAPERS.filter(np=>np.prereqs.includes(p.id)&&np.prereqs.every(pid=>state.completed[pid])&&!state.completed[np.id]);
+  const sc=passed?'#1DE9B6':correct>=total*0.6?'#00BCD4':'#FF5252';
+  let html=`<div class="fade-in" style="max-width:600px">
+    <div style="background:#16213E;border:1px solid ${sc}44;border-radius:12px;padding:32px;text-align:center;margin-bottom:24px;">
+      <div style="font-size:3rem;font-weight:900;color:${sc}">${correct}/${total}</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#fff;margin:8px 0">${passed?'Topic completed!':correct>=total*0.6?'Almost — review and retry':'Keep studying and retry'}</div>
+      <div style="font-size:0.82rem;color:#888;margin-bottom:20px">${passed?p.title+' marked complete.':'Get all questions correct to unlock next topics.'}</div>`;
+  if(passed&&newlyUnlocked.length>0){
+    html+=`<div style="margin-bottom:16px"><div style="font-size:0.72rem;color:#1DE9B6;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Unlocked</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+    ${newlyUnlocked.map(np=>`<span style="background:#1DE9B611;border:1px solid #1DE9B644;color:#1DE9B6;padding:5px 14px;border-radius:20px;font-size:0.8rem;cursor:pointer" onclick="openPaper(PAPERS.find(p=>p.id==='${np.id}'))">${np.icon} ${np.shortTitle}</span>`).join('')}</div></div>`;
+  }
+  html+=`<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <button onclick="state.quizState=null;renderQuiz()" style="padding:9px 18px;background:#16213E;color:#ccc;border:1px solid #2a2a4a;border-radius:7px;font-size:0.8rem;cursor:pointer">Retry Quiz</button>
+    <button onclick="showTab('learn')" style="padding:9px 18px;background:#00BCD4;color:#000;border:none;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer">Back to Lesson</button>
+    ${passed&&newlyUnlocked.length>0?`<button onclick="openPaper(PAPERS.find(p=>p.id==='${newlyUnlocked[0].id}'))" style="padding:9px 18px;background:#1DE9B6;color:#000;border:none;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer">Next Topic →</button>`:''}
+  </div></div>`;
+  html+=`<div style="margin-top:20px"><div style="font-size:0.75rem;color:#555;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">Review</div>`;
+  p.questions.forEach((q,i)=>{
+    const ok=qs.passed[i];
+    html+=`<div style="background:#16213E;border:1px solid ${ok?'#1DE9B622':'#FF525222'};border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">
+      <span style="color:${ok?'#1DE9B6':'#FF5252'};font-size:1rem;flex-shrink:0">${ok?'✓':'✗'}</span>
+      <span style="font-size:0.8rem;color:#aaa;line-height:1.5">${q.q}</span></div>`;
+  });
+  html+=`</div></div>`;
+  document.getElementById('content').innerHTML=html;
+}
+window.PAPERS=PAPERS;
+renderTree(); updateProgressBar(); showHome();
+</script>
+<!-- Cross-device progress sync -->
+<script>
+(function(){
+  var SU='https://gbkhkbfbarsnpbdkxzii.supabase.co';
+  var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdia2hrYmZiYXJzbnBiZGt4emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQzODAzNzMsImV4cCI6MjA0OTk1NjM3M30.mcOcC2GVEu_wD3xNBzSCC3MwDck3CIdmz4D8adU-bpI';
+  var MOD='pa3';
+  var LSK='pa3_completed';
+  var FMT='object';
+
+  function getIds(){
+    var raw=localStorage.getItem(LSK);
+    if(!raw) return [];
+    try{
+      var p=JSON.parse(raw);
+      if(Array.isArray(p)) return p;
+      return Object.keys(p).filter(function(k){return p[k];});
+    }catch(e){return [];}
+  }
+
+  function push(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    var ids=getIds();
+    if(!ids.length) return;
+    fetch(SU+'/rest/v1/academy_progress',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({email:email,module:MOD,completed:ids,updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }
+
+  var _orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    _orig.call(this,k,v);
+    if(k===LSK) push();
+  };
+
+  window.addEventListener('load',function(){
+    var email=localStorage.getItem('academy_email');
+    if(!email) return;
+    fetch(SU+'/rest/v1/academy_progress?email=eq.'+encodeURIComponent(email)+'&module=eq.'+MOD+'&select=completed',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(!rows||!rows[0]||!rows[0].completed||!rows[0].completed.length) return;
+      var remote=rows[0].completed;
+      var raw=localStorage.getItem(LSK);
+      var merged;
+      if(FMT==='object'){
+        merged=raw?JSON.parse(raw):{};
+        remote.forEach(function(id){merged[id]=true;});
+        _orig.call(localStorage,LSK,JSON.stringify(merged));
+      } else {
+        var local=raw?JSON.parse(raw):[];
+        var s=new Set(local);
+        remote.forEach(function(id){s.add(id);});
+        _orig.call(localStorage,LSK,JSON.stringify(Array.from(s)));
+      }
+      if(typeof renderTree==='function') renderTree();
+      if(typeof updateProgressBar==='function') updateProgressBar();
+      if(typeof render==='function') render();
+    }).catch(function(){});
+  });
+
+  var btn=document.createElement('a');
+  btn.href='index.html';
+  btn.innerHTML='&#8592; Menu';
+  btn.style.cssText='position:fixed;top:10px;left:10px;z-index:9999;background:#16213E;color:#7C4DFF;border:1px solid #7C4DFF44;padding:5px 12px;border-radius:7px;font-size:0.75rem;font-weight:700;text-decoration:none;opacity:0.8;transition:opacity 0.2s';
+  btn.onmouseover=function(){this.style.opacity='1';};
+  btn.onmouseout=function(){this.style.opacity='0.8';};
+  document.body.appendChild(btn);
+})();
+</script>
+</body>
+</html>
